@@ -10,11 +10,10 @@ from pyrosetta import init
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
-from src.init_random_positions import start_input_poses
 from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
 from src.single_process import SingleProcessPopulCalculator as PopulCalculator
-from src.utils import get_position_info
+from src.utils import get_pose_from_file, get_position_info
 
 MAIN_PATH = os.getcwd()
 
@@ -61,8 +60,8 @@ def main():
     jobid = config.jobid
 
     # --- INIT -----------------------------------------+
-    native_pose, init_state_pose = start_input_poses(pose_input)
-    scfxn = FAFitnessFunction(native_pose, init_state_pose, trans_max_magnitude)
+    native_pose = get_pose_from_file(pose_input)
+    scfxn = FAFitnessFunction(native_pose, trans_max_magnitude)
 
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(native_pose)]
