@@ -1,0 +1,16 @@
+
+*
+
+!.gitignore
+!*.py
+!src/
+!src/**.py
+
+!configs/
+!configs/**.ini
+
+
+!inputs/
+!inputs/**
+!inputs/pdbs/
+!inputs/pdbs/**.pdb
