@@ -1,7 +1,39 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+from src.pdb_structure import pdbstructure_from_file
+
 IP_ADDRESS = "10.8.0.6"
+
+
+# compute an axis-aligned bounding box for the given pdb structure
+def xyz_limits_for_pdb(pdb):
+    first = True
+    count = 0
+    for chain in pdb.chains:
+        for res in chain.residues:
+            for atom in res.atoms:
+                count += 1
+                if first:
+                    # print "first", count
+                    first = False
+                    lower_xyz = np.array(atom.xyz).tolist()
+                    upper_xyz = np.array(atom.xyz).tolist()
+                else:
+                    lower_xyz = np.minimum(lower_xyz, np.array(atom.xyz).tolist())
+                    upper_xyz = np.maximum(upper_xyz, np.array(atom.xyz).tolist())
+    # print "xyz from", count, "atoms"
+    return lower_xyz, upper_xyz
+
+
+def get_translation_max(input_pdb):
+    pdb = pdbstructure_from_file(input_pdb)
+    lower_xyz, upper_xyz = xyz_limits_for_pdb(pdb)
+    max_translation = max(np.maximum(abs(lower_xyz), abs(upper_xyz)))
+    return max_translation + 10
 
 
 def convert_range(OldValue, old_range, new_range):

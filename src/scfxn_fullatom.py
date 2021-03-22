@@ -48,7 +48,7 @@ def l2_norm(zd_reference, zd_current):
 
 
 class FAFitnessFunction:
-    def __init__(self, native_pose, input_pose, trans_max_magnitude, refinement=False):
+    def __init__(self, native_pose, input_pose, trans_max_magnitude):
         self.logger = logging.getLogger("evodock.scfxn")
         self.native_pose = native_pose
         self.input_pose = input_pose
@@ -56,10 +56,7 @@ class FAFitnessFunction:
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        if refinement:
-            self.converter = LocalGenotypeConverter(input_pose)
-        else:
-            self.converter = GlobalGenotypeConverter(input_pose)
+        self.converter = GlobalGenotypeConverter(input_pose)
 
         self.pymover.apply(input_pose)
         self.trans_max_magnitude = trans_max_magnitude

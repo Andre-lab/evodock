@@ -11,10 +11,9 @@ from src.mpi_utils import IndividualMPI, np_to_ind
 from src.scfxn_fullatom import FAFitnessFunction
 
 
-class SingleMasterProcess:
-    def __init__(self, size, cost_func):
-        self.rank = 0
-        self.size = size
+class SingleProcessPopulCalculator:
+    def __init__(self, cost_func):
+        self.size = 1
         self.cost_func = cost_func
         self.local_search = cost_func.local_search
         self.scfxn = cost_func.local_search.scfxn
