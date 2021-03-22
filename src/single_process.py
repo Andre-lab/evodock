@@ -17,12 +17,10 @@ class SingleProcessPopulCalculator:
         self.cost_func = cost_func
         self.local_search = cost_func.local_search
         self.scfxn = cost_func.local_search.scfxn
-        refinement_option = True
         scfxn = FAFitnessFunction(
             self.scfxn.native_pose,
             self.scfxn.input_pose,
             self.scfxn.trans_max_magnitude,
-            refinement_option,
         )
         init_popul = LocalSearchPopulation(scfxn, "mcm_rosetta")
         self.init_population = init_popul

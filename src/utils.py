@@ -2,11 +2,18 @@
 # coding: utf-8
 
 import numpy as np
+from pyrosetta import Pose, pose_from_file
 from scipy.spatial.transform import Rotation as R
 
 from src.pdb_structure import pdbstructure_from_file
 
 IP_ADDRESS = "10.8.0.6"
+
+
+def get_pose_from_file(pose_input):
+    native_pose = Pose()
+    pose_from_file(native_pose, pose_input)
+    return native_pose
 
 
 # compute an axis-aligned bounding box for the given pdb structure
