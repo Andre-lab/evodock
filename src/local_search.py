@@ -44,7 +44,7 @@ def init_fa_penalization(scfxn):
     axis = "x"
     positions = change_axis(initial_position, axis, amount)
     genotype = scfxn.convert_positions_to_genotype(positions)
-    ind_pose = scfxn.apply_sixD_to_pose(genotype)
+    ind_pose = scfxn.apply_genotype_to_pose(genotype)
     fa_limit = scorefxn_low.score(ind_pose)
     return fa_limit
 
@@ -135,7 +135,7 @@ class LocalSearchPopulation:
         all_z = []
         all_positions = []
         for ind in popul:
-            pose = self.scfxn.apply_sixD_to_pose(ind.genotype)
+            pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
             positions = get_position_info(pose)
             all_x.append(positions[3])
             all_y.append(positions[4])
@@ -175,7 +175,7 @@ class LocalSearchPopulation:
         return popul
 
     def process_individual(self, ind, local_search=True):
-        pose = self.scfxn.apply_sixD_to_pose(ind)
+        pose = self.scfxn.apply_genotype_to_pose(ind)
         before = self.energy_score(pose)
         positions = get_position_info(pose)
         # print(positions)

@@ -8,8 +8,8 @@ from src.utils import IP_ADDRESS
 
 
 class IndividualZD:
-    def __init__(self, SixD_vector=[], score=0, ZD=[]):
-        self.SixD_vector = SixD_vector
+    def __init__(self, DoFs_vector=[], score=0, ZD=[]):
+        self.DoFs_vector = DoFs_vector
         self.ZD = ZD
         self.score = score
 
@@ -32,35 +32,15 @@ class ScorePopulation:
         with open(self.log_interface, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
 
-    def score(self, popul):
-        score_popul = []
-        for ind in popul:
-            score = self.scfxn.score(ind.SixD_vector)
-            score_popul.append(IndividualZD(ind.SixD_vector, score, ind.ZD))
-        return score_popul
-
-    def convert_genotype(self, genotype):
-        return self.scfxn.convert_genotype(genotype)
-
-    def apply(self, genotypes):
-        print("APPLY NO SE USA")
-        exit()
-        popul = []
-        for g in genotypes:
-            gen = self.convert_genotype(g)
-            popul.append(IndividualZD(gen))
-        popul_score = self.score(popul)
-        return [p.score for p in popul_score]
-
     def render_best(self, gen, best_solution, population):
-        SixD_vector = self.convert_genotype(best_solution.genotype)
+        DoFs_vector = self.scfxn.convert_genotype_to_positions(best_solution.genotype)
         rmsd = best_solution.rmsd
         with open(self.log_best, "a") as file_object:
             # file_object.write("gen:\t{}\t".format(gen))
-            vector_str = ",".join(["{}".format(i) for i in SixD_vector])
+            vector_str = ",".join(["{}".format(i) for i in DoFs_vector])
             file_object.write("{}\n".format(vector_str))
 
-        return SixD_vector, rmsd
+        return DoFs_vector, rmsd
 
     def size(self):
         return self.scfxn.size()
@@ -68,41 +48,13 @@ class ScorePopulation:
     def popul_to_pdbs(self, popul):
         os.makedirs("./folder_pdbs/", exist_ok=True)
         for i, ind in enumerate(popul):
-            # pose = self.scfxn.apply_sixD_to_pose(ind.SixD_vector)
+            # pose = self.scfxn.apply_genotype_to_pose(ind.DoFs_vector)
             pose = ind.pose
             pose.dump_pdb("./folder_pdbs/ind_" + str(i) + ".pdb")
 
     def apply_local_search(self, popul):
         new_popul = self.local_search.apply(popul)
         return new_popul
-
-    # -- debug --#
-    def get_problematic_terms(self, popul):
-        terms = {}
-        for ind in popul:
-            # pose = self.scfxn.apply_sixD_to_pose(ind)
-            pose = ind.pose
-            self.scfxn.scfxn_rosetta(pose)
-            dict_scores = self.scfxn.get_dict_scores(pose)
-            dict_scores = {
-                k: v
-                for k, v in sorted(
-                    dict_scores.items(), key=lambda item: item[1], reverse=True
-                )
-            }
-
-            problematic_terms = list(dict_scores.keys())[:3]
-            for t in problematic_terms:
-                if t in list(terms.keys()):
-                    terms[t] += dict_scores[t]
-                else:
-                    terms[t] = dict_scores[t]
-        avg_terms = {}
-        for t, k in terms.items():
-            avg_terms[t] = k / len(popul)
-        return avg_terms
-
-    # --- only for debug --- #
 
     def print_popul_info(self, popul, destiny, trial_popul=False):
         popul_dst = [ind.score for ind in popul]
@@ -137,7 +89,7 @@ class ScorePopulation:
         for ind, p in enumerate(popul):
             # gen = scfxn.convert_positions_to_genotype(p.genotype)
             gen = p.genotype
-            tmp_pose = self.scfxn.apply_sixD_to_pose(gen)
+            tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
             tmp_pose.pdb_info().name("popul_" + str(ind))
             tmp_pose.dump_pdb(destiny + "popul_" + str(ind) + ".pdb")
 
@@ -146,6 +98,6 @@ class ScorePopulation:
         for ind, p in enumerate(popul):
             # gen = scfxn.convert_positions_to_genotype(p.genotype)
             gen = p.genotype
-            tmp_pose = self.scfxn.apply_sixD_to_pose(gen)
+            tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
             tmp_pose.pdb_info().name("popul_" + str(ind))
             pymover.apply(tmp_pose)

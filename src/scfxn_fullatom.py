@@ -54,7 +54,7 @@ class FAFitnessFunction:
         return dst, rmsd, interface, irms
 
     def render_models(self, pdb_id, SixD_vector, is_best=None, interface=False):
-        pose = self.apply_sixD_to_pose(SixD_vector)
+        pose = self.apply_genotype_to_pose(SixD_vector)
         dst = self.scfxn_rosetta.score(pose)
         interface = calc_interaction_energy(pose, self.scfxn_rosetta, Vector1([1]))
         irms = calc_Irmsd(self.native_pose, pose, self.scfxn_rosetta, Vector1([1]))
@@ -67,7 +67,7 @@ class FAFitnessFunction:
         return dst, rmsd, interface, irms
 
     def score(self, SixD_vector):
-        pose = self.apply_sixD_to_pose(SixD_vector)
+        pose = self.apply_genotype_to_pose(SixD_vector)
         try:
             dst = self.scfxn_rosetta.score(pose)
         except ValueError:
@@ -82,20 +82,20 @@ class FAFitnessFunction:
     def convert_positions_to_genotype(self, positions):
         return self.converter.convert_positions_to_genotype(positions)
 
-    def convert_genotype(self, genotype):
+    def convert_genotype_to_positions(self, genotype):
         return self.converter.convert_genotype(genotype)
 
     def get_sol_string(self, sol):
         return " , ".join(["{:.2f}".format(e) for e in sol])
 
-    def apply_sixD_to_pose(self, genotype):
-        SixD_vector = self.convert_genotype(genotype)
+    def apply_genotype_to_pose(self, genotype):
+        DoFs_vector = self.convert_genotype_to_positions(genotype)
         ind_pose = Pose()
         ind_pose.assign(self.dock_pose)
-        euler = np.asarray(SixD_vector[0:3])
+        euler = np.asarray(DoFs_vector[0:3])
         r = R.from_euler("xyz", euler, degrees=True).as_matrix()
         flexible_jump = ind_pose.jump(self.jump_num)
-        rosetta_rotation, rosetta_translation = to_rosetta(r, SixD_vector[3:])
+        rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
         flexible_jump.set_rotation(rosetta_rotation)
         flexible_jump.set_translation(rosetta_translation)
         ind_pose.set_jump(self.jump_num, flexible_jump)
