@@ -1,12 +1,10 @@
 import logging
-import os
 import random
 import time
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from scfxn_fullatom import l2_norm
 from selection import (CrowdingSelection, EliteSelection, GreedySelection,
                        nearest_neighbor)
 
