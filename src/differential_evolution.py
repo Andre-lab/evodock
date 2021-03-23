@@ -1,14 +1,11 @@
 import logging
-import os
 import random
 import time
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.scfxn_fullatom import l2_norm
-from src.selection import (CrowdingSelection, EliteSelection, GreedySelection,
-                           nearest_neighbor)
+from src.selection import GreedySelection
 
 # import matplotlib.pyplot as plt
 # import pandas as pd
@@ -137,7 +134,8 @@ class DifferentialEvolutionAlgorithm:
 
                 # --- MUTATION (step #3.A) ---------------------+
 
-                # select three random vector index positions [0, self.popsize), not including current vector (j)
+                # select 3 random vector index positions [0, self.popsize)
+                # not including current vector (j)
                 candidates = list(range(0, self.popsize))
                 candidates.remove(j)
                 random_index = random.sample(candidates, 3)
@@ -146,11 +144,6 @@ class DifferentialEvolutionAlgorithm:
                     x_1 = population[j].genotype
                 if self.scheme == "RANDOM":
                     x_1 = population[random_index[0]].genotype
-                if self.scheme == "NEAR":
-                    nearest = nearest_neighbor(
-                        population, population[j].genotype, "PARENT"
-                    )
-                    x_1 = population[nearest].genotype
                 if self.scheme == "BEST":
                     x_1 = population[gen_scores.index(min(gen_scores))].genotype
 

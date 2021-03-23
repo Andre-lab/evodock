@@ -18,9 +18,7 @@ class SingleProcessPopulCalculator:
         self.local_search = cost_func.local_search
         self.scfxn = cost_func.local_search.scfxn
         scfxn = FAFitnessFunction(
-            self.scfxn.native_pose,
-            self.scfxn.input_pose,
-            self.scfxn.trans_max_magnitude,
+            self.scfxn.native_pose, self.scfxn.trans_max_magnitude,
         )
         init_popul = LocalSearchPopulation(scfxn, "mcm_rosetta")
         self.init_population = init_popul
@@ -87,7 +85,6 @@ class SingleProcessPopulCalculator:
                 idx, ind = np_to_ind(arr)
                 result_pop[idx] = ind
 
-        # result_pop = self.cost_func.local_search.set_new_max_translations(result_pop)
         return result_pop
 
     def terminate(self):
