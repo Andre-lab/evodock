@@ -1,17 +1,9 @@
 import os
-import time
 
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
 from src.local_search import LocalSearchPopulation
 from src.utils import IP_ADDRESS
-
-
-class IndividualZD:
-    def __init__(self, DoFs_vector=[], score=0, ZD=[]):
-        self.DoFs_vector = DoFs_vector
-        self.ZD = ZD
-        self.score = score
 
 
 class ScorePopulation:
@@ -31,6 +23,9 @@ class ScorePopulation:
             file_object.write("#{}\n".format(jobid))
         with open(self.log_interface, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
+
+    def get_sol_string(self, sol):
+        return self.scfxn.get_sol_string(sol)
 
     def render_best(self, gen, best_solution, population):
         DoFs_vector = self.scfxn.convert_genotype_to_positions(best_solution.genotype)
@@ -87,7 +82,6 @@ class ScorePopulation:
     def dump_pdbs(self, popul, destiny="./"):
         os.makedirs(destiny, exist_ok=True)
         for ind, p in enumerate(popul):
-            # gen = scfxn.convert_positions_to_genotype(p.genotype)
             gen = p.genotype
             tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
             tmp_pose.pdb_info().name("popul_" + str(ind))
@@ -96,7 +90,6 @@ class ScorePopulation:
     def pymol_visualization(self, popul):
         pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         for ind, p in enumerate(popul):
-            # gen = scfxn.convert_positions_to_genotype(p.genotype)
             gen = p.genotype
             tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
             tmp_pose.pdb_info().name("popul_" + str(ind))

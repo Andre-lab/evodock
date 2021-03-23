@@ -53,6 +53,7 @@ class EvodockConfig:
             )
         else:
             self.trans_max_magnitude = get_translation_max(self.pose_input)
+        return self.trans_max_magnitude
 
     def read_config(self, ini_file):
         config = configparser.ConfigParser()

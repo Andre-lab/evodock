@@ -1,32 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import numpy as np
 
-from src.distance_axes import (calculate_local_coordinates,
-                               calculate_max_coordiantes)
-# from principal_axes import calculate_max_coordiantes
+from src.distance_axes import calculate_local_coordinates
 from src.utils import convert_range, get_position_info
 
 
-def get_translation_max(dock_pose):
-    jump_num = 1
-    flexible_jump = dock_pose.jump(jump_num)
-    translation = np.asarray(flexible_jump.get_translation())
-    max_trans = max(translation) + 1
-    return [max_trans, max_trans, max_trans]
-
-
 class GlobalGenotypeConverter:
-    def __init__(self, native_pose):
+    def __init__(self, native_pose, max_trans=70):
         self.max_rot = 180
-        # self.max_trans = get_translation_max(native_pose)
-        max_trans_coordinates, min_trans_coordinates = calculate_max_coordiantes(
-            native_pose
-        )
-        self.max_trans = [t + 10 for t in max_trans_coordinates]
-        self.min_trans = [t - 10 for t in min_trans_coordinates]
-        # self.max_trans = [70, 70, 70]
+        mtrans = max_trans
+        self.max_trans = [mtrans for t in range(3)]
+        self.min_trans = [mtrans * -1 for t in range(3)]
         self.bounds = self.define_bounds()
 
     def define_bounds(self):
@@ -75,7 +60,12 @@ class LocalGenotypeConverter(GlobalGenotypeConverter):
                 (init_pos_rot[i] - self.max_rot, init_pos_rot[i] + self.max_rot)
             )
         for i in range(3):
-            bounds.append((self.min_trans[i], self.max_trans[i],))
+            bounds.append(
+                (
+                    init_pos_trans[i] - self.min_trans[i],
+                    init_pos_trans[i] - self.max_trans[i],
+                )
+            )
         return bounds
 
 

@@ -202,7 +202,7 @@ class DifferentialEvolutionAlgorithm:
             best_SixD_vector, best_rmsd = self.popul_calculator.cost_func.render_best(
                 i, gen_sol, population
             )
-            best_sol_str = self.popul_calculator.cost_func.scfxn.get_sol_string(
+            best_sol_str = self.popul_calculator.cost_func.get_sol_string(
                 best_SixD_vector
             )
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))

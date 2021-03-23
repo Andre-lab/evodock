@@ -25,7 +25,7 @@ class FAFitnessFunction:
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        self.converter = GlobalGenotypeConverter(self.input_pose)
+        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude)
         self.pymover.apply(self.input_pose)
         self.trans_max_magnitude = trans_max_magnitude
         self.dock_pose.assign(self.input_pose)
@@ -40,34 +40,8 @@ class FAFitnessFunction:
         rmsd = CA_rmsd(self.native_pose, pose)
         return rmsd
 
-    def render_individual(self, pdb_id, individual, is_best=None, interface=False):
-        pose = individual.pose
-        dst = self.scfxn_rosetta.score(pose)
-        interface = calc_interaction_energy(pose, self.scfxn_rosetta, Vector1([1]))
-        irms = calc_Irmsd(self.native_pose, pose, self.scfxn_rosetta, Vector1([1]))
-        if np.isnan(dst):
-            dst = 10000
-        prot_name = "popul" if is_best is None else is_best
-        pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        self.pymover.apply(pose)
-        rmsd = self.get_rmsd(pose)
-        return dst, rmsd, interface, irms
-
-    def render_models(self, pdb_id, SixD_vector, is_best=None, interface=False):
-        pose = self.apply_genotype_to_pose(SixD_vector)
-        dst = self.scfxn_rosetta.score(pose)
-        interface = calc_interaction_energy(pose, self.scfxn_rosetta, Vector1([1]))
-        irms = calc_Irmsd(self.native_pose, pose, self.scfxn_rosetta, Vector1([1]))
-        if np.isnan(dst):
-            dst = 10000
-        prot_name = "popul" if is_best is None else is_best
-        pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        self.pymover.apply(pose)
-        rmsd = self.get_rmsd(pose)
-        return dst, rmsd, interface, irms
-
-    def score(self, SixD_vector):
-        pose = self.apply_genotype_to_pose(SixD_vector)
+    def score(self, genotype):
+        pose = self.apply_genotype_to_pose(genotype)
         try:
             dst = self.scfxn_rosetta.score(pose)
         except ValueError:
@@ -101,3 +75,29 @@ class FAFitnessFunction:
         ind_pose.set_jump(self.jump_num, flexible_jump)
         # now is time to score the join_pose
         return ind_pose
+
+    def render_individual(self, pdb_id, individual, is_best=None, interface=False):
+        pose = individual.pose
+        dst = self.scfxn_rosetta.score(pose)
+        interface = calc_interaction_energy(pose, self.scfxn_rosetta, Vector1([1]))
+        irms = calc_Irmsd(self.native_pose, pose, self.scfxn_rosetta, Vector1([1]))
+        if np.isnan(dst):
+            dst = 10000
+        prot_name = "popul" if is_best is None else is_best
+        pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
+        self.pymover.apply(pose)
+        rmsd = self.get_rmsd(pose)
+        return dst, rmsd, interface, irms
+
+    def render_models(self, pdb_id, genotype, is_best=None, interface=False):
+        pose = self.apply_genotype_to_pose(genotype)
+        dst = self.scfxn_rosetta.score(pose)
+        interface = calc_interaction_energy(pose, self.scfxn_rosetta, Vector1([1]))
+        irms = calc_Irmsd(self.native_pose, pose, self.scfxn_rosetta, Vector1([1]))
+        if np.isnan(dst):
+            dst = 10000
+        prot_name = "popul" if is_best is None else is_best
+        pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
+        self.pymover.apply(pose)
+        rmsd = self.get_rmsd(pose)
+        return dst, rmsd, interface, irms
