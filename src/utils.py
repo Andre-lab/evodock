@@ -87,3 +87,52 @@ def get_position_info(dock_pose):
     flexible_jump = dock_pose.jump(1)
     euler_vec = get_rotation_euler(flexible_jump)
     return list(euler_vec) + list(flexible_jump.get_translation())
+
+
+def set_new_max_translations(scfxn, popul):
+    # 1) get all positions
+    # 2) set new max_translations
+    # 3) convert genotypes to new translation
+    all_x = []
+    all_y = []
+    all_z = []
+    all_positions = []
+    for ind in popul:
+        pose = scfxn.apply_genotype_to_pose(ind.genotype)
+        positions = get_position_info(pose)
+        all_x.append(positions[3])
+        all_y.append(positions[4])
+        all_z.append(positions[5])
+        all_positions.append(positions)
+
+    max_x = max([val for val in all_x])
+    max_x += max_x * 0.1
+    max_y = max([val for val in all_y])
+    max_y += max_y * 0.1
+    max_z = max([val for val in all_z])
+    max_z += max_z * 0.1
+
+    min_x = min([val for val in all_x])
+    min_x += min_x * 0.1
+    min_y = min([val for val in all_y])
+    min_y += min_y * 0.1
+    min_z = min([val for val in all_z])
+    min_z += min_z * 0.1
+
+    # print("prev max_trans ")
+    # print(scfxn.converter.max_trans)
+    scfxn.converter.max_trans = [max_x, max_y, max_z]
+    scfxn.converter.min_trans = [min_x, min_y, min_z]
+    scfxn.converter.bounds = scfxn.converter.define_bounds()
+    # print("updated max_trans ")
+    # print(scfxn.converter.max_trans)
+    # print(scfxn.converter.min_trans)
+
+    for i, ind in enumerate(popul):
+        # print("=== before ===")
+        # print(all_positions[i])
+        ind.genotype = scfxn.convert_positions_to_genotype(all_positions[i])
+        # print("==== after ===")
+        # print(scfxn.convert_genotype(ind.genotype))
+
+    return popul
