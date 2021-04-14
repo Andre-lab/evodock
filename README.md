@@ -19,19 +19,19 @@ This package is only compatible with Python 3.4 and above. To install this packa
 * Install the package itself:
 
 ```console
-git clone https://github.com/danielvarela/PSPHybridDE.git
-cd PSPHybridDE
+git clone https://github.com/Andre-lab/evodock.git
+cd evodock
 pip install -r requirements.txt
 ```
 
 # Basic Usage
 
-1. Create a configuration file following the example found at 
+1. Create a configuration file following the example found at [sample\_dock.ini](https://github.com/Andre-lab/evodock/blob/2fbc755cf84f64641153ad75757ad4bb3bf6ff3f/configs/sample_dock.ini)
 
 ```dosini
 [inputs]
 # complex pdb
-pose_input=/inputs/pdbs/1ppe_IE.prepack.pdb
+pose_input=./inputs/pdbs/1ppe_IE.prepack.pdb
 
 [outputs]
 # output file log
