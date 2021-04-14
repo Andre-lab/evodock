@@ -2,13 +2,7 @@ import logging
 import random
 import time
 
-import matplotlib.pyplot as plt
-import pandas as pd
-
 from src.selection import GreedySelection
-
-# import matplotlib.pyplot as plt
-# import pandas as pd
 
 
 def ensure_bounds(vec, bounds):
@@ -44,18 +38,16 @@ class Individual:
 
 
 class DifferentialEvolutionAlgorithm:
-    def __init__(
-        self, popul_calculator, scheme, popsize, mutate, recombination, maxiter, jobid
-    ):
-        self.scheme = scheme
+    def __init__(self, popul_calculator, config):
+        self.scheme = config.scheme
         self.logger = logging.getLogger("evodock.de")
         self.logger.setLevel(logging.INFO)
         self.popul_calculator = popul_calculator
-        self.popsize = popsize
-        self.mutate = mutate
-        self.recombination = recombination
-        self.maxiter = maxiter
-        self.job_id = jobid
+        self.popsize = config.popsize
+        self.mutate = config.mutate
+        self.recombination = config.recombination
+        self.maxiter = config.maxiter
+        self.job_id = config.jobid
         self.ind_size = popul_calculator.cost_func.size()
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.job_id.replace("evolution", "time")
@@ -75,23 +67,8 @@ class DifferentialEvolutionAlgorithm:
             popul.append(indv)
             population.append(Individual(indv, 0, 1000))
 
-        # popul_gen = [ind.genotype for ind in population]
-        # popul_scores = self.popul_calculator.cost_func.apply(popul_gen)
-
-        # self.popul_calculator.cost_func.pymol_visualization(population)
         init_population = True
-
         population = self.popul_calculator.run(popul, init_population)
-
-        destiny_popul = "./initial_population/"
-        self.popul_calculator.cost_func.dump_pdbs(population, destiny_popul)
-
-        scores = [p.score for p in population]
-        rmsds = [p.rmsd for p in population]
-        df = pd.DataFrame({"score": scores, "rmsd": rmsds})
-
-        df.plot.scatter(x="rmsd", y="score")
-        plt.savefig("init_population.png")
 
         return population
 
@@ -112,7 +89,6 @@ class DifferentialEvolutionAlgorithm:
             file_time.write("INIT EVOLUTION\n")
 
     def main(self, population):
-
         self.logger.info(" DE")
         # --- SOLVE --------------------------------------------+
 
@@ -125,15 +101,14 @@ class DifferentialEvolutionAlgorithm:
             file_object = open(self.job_id, "a")
             file_time = open(self.file_time_name, "a")
 
-            # file_object = open(outdir + "evolution_example.txt", "a")
             file_object.write("GENERATION: \t" + str(i) + "\t")
             gen_scores = [ind.score for ind in population]
+
             # cycle through each individual in the population
             trials = []
             for j in range(0, self.popsize):
 
                 # --- MUTATION (step #3.A) ---------------------+
-
                 # select 3 random vector index positions [0, self.popsize)
                 # not including current vector (j)
                 candidates = list(range(0, self.popsize))
@@ -181,9 +156,8 @@ class DifferentialEvolutionAlgorithm:
             )
 
             # --- SCORE KEEPING --------------------------------+
-            # self.logger.info("POPUL SCORES : ", gen_scores)
-            gen_avg = sum(gen_scores) / self.popsize  # current generation avg. fitness
-            gen_best = min(gen_scores)  # fitness of best individual
+            gen_avg = sum(gen_scores) / self.popsize
+            gen_best = min(gen_scores)
 
             trial_avg = sum(trial_scores) / self.popsize
             trial_best = min(trial_scores)
@@ -196,9 +170,6 @@ class DifferentialEvolutionAlgorithm:
                 "   > TRIAL INFO: {:.2f} {:.2f} ".format(trial_best, trial_avg)
             )
 
-            # problematic_terms = self.popul_calculator.cost_func.get_problematic_terms(trial_inds)
-            # self.logger.info("   > TOP PROBLEM TERMS {}".format(str(problematic_terms)))
-
             best_SixD_vector, best_rmsd = self.popul_calculator.cost_func.render_best(
                 i, gen_sol, population
             )
@@ -208,11 +179,6 @@ class DifferentialEvolutionAlgorithm:
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
             self.popul_calculator.cost_func.print_information(population)
             # self.popul_calculator.cost_func.pymol_visualization(population)
-            # _ = input("continue > ")
-
-            if i == 20 or i == 50:
-                destiny_popul = "./populationi_gen{}/".format(i)
-                self.popul_calculator.cost_func.dump_pdbs(population, destiny_popul)
 
             file_object.write("%f \t" % gen_avg)
             file_object.write("%f \t" % gen_best)
@@ -222,5 +188,4 @@ class DifferentialEvolutionAlgorithm:
             file_time.write("%f \n" % (end - start))
             file_time.close()
 
-        # self.popul_calculator.cost_func.print_popul(population)
         return population
