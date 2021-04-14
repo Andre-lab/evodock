@@ -40,17 +40,6 @@ class ScorePopulation:
     def size(self):
         return self.scfxn.size()
 
-    def popul_to_pdbs(self, popul):
-        os.makedirs("./folder_pdbs/", exist_ok=True)
-        for i, ind in enumerate(popul):
-            # pose = self.scfxn.apply_genotype_to_pose(ind.DoFs_vector)
-            pose = ind.pose
-            pose.dump_pdb("./folder_pdbs/ind_" + str(i) + ".pdb")
-
-    def apply_local_search(self, popul):
-        new_popul = self.local_search.apply(popul)
-        return new_popul
-
     def print_popul_info(self, popul, destiny, trial_popul=False):
         popul_dst = [ind.score for ind in popul]
         popul_rmsd = [ind.rmsd for ind in popul]
