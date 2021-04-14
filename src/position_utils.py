@@ -16,8 +16,6 @@ from pyrosetta.rosetta.protocols.toolbox.rigid_body import \
     create_euler_rotation
 from scipy.spatial import distance
 
-from src.reader import StructureReader
-
 
 def print_rotation_translation(R, t):
     with open("align_info.txt", "w") as file_object:
