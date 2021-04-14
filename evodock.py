@@ -47,13 +47,7 @@ def main():
     # --- Position Params -----------------------------+
     trans_max_magnitude = config.get_max_translation()
 
-    # --- DE PARAMS -----------------------------------+
-
-    scheme = config.scheme
-    popsize = config.popsize
-    mutate = config.mutate
-    recombination = config.recombination
-    maxiter = config.maxiter
+    # --- LS PARAMS -----------------------------------+
     local_search_option = config.local_search_option
 
     # --- OUTPUT --------------------------------------+
@@ -77,7 +71,7 @@ def main():
     logger.info(" native pose score {:.2f}".format(native_score))
 
     logger.info("==============================")
-    alg = DE(popul_calculator, scheme, popsize, mutate, recombination, maxiter, jobid,)
+    alg = DE(popul_calculator, config)
     init_population = alg.init_population()
 
     # --- RUN -----------------------------------------+
