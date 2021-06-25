@@ -7,6 +7,7 @@
 
 * PyRosetta==4
 * numpy==1.19.4
+* vector3d
 
 
 
