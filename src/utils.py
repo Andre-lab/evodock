@@ -6,15 +6,39 @@ from pyrosetta import Pose, pose_from_file
 from scipy.spatial.transform import Rotation as R
 
 from src.pdb_structure import pdbstructure_from_file
+from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
+from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, jump_num_sym_dof
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 
-IP_ADDRESS = "10.8.0.6"
+IP_ADDRESS = "10.8.0.14"
 
+# symmetric maps from dof name to dof int
+strtodofint = {"x": 1, "y": 2, "z": 3, "angle_x": 4, "angle_y": 5, "angle_z": 6}
+inttodofstr =  {v: k for k, v in strtodofint.items()}
 
-def get_pose_from_file(pose_input):
+def map_jump_and_dofs_to_int(pose: Pose, syminfo: dict) -> None:
+    """Map jump strings to jump ints and dof str to dof ints."""
+    syminfo["jumps_int"] = [sym_dof_jump_num(pose, jump_str) for jump_str in syminfo.get("jumps_str")]
+    syminfo["dofs_int"] = [[strtodofint.get(dof_str) for dof_str in dofs_str] for dofs_str in syminfo.get("dofs_str")]
+
+def get_symmetric_genotype_str(pose: Pose) -> str:
+    """Gets which symdofs are present in the genotype and in the order as they are in the genotype."""
+    symdofs = pose.conformation().Symmetry_Info().get_dofs()
+    symmetric_genotype = []
+    for jump_id, symdof in symdofs.items():
+        jump_str = jump_num_sym_dof(pose, jump_id)
+        for dof in range(1, 7):
+            if symdof.allow_dof(dof):
+                symmetric_genotype.append(f"{jump_str}:{inttodofstr[dof]}")
+    return " ".join(symmetric_genotype)
+
+def get_pose_from_file(pose_input, syminfo: dict = None):
     native_pose = Pose()
     pose_from_file(native_pose, pose_input)
+    if syminfo:
+        SetupForSymmetryMover(syminfo.get("file")).apply(native_pose)
+        map_jump_and_dofs_to_int(native_pose, syminfo)
     return native_pose
-
 
 # compute an axis-aligned bounding box for the given pdb structure
 def xyz_limits_for_pdb(pdb):
@@ -82,11 +106,28 @@ def get_rotation_euler(flexible_jump):
     vec = rot_matrix.as_euler("xyz", degrees=True)
     return vec
 
+def get_translation(flexible_jump):
+    return np.asarray(flexible_jump.rt().get_translation())
 
 def get_position_info(dock_pose):
-    flexible_jump = dock_pose.jump(1)
-    euler_vec = get_rotation_euler(flexible_jump)
-    return list(euler_vec) + list(flexible_jump.get_translation())
+    if is_symmetric(dock_pose):
+        native_val = []
+        dofs = dock_pose.conformation().Symmetry_Info().get_dofs()
+        for jump_id, symdof in dofs.items():
+            flexible_jump = dock_pose.jump(jump_id)
+            rot = get_rotation_euler(flexible_jump)
+            trans = get_translation(flexible_jump)
+            for dof in range(1, 7):
+                if symdof.allow_dof(dof):
+                    if dof < 4:
+                        native_val.append(trans[dof - 1])
+                    else:
+                        native_val.append(rot[dof - 4])
+    else:
+        flexible_jump = dock_pose.jump(1)
+        euler_vec = get_rotation_euler(flexible_jump)
+        native_val = list(euler_vec) + list(flexible_jump.get_translation())
+    return native_val
 
 
 def set_new_max_translations(scfxn, popul):

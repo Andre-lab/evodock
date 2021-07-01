@@ -13,7 +13,8 @@ from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
 from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
 from src.single_process import SingleProcessPopulCalculator as PopulCalculator
-from src.utils import get_pose_from_file, get_position_info
+from src.utils import get_pose_from_file, get_position_info, get_symmetric_genotype_str
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 
 MAIN_PATH = os.getcwd()
 
@@ -26,6 +27,7 @@ def init_options_fa(filename):
         "-docking:dock_mcm_first_cycles 1",
         "-docking:dock_mcm_second_cycles 1",
         "-include_current True",
+        "-initialize_rigid_body_dofs 1",
         "-ex1",
         "-ex2aro",
         "-use_input_sc",
@@ -53,9 +55,12 @@ def main():
     # --- OUTPUT --------------------------------------+
     jobid = config.jobid
 
-    # --- INIT -----------------------------------------+
-    native_pose = get_pose_from_file(pose_input)
-    scfxn = FAFitnessFunction(native_pose, trans_max_magnitude)
+    # --- Symmetry information ------------------------+
+    syminfo = config.syminfo
+
+    # --- INIT ----------------------------------------+
+    native_pose = get_pose_from_file(pose_input, syminfo)
+    scfxn = FAFitnessFunction(native_pose, trans_max_magnitude, syminfo)
 
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(native_pose)]
@@ -63,7 +68,12 @@ def main():
     native_score = scfxn.scfxn_rosetta.score(native_pose)
 
     score_popul = ScorePopulation(scfxn, jobid, local_search_option)
-    popul_calculator = PopulCalculator(score_popul)
+    popul_calculator = PopulCalculator(score_popul, syminfo)
+
+    if is_symmetric(native_pose):
+        logger.info("==============================")
+        logger.info(" Running EvoDOCK with symmetry")
+        logger.info(f" The genotype is: {get_symmetric_genotype_str(native_pose)}")
 
     logger.info("==============================")
     logger.info(" native information ")
@@ -80,7 +90,6 @@ def main():
     population = popul_calculator.run(init_population)
     alg.main(population)
     popul_calculator.terminate()
-
 
 if __name__ == "__main__":
     main()

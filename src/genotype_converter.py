@@ -4,15 +4,34 @@
 
 from src.distance_axes import calculate_local_coordinates
 from src.utils import convert_range, get_position_info
-
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from src.utils import get_rotation_euler, get_translation
 
 class GlobalGenotypeConverter:
-    def __init__(self, native_pose, max_trans=70):
-        self.max_rot = 180
-        mtrans = max_trans
-        self.max_trans = [mtrans for t in range(3)]
-        self.min_trans = [mtrans * -1 for t in range(3)]
-        self.bounds = self.define_bounds()
+    def __init__(self, native_pose, max_trans=70, syminfo: dict = None):
+        if is_symmetric(native_pose):
+            self.bounds = self.define_symmetric_bounds(native_pose, syminfo)
+        else:
+            self.max_rot = 180
+            mtrans = max_trans
+            self.max_trans = [mtrans for t in range(3)]
+            self.min_trans = [mtrans * -1 for t in range(3)]
+            self.bounds = self.define_bounds()
+
+    def define_symmetric_bounds(self, native_pose, syminfo):
+        """Define symmetrical bounds."""
+        bounds = []
+        for jump, dofs, parsed_bounds in zip(syminfo.get("jumps_int"), syminfo.get("dofs_int"), syminfo.get("bounds")):
+            flexible_jump = native_pose.jump(jump)
+            rot = get_rotation_euler(flexible_jump)
+            trans = get_translation(flexible_jump)
+            for dof, bound in zip(dofs, parsed_bounds):
+                if dof < 4:
+                    native_val = trans[dof - 1]
+                else:
+                    native_val = rot[dof - 4]
+                bounds.append((- float(bound) + native_val, + float(bound) + native_val))
+        return bounds
 
     def define_bounds(self):
         bounds = []

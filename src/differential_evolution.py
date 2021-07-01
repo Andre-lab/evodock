@@ -52,6 +52,9 @@ class DifferentialEvolutionAlgorithm:
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.job_id.replace("evolution", "time")
         self.init_file()
+        self.pymol_on = config.pymol_on
+        self.pymol_history = config.pymol_history
+        self.popul_calculator.cost_func.local_search.slide = config.slide
 
     def init_population(self, popsize=None):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
@@ -178,7 +181,8 @@ class DifferentialEvolutionAlgorithm:
             )
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
             self.popul_calculator.cost_func.print_information(population)
-            # self.popul_calculator.cost_func.pymol_visualization(population)
+            if self.pymol_on:
+                self.popul_calculator.cost_func.pymol_visualization(population, self.pymol_history)
 
             file_object.write("%f \t" % gen_avg)
             file_object.write("%f \t" % gen_best)
