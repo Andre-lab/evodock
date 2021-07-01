@@ -76,8 +76,10 @@ class ScorePopulation:
             tmp_pose.pdb_info().name("popul_" + str(ind))
             tmp_pose.dump_pdb(destiny + "popul_" + str(ind) + ".pdb")
 
-    def pymol_visualization(self, popul):
+    def pymol_visualization(self, popul, history=False):
         pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
+        if history:
+            pymover.keep_history(True)
         for ind, p in enumerate(popul):
             gen = p.genotype
             tmp_pose = self.scfxn.apply_genotype_to_pose(gen)

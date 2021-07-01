@@ -13,10 +13,11 @@ from scipy.spatial.transform import Rotation as R
 from src.genotype_converter import GlobalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
 from src.utils import IP_ADDRESS
-
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from src.utils import get_rotation_euler, get_translation
 
 class FAFitnessFunction:
-    def __init__(self, native_pose, trans_max_magnitude):
+    def __init__(self, native_pose, trans_max_magnitude, syminfo: dict = None):
         self.logger = logging.getLogger("evodock.scfxn")
         self.native_pose = native_pose
         self.input_pose = Pose()
@@ -25,8 +26,8 @@ class FAFitnessFunction:
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude)
-        self.pymover.apply(self.input_pose)
+        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude, syminfo)
+        # self.pymover.apply(self.input_pose) # why do we have this here when we are calling it again below?
         self.trans_max_magnitude = trans_max_magnitude
         self.dock_pose.assign(self.input_pose)
         self.dock_pose.pdb_info().name("INIT_STATE")
@@ -35,6 +36,7 @@ class FAFitnessFunction:
         self.ax1, self.ax2, self.ax3 = build_axis()
         mros_temp = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         self.mros, _ = to_rosetta(mros_temp, [0, 0, 0])
+        self.syminfo = syminfo
 
     def get_rmsd(self, pose):
         rmsd = CA_rmsd(self.native_pose, pose)
@@ -66,13 +68,30 @@ class FAFitnessFunction:
         DoFs_vector = self.convert_genotype_to_positions(genotype)
         ind_pose = Pose()
         ind_pose.assign(self.dock_pose)
-        euler = np.asarray(DoFs_vector[0:3])
-        r = R.from_euler("xyz", euler, degrees=True).as_matrix()
-        flexible_jump = ind_pose.jump(self.jump_num)
-        rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
-        flexible_jump.set_rotation(rosetta_rotation)
-        flexible_jump.set_translation(rosetta_translation)
-        ind_pose.set_jump(self.jump_num, flexible_jump)
+        if is_symmetric(ind_pose):
+            Dofs_vector = iter(DoFs_vector)
+            for jump, dofs in zip(self.syminfo.get("jumps_int"), self.syminfo.get("dofs_int")):
+                flexible_jump = ind_pose.jump(jump)
+                rot = get_rotation_euler(flexible_jump)
+                trans = get_translation(flexible_jump)
+                for dof in dofs:
+                    if dof < 4:
+                        trans[dof - 1] = next(Dofs_vector)
+                    else:
+                        rot[dof - 4] = next(Dofs_vector)
+                rot = R.from_euler("xyz", rot, degrees=True).as_matrix()
+                rosetta_rotation, rosetta_translation = to_rosetta(rot, trans)
+                flexible_jump.set_rotation(rosetta_rotation)
+                flexible_jump.set_translation(rosetta_translation)
+                ind_pose.set_jump(jump, flexible_jump)
+        else:
+            euler = np.asarray(DoFs_vector[0:3])
+            r = R.from_euler("xyz", euler, degrees=True).as_matrix()
+            flexible_jump = ind_pose.jump(self.jump_num)
+            rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
+            flexible_jump.set_rotation(rosetta_rotation)
+            flexible_jump.set_translation(rosetta_translation)
+            ind_pose.set_jump(self.jump_num, flexible_jump)
         # now is time to score the join_pose
         return ind_pose
 

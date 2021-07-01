@@ -12,14 +12,12 @@ from src.scfxn_fullatom import FAFitnessFunction
 
 
 class SingleProcessPopulCalculator:
-    def __init__(self, cost_func):
+    def __init__(self, cost_func, syminfo: dict = None):
         self.size = 1
         self.cost_func = cost_func
         self.local_search = cost_func.local_search
         self.scfxn = cost_func.local_search.scfxn
-        scfxn = FAFitnessFunction(
-            self.scfxn.native_pose, self.scfxn.trans_max_magnitude,
-        )
+        scfxn = FAFitnessFunction(self.scfxn.native_pose, self.scfxn.trans_max_magnitude, syminfo)
         init_popul = LocalSearchPopulation(scfxn, "mcm_rosetta")
         self.init_population = init_popul
 
