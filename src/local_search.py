@@ -6,7 +6,7 @@ from pyrosetta.rosetta.protocols.docking import (DockingSlideIntoContact,
                                                  calc_interaction_energy,
                                                  calc_Irmsd)
 
-from src.differential_evolution import Individual
+from src.individual import Individual
 from src.utils import get_position_info
 
 

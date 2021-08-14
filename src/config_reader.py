@@ -24,6 +24,10 @@ class EvodockConfig:
             logger.info("input complex not found. Use 'pose_input' parameter")
             exit()
 
+        # --- DOCKING PARAMS -----------------------------------+
+
+        self.docking_type_option = config["Docking"].get("type")
+
         # --- DE PARAMS -----------------------------------+
 
         self.scheme = config["DE"].get("scheme")

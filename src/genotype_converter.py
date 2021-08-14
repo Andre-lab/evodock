@@ -45,26 +45,23 @@ class GlobalGenotypeConverter:
 
 class LocalGenotypeConverter(GlobalGenotypeConverter):
     def __init__(self, native_pose):
-        self.max_rot = 16
+        self.max_rot = [8, 8, 8]
+        self.max_trans = [3, 3, 3]
         self.pose = native_pose
-        self.max_trans, self.min_trans = calculate_local_coordinates(native_pose)
         self.bounds = self.define_bounds()
 
     def define_bounds(self):
         bounds = []
         init_pos = get_position_info(self.pose)
-        init_pos_rot = init_pos[:3]
-        init_pos_trans = init_pos[3:]
+        init_rot = init_pos[:3]
         for i in range(3):
             bounds.append(
-                (init_pos_rot[i] - self.max_rot, init_pos_rot[i] + self.max_rot)
+                (init_rot[i] - self.max_rot[i], init_rot[i] + self.max_rot[i])
             )
+        init_trans = init_pos[3:]
         for i in range(3):
             bounds.append(
-                (
-                    init_pos_trans[i] - self.min_trans[i],
-                    init_pos_trans[i] - self.max_trans[i],
-                )
+                (init_trans[i] - self.max_trans[i], init_trans[i] + self.max_trans[i])
             )
         return bounds
 
