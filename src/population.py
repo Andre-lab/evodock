@@ -9,7 +9,9 @@ from src.utils import IP_ADDRESS
 class ScorePopulation:
     def __init__(self, scfxn, jobid, local_search_opt="None"):
         self.name = "ScorePopulation"
+        self.jobid = jobid
         self.scfxn = scfxn
+        self.local_search_opt = local_search_opt
         self.log_best = jobid.replace("evolution", "best")
         self.log_interface = jobid.replace("evolution", "interface")
         self.log_popul = jobid.replace("evolution", "popul")

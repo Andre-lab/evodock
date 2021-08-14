@@ -10,13 +10,14 @@ from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from scipy.spatial.transform import Rotation as R
 
-from src.genotype_converter import GlobalGenotypeConverter
+from src.genotype_converter import (GlobalGenotypeConverter,
+                                    LocalGenotypeConverter)
 from src.position_utils import build_axis, to_rosetta
 from src.utils import IP_ADDRESS
 
 
 class FAFitnessFunction:
-    def __init__(self, native_pose, trans_max_magnitude):
+    def __init__(self, native_pose, trans_max_magnitude, local_docking="Global"):
         self.logger = logging.getLogger("evodock.scfxn")
         self.native_pose = native_pose
         self.input_pose = Pose()
@@ -25,7 +26,12 @@ class FAFitnessFunction:
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude)
+        if local_docking == "Local":
+            self.converter = LocalGenotypeConverter(self.input_pose)
+        else:
+            self.converter = GlobalGenotypeConverter(
+                self.input_pose, trans_max_magnitude
+            )
         self.pymover.apply(self.input_pose)
         self.trans_max_magnitude = trans_max_magnitude
         self.dock_pose.assign(self.input_pose)

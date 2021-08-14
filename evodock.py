@@ -10,6 +10,7 @@ from pyrosetta import init
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
+from src.options import init_global_docking, init_local_docking
 from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
 from src.single_process import SingleProcessPopulCalculator as PopulCalculator
@@ -20,32 +21,23 @@ MAIN_PATH = os.getcwd()
 logging.basicConfig(level=logging.ERROR)
 
 
-def init_options_fa(filename):
-    opts = [
-        "-mute all",
-        "-docking:dock_mcm_first_cycles 1",
-        "-docking:dock_mcm_second_cycles 1",
-        "-include_current True",
-        "-ex1",
-        "-ex2aro",
-        "-use_input_sc",
-        "-unboundrot {}".format(filename),
-    ]
-    return " ".join(opts)
-
-
 def main():
     config = EvodockConfig(sys.argv[-1])
 
     pose_input = config.pose_input
-
-    init(extra_options=init_options_fa(pose_input))
+    if config.docking_type_option == "Local":
+        init(extra_options=init_local_docking(pose_input))
+    else:
+        init(extra_options=init_global_docking(pose_input))
 
     logger = logging.getLogger("evodock")
     logger.setLevel(logging.INFO)
 
     # --- Position Params -----------------------------+
     trans_max_magnitude = config.get_max_translation()
+
+    # --- DOCKING PARAMS -----------------------------------+
+    docking_type_option = config.docking_type_option
 
     # --- LS PARAMS -----------------------------------+
     local_search_option = config.local_search_option
@@ -72,7 +64,7 @@ def main():
 
     logger.info("==============================")
     alg = DE(popul_calculator, config)
-    init_population = alg.init_population()
+    init_population = alg.init_population(config.popsize, docking_type_option)
 
     # --- RUN -----------------------------------------+
     logger.info("==============================")

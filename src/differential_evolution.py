@@ -2,7 +2,9 @@ import logging
 import random
 import time
 
+from src.individual import Individual
 from src.selection import GreedySelection
+from src.single_process import SingleProcessPopulCalculator
 
 
 def ensure_bounds(vec, bounds):
@@ -25,15 +27,6 @@ def ensure_bounds(vec, bounds):
     return vec_new
 
 
-class Individual:
-    def __init__(self, genotype, score, rmsd=1000, i_sc=1000, irms=1000):
-        self.genotype = genotype
-        self.score = score
-        self.rmsd = rmsd
-        self.i_sc = i_sc
-        self.irms = irms
-
-
 # --- MAIN ---------------------------------------------------------------------+
 
 
@@ -53,8 +46,13 @@ class DifferentialEvolutionAlgorithm:
         self.file_time_name = self.job_id.replace("evolution", "time")
         self.init_file()
 
-    def init_population(self, popsize=None):
+    def init_population(self, popsize=None, docking_type="Global"):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
+
+        population_calculator = SingleProcessPopulCalculator(
+            self.popul_calculator.cost_func, docking_type
+        )
+
         if popsize is None:
             popsize = self.popsize
         self.logger.info(" init population")
@@ -68,7 +66,7 @@ class DifferentialEvolutionAlgorithm:
             population.append(Individual(indv, 0, 1000))
 
         init_population = True
-        population = self.popul_calculator.run(popul, init_population)
+        population = population_calculator.run(popul, init_population)
 
         return population
 

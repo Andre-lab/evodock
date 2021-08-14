@@ -49,6 +49,10 @@ pose_input=./inputs/pdbs/1ppe_IE.prepack.pdb
 # output file log
 output_file=quick_evolution_sample.log
 
+[Docking]
+# selects docking protocl [Global, Local]
+type=Global
+
 [DE]
 # evolution algorithm parent strategy [RANDOM, BEST] 
 scheme=BEST
@@ -78,16 +82,20 @@ python evodock.py configs/sample_dock.ini
 
 ### Section [inputs]
 
-At pose<sub>input</sub>, you might provide the path to a complex with two
+At pose\_input, you might provide the path to a complex with two
 chains, which previously was preprocessed with a prepack protocol in order to fix possible collisions at the sidechain. An
 script at script folders is provided. 
 
 ### Section [outputs]
 
-At  output<sub>file</sub> you can indicate the output folder and log file for
+At  output\_file you can indicate the output folder and log file for
 the output. Log file name should contain the word "evolution" to not produce
-errors (todo: improve the code of this). The name of the output<sub>file</sub> should be
+errors (todo: improve the code of this). The name of the output\_file should be
 different for each independent run. 
+
+
+### Section [Docking]
+Option "type" allows to select between global docking (Global) and local docking (Local).
 
 ### Section [DE]
 The set of parameters for Differential Evolution ([DE])  that you must change for a production run are populsize (from 10 to 100) and maxiter (from 10 to 100),
@@ -97,9 +105,9 @@ can be fine tuned for specific purposes, although this set (0.3 and 0.9) have
 shown a good balance between exploration and exploration at our benchmark runs,
 which leads into good results. Scheme corresponds to the selection strategy for
 the base vector at mutation operation (https://en.wikipedia.org/wiki/Differential_evolution for more details).
-Parameter "local<sub>search</sub>" can be changed to None (aka, only DE is performed),
-only<sub>slide</sub> (local search operation is equivalent to apply slide<sub>into</sub><sub>contact</sub>)
-or mcm<sub>rosetta</sub> (which applies slide<sub>into</sub><sub>contact</sub> + MC energy minimization and
+Parameter "local\_search" can be changed to None (aka, only DE is performed),
+only\_slide (local search operation is equivalent to apply slide\_into\_contact)
+or mcm\_rosetta (which applies slide\_into\_contact + MC energy minimization and
 sidechain optimization, recommended option and used at our benchmarks)
 
 
@@ -138,8 +146,8 @@ translation (last 3 values) of the individual with lowest energy value.
 
 ### Get scatter plot
 
-python ./scripts/make<sub>scatter</sub><sub>plot.py</sub>
-<path<sub>to</sub><sub>popul</sub>\*.log>
+python ./scripts/make\_scatter\_plot.py
+<path\_to\_popul\*.log>
 
 It creates the interface energy vs iRMSD plot,
 commonly used to evaluate the sampling results. Each point
@@ -151,7 +159,7 @@ can be specified in order to collect the results from different independent runs
 
 For each popul\*log
 
-python ./scripts/make<sub>evolution</sub><sub>plot.py</sub> <path to evolution\*.log>
+python ./scripts/make\_evolution\_plot.py <path to evolution\*.log>
 
 Creates a lineplot where y-axis corresponds to the global energy function (used
 as fitness function during the evolution) and x-axis corresponds to each
