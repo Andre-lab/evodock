@@ -123,6 +123,8 @@ python ./scripts/make\_scatter\_plot.py "<path\_to\_popul\*.log>"
 
 It creates the global energy value vs RMSD plot if input is popul*log or interface energy vs iRMSD plot if input corresponds to interface*log. Each point corresponds to an individual in the last individual. Several \*log files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
 
+![interface Energy vs iRMSD scatter plot](https://github.com/Andre-lab/evodock/blob/main/images/scatterplot.png)
+
 
 ### Get evolution performance
 
@@ -134,7 +136,7 @@ Creates a lineplot where y-axis corresponds to the global energy function (used 
 
 Green line corresponds to the average energy value of the population, while the red line corresponds to the lowest energy value of the population. A proper evolution should maintain a close distance between both lines and average line should follow the tend of the lowest energy line. That would indicate that the population evolves towards the best energy individual. In case that there is a large different between both lines, F and CR parameters should be tuned. For example, reducing the exploration of the algorithm by decreasing the value of F.
 
-
+![Evolution sample image](https://github.com/Andre-lab/evodock/blob/main/images/quick_evolution_sample.png)
 
 # Differential Evolution Algorithm
 
