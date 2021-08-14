@@ -82,33 +82,18 @@ python evodock.py configs/sample_dock.ini
 
 ### Section [inputs]
 
-At pose\_input, you might provide the path to a complex with two
-chains, which previously was preprocessed with a prepack protocol in order to fix possible collisions at the sidechain. An
-script at script folders is provided. 
+At pose\_input, you might provide the path to a complex with two chains, which previously was preprocessed with a prepack protocol in order to fix possible collisions at the sidechain. An script at script folders is provided. 
 
 ### Section [outputs]
 
-At  output\_file you can indicate the output folder and log file for
-the output. Log file name should contain the word "evolution" to not produce
-errors (todo: improve the code of this). The name of the output\_file should be
-different for each independent run. 
+At  output\_file you can indicate the output folder and log file for the output. Log file name should contain the word "evolution" to not produce errors (todo: improve the code of this). The name of the output\_file should be different for each independent run.
 
 
 ### Section [Docking]
 Option "type" allows to select between global docking (Global) and local docking (Local).
 
 ### Section [DE]
-The set of parameters for Differential Evolution ([DE])  that you must change for a production run are populsize (from 10 to 100) and maxiter (from 10 to 100),
-which would lead into an evolution of 100 individuals during 100
-iterations/generations. Evolutionary parameters (mutation F and crossover CR),
-can be fine tuned for specific purposes, although this set (0.3 and 0.9) have
-shown a good balance between exploration and exploration at our benchmark runs,
-which leads into good results. Scheme corresponds to the selection strategy for
-the base vector at mutation operation (https://en.wikipedia.org/wiki/Differential_evolution for more details).
-Parameter "local\_search" can be changed to None (aka, only DE is performed),
-only\_slide (local search operation is equivalent to apply slide\_into\_contact)
-or mcm\_rosetta (which applies slide\_into\_contact + MC energy minimization and
-sidechain optimization, recommended option and used at our benchmarks)
+The set of parameters for Differential Evolution ([DE])  that you must change for a production run are populsize (from 10 to 100) and maxiter (from 10 to 100), which would lead into an evolution of 100 individuals during 100 iterations/generations. Evolutionary parameters (mutation F and crossover CR), can be fine tuned for specific purposes, although this set (0.3 and 0.9) have shown a good balance between exploration and exploration at our benchmark runs, which leads into good results. Scheme corresponds to the selection strategy for the base vector at mutation operation (https://en.wikipedia.org/wiki/Differential_evolution for more details). Parameter "local\_search" can be changed to None (aka, only DE is performed), only\_slide (local search operation is equivalent to apply slide\_into\_contact) or mcm\_rosetta (which applies slide\_into\_contact + MC energy minimization and sidechain optimization, recommended option and used at our benchmarks)
 
 
 # Interpret output:
@@ -117,42 +102,26 @@ It is going to produce 4 different log files:
 
 -   evolution\*log is a summary of the evolutionary process, which indicates the number of generation,
 
-average energy of the population, lowest energy of population and the RMSD of the
-best individual with the lowest energy.
+average energy of the population, lowest energy of population and the RMSD of the best individual with the lowest energy.
 
--   popul\*log is the status of each generation during the evolution. It contains
+-   popul\*log is the status of each generation during the evolution. It contains two lines per generation: one corresponding to the energy value of each individual and other to the corresponding RMSD.
 
-two lines per generation: one corresponding to the energy value of each
-individual and other to the corresponding RMSD.
+-   interface\*log is similar to popul, but it reports the interface energy value and the iRMSD for each corresponding individual at each generation.
 
--   interface\*log is similar to popul, but it reports the interface energy value
-
-and the iRMSD for each corresponding individual at each generation.
-
--   trials\*log is the equivalent file to popul\*log, but it reports the trials
-
-(candidates) generated during the each generation. This can be practically
-useful in case that you want to check if the DE+MC is creating proper
-candidates that can contribute to the evolution.
+-   trials\*log is the equivalent file to popul\*log, but it reports the trials (candidates) generated during the each generation. This can be practically useful in case that you want to check if the DE+MC is creating proper candidates that can contribute to the evolution.
 
 -   time\*log is the computational time (in seconds) for each generation.
 
--   best\*log contains, at each line, the rotation (first 3 values) and
-
-translation (last 3 values) of the individual with lowest energy value. 
+-   best\*log contains, at each line, the rotation (first 3 values) and translation (last 3 values) of the individual with lowest energy value.
 
 
 ## Getting images
 
 ### Get scatter plot
 
-python ./scripts/make\_scatter\_plot.py
-<path\_to\_popul\*.log>
+python ./scripts/make\_scatter\_plot.py "<path\_to\_popul\*.log>"
 
-It creates the interface energy vs iRMSD plot,
-commonly used to evaluate the sampling results. Each point
-corresponds to an individual in the last individual. Several popul\*log files
-can be specified in order to collect the results from different independent runs.
+It creates the global energy value vs RMSD plot if input is popul*log or interface energy vs iRMSD plot if input corresponds to interface*log. Each point corresponds to an individual in the last individual. Several \*log files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
 
 
 ### Get evolution performance
@@ -161,17 +130,9 @@ For each popul\*log
 
 python ./scripts/make\_evolution\_plot.py <path to evolution\*.log>
 
-Creates a lineplot where y-axis corresponds to the global energy function (used
-as fitness function during the evolution) and x-axis corresponds to each
-generation.
+Creates a lineplot where y-axis corresponds to the global energy function (used as fitness function during the evolution) and x-axis corresponds to each generation.
 
-Green line corresponds to the average energy value of the population, while the
-red line corresponds to the lowest energy value of the population. A proper
-evolution should maintain a close distance between both lines and average line
-should follow the tend of the lowest energy line. That would indicate that the
-population evolves towards the best energy individual. In case that there is a
-large different between both lines, F and CR parameters should be tuned. For
-example, reducing the exploration of the algorithm by decreasing the value of F.
+Green line corresponds to the average energy value of the population, while the red line corresponds to the lowest energy value of the population. A proper evolution should maintain a close distance between both lines and average line should follow the tend of the lowest energy line. That would indicate that the population evolves towards the best energy individual. In case that there is a large different between both lines, F and CR parameters should be tuned. For example, reducing the exploration of the algorithm by decreasing the value of F.
 
 
 
