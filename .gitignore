@@ -17,3 +17,6 @@
 
 !scripts/
 !scripts/prepacking.py
+
+!images/
+!images/*png
