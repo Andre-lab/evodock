@@ -136,7 +136,7 @@ Creates a lineplot where y-axis corresponds to the global energy function (used 
 
 Green line corresponds to the average energy value of the population, while the red line corresponds to the lowest energy value of the population. A proper evolution should maintain a close distance between both lines and average line should follow the tend of the lowest energy line. That would indicate that the population evolves towards the best energy individual. In case that there is a large different between both lines, F and CR parameters should be tuned. For example, reducing the exploration of the algorithm by decreasing the value of F.
 
-![Evolution sample image](https://github.com/Andre-lab/evodock/blob/main/images/quick_evolution_sample.png)
+![Evolution sample image](https://github.com/Andre-lab/evodock/blob/main/images/evolution_sample.png)
 
 # Differential Evolution Algorithm
 
