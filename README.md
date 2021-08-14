@@ -34,7 +34,7 @@ pip install -r requirements.txt
 0. Preprocess complex pdb with prepacking
 
 ```console
-python ./scripts/preprocessing <input_pdb>
+python ./scripts/prepacking.py <input_pdb>
 ```
 
 
