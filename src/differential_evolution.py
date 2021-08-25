@@ -168,9 +168,11 @@ class DifferentialEvolutionAlgorithm:
                 "   > TRIAL INFO: {:.2f} {:.2f} ".format(trial_best, trial_avg)
             )
 
-            best_SixD_vector, best_rmsd = self.popul_calculator.cost_func.render_best(
-                i, gen_sol, population
-            )
+            (
+                best_pdb,
+                best_SixD_vector,
+                best_rmsd,
+            ) = self.popul_calculator.cost_func.render_best(i, gen_sol, population)
             best_sol_str = self.popul_calculator.cost_func.get_sol_string(
                 best_SixD_vector
             )
@@ -186,4 +188,4 @@ class DifferentialEvolutionAlgorithm:
             file_time.write("%f \n" % (end - start))
             file_time.close()
 
-        return population
+        return population, best_pdb
