@@ -112,7 +112,7 @@ average energy of the population, lowest energy of population and the RMSD of th
 
 -   time\*log is the computational time (in seconds) for each generation.
 
--   best\*log contains, at each line, the rotation (first 3 values) and translation (last 3 values) of the individual with lowest energy value.
+-   best\*log contains, at each line, the rotation (first 3 values) and translation (3 values) of the individual with lowest energy value.
 
 
 ## Getting images
@@ -121,7 +121,7 @@ average energy of the population, lowest energy of population and the RMSD of th
 
 python ./scripts/make\_scatter\_plot.py "<path\_to\_popul\*.log>"
 
-It creates the global energy value vs RMSD plot if input is popul*log or interface energy vs iRMSD plot if input corresponds to interface*log. Each point corresponds to an individual in the last individual. Several \*log files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
+It creates the global energy value vs RMSD plot if input is popul*log or interface energy vs iRMSD plot if input corresponds to interface*log. Each point corresponds to an individual in the last generation. Several \*log files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
 
 ![interface Energy vs iRMSD scatter plot](https://github.com/Andre-lab/evodock/blob/main/images/scatterplot.png)
 
