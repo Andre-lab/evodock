@@ -70,8 +70,10 @@ def main():
     logger.info("==============================")
     logger.info(" starts EvoDOCK : evolutionary docking process")
     population = popul_calculator.run(init_population)
-    alg.main(population)
+    _, best_pdb = alg.main(population)
     popul_calculator.terminate()
+    name = jobid.replace(".log", "_final_docked_evo.pdb")
+    best_pdb.dump_pdb(name)
 
 
 if __name__ == "__main__":
