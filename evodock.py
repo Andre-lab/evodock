@@ -44,6 +44,8 @@ def main():
 
     # --- OUTPUT --------------------------------------+
     jobid = config.jobid
+    if "/" in jobid:
+        os.makedirs("/".join(jobid.split("/")[:-1]), exist_ok=True)
 
     # --- INIT -----------------------------------------+
     native_pose = get_pose_from_file(pose_input)

@@ -37,7 +37,7 @@ class ScorePopulation:
             vector_str = ",".join(["{}".format(i) for i in DoFs_vector])
             file_object.write("{}\n".format(vector_str))
 
-        best_pdb = self.scfxn.apply_genotype_to_pose(DoFs_vector)
+        best_pdb = self.scfxn.apply_genotype_to_pose(best_solution.genotype)
         return best_pdb, DoFs_vector, rmsd
 
     def size(self):
