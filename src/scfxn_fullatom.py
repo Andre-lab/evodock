@@ -4,9 +4,10 @@ import logging
 
 import numpy as np
 from pyrosetta import Pose, Vector1
+from pyrosetta.rosetta.core.pose import get_jump_id_from_chain
 from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory
 from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
-                                                 calc_Irmsd)
+                                                 calc_Irmsd, setup_foldtree)
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from scipy.spatial.transform import Rotation as R
 
@@ -74,11 +75,11 @@ class FAFitnessFunction:
         ind_pose.assign(self.dock_pose)
         euler = np.asarray(DoFs_vector[0:3])
         r = R.from_euler("xyz", euler, degrees=True).as_matrix()
-        flexible_jump = ind_pose.jump(self.jump_num)
+        flexible_jump = ind_pose.jump(ind_pose.num_jump())
         rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
         flexible_jump.set_rotation(rosetta_rotation)
         flexible_jump.set_translation(rosetta_translation)
-        ind_pose.set_jump(self.jump_num, flexible_jump)
+        ind_pose.set_jump(ind_pose.num_jump(), flexible_jump)
         # now is time to score the join_pose
         return ind_pose
 
