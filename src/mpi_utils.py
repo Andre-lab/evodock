@@ -1,4 +1,5 @@
 import copy
+import random
 import time
 
 import numpy as np
@@ -19,11 +20,17 @@ class IndividualMPI:
         if type(ind) is list:
             self.genotype = ind
             self.score = 1000
+            # self.idx_ligand = random.randint(0, 99)
+            # self.idx_receptor = random.randint(0, 99)
+            self.idx_ligand = 1
+            self.idx_receptor = 1
             self.rmsd = 0
             self.i_sc = 0
             self.irms = 0
         else:
             self.genotype = ind.genotype
+            self.idx_ligand = ind.idx_ligand
+            self.idx_receptor = ind.idx_receptor
             self.score = ind.score
             self.rmsd = ind.rmsd
             self.i_sc = ind.i_sc
@@ -31,6 +38,9 @@ class IndividualMPI:
 
     def convert_to_np(self):
         a = self.genotype
+        a.append(self.score)
+        a.append(self.idx_ligand)
+        a.append(self.idx_receptor)
         a.append(self.score)
         a.append(self.rmsd)
         a.append(self.i_sc)
@@ -40,12 +50,20 @@ class IndividualMPI:
         return a
 
     def convert_to_ind(self):
-        return Individual(self.genotype, self.score, self.rmsd, self.i_sc, self.irms)
+        return Individual(
+            self.genotype,
+            self.score,
+            self.idx_ligand,
+            self.idx_receptor,
+            self.rmsd,
+            self.i_sc,
+            self.irms,
+        )
 
 
 def np_to_ind(a):
     a = list(a)
-    ind = Individual(a[0:6], a[6], a[7], a[8], a[9])
+    ind = Individual(a[0:6], a[6], a[7], a[8], a[9], a[10], a[11])
     idx = int(round(a[-1]))
     return (idx, ind)
 

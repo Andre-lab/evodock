@@ -1,10 +1,14 @@
+import glob
 import logging
 
 from pyrosetta import Pose, Vector1
-from pyrosetta.rosetta.protocols.docking import (DockingSlideIntoContact,
-                                                 DockMCMProtocol,
+from pyrosetta.rosetta.core.import_pose import poses_from_files
+from pyrosetta.rosetta.core.pose import append_pose_to_pose
+from pyrosetta.rosetta.protocols.docking import (DockMCMProtocol,
+                                                 FaDockingSlideIntoContact,
                                                  calc_interaction_energy,
                                                  calc_Irmsd)
+from pyrosetta.rosetta.utility import vector1_std_string
 
 from src.individual import Individual
 from src.utils import get_position_info
@@ -16,11 +20,37 @@ class LocalSearchPopulation:
     # only_slide: just slide_into_contact
     # mcm_rosetta: mcm protocol mover (high res) from rosetta (2 cycles)
     def __init__(self, scfxn, packer_option="default_combination"):
+        lst_ligand = glob.glob(
+            "/home/daniel/projects/evodock/flexbackbones/relax/2jtoA/*"
+        )
+        lst_ligand += lst_ligand
+        lst_ligand += lst_ligand
+        lst_ligand += lst_ligand
+        lst_ligand = lst_ligand[:3]
+
+        lst_receptor = glob.glob(
+            "/home/daniel/projects/evodock/flexbackbones/relax/1kwmA/*"
+        )
+        lst_receptor += lst_receptor
+        lst_receptor += lst_receptor
+        lst_receptor += lst_receptor
+        lst_receptor = lst_receptor[:3]
+
+        filenames_ligand = vector1_std_string()
+        for f in lst_ligand:
+            filenames_ligand.append(f)
+        filenames_receptor = vector1_std_string()
+        for f in lst_receptor:
+            filenames_receptor.append(f)
+
+        self.list_ligand = poses_from_files(filenames_ligand)
+        self.list_receptor = poses_from_files(filenames_receptor)
         self.packer_option = packer_option
         self.scfxn = scfxn
         self.local_logger = logging.getLogger("evodock.local")
         self.local_logger.setLevel(logging.INFO)
-        self.slide_into_contact = DockingSlideIntoContact(1)
+        self.native_fold_tree = scfxn.dock_pose.fold_tree()
+        # self.slide_into_contact = DockingSlideIntoContact(1)
         if packer_option == "mcm_rosetta":
             mcm_docking = DockMCMProtocol()
             mcm_docking.set_native_pose(scfxn.dock_pose)
@@ -39,10 +69,27 @@ class LocalSearchPopulation:
         return score
 
     def process_individual(self, ind, local_search=True):
+        # pose2 = self.list_ligand[1]
+        # pose1 = self.list_receptor[1]
+        # join_pose = Pose()
+        # join_pose.assign(pose1)
+        # append_pose_to_pose(join_pose, pose2, True)
+        # # print("before : ")
+        # # print(join_pose.fold_tree())
+        # join_pose.conformation().detect_disulfides()
+        # # print("after : ")
+        # # print(join_pose.fold_tree())
+
+        # join_pose.fold_tree(self.native_fold_tree)
+        # self.scfxn.dock_pose = join_pose
+
         pose = self.scfxn.apply_genotype_to_pose(ind)
+
+        slide_into_contact = FaDockingSlideIntoContact(pose.num_jump())
+        pose.dump_pdb("test_join.pdb")
         before = self.energy_score(pose)
         if local_search and self.packer_option != "None":
-            self.slide_into_contact.apply(pose)
+            slide_into_contact.apply(pose)
             if self.packer_option != "only_slide":
                 self.docking.apply(pose)
             after = self.energy_score(pose)
@@ -62,5 +109,5 @@ class LocalSearchPopulation:
         positions = get_position_info(pose)
         # replace trial with this new positions
         genotype = self.scfxn.convert_positions_to_genotype(positions)
-        result_individual = Individual(genotype, after, rmsd, interface, irms)
+        result_individual = Individual(genotype, after, 1, 1, rmsd, interface, irms)
         return result_individual, before, after

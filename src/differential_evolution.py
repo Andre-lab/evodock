@@ -63,7 +63,7 @@ class DifferentialEvolutionAlgorithm:
             for j in range(len(self.bounds)):
                 indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
             popul.append(indv)
-            population.append(Individual(indv, 0, 1000))
+            population.append(Individual(indv, 1, 1, 0, 1000))
 
         init_population = True
         population = population_calculator.run(popul, init_population)
@@ -178,7 +178,7 @@ class DifferentialEvolutionAlgorithm:
             )
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
             self.popul_calculator.cost_func.print_information(population)
-            # self.popul_calculator.cost_func.pymol_visualization(population)
+            self.popul_calculator.cost_func.pymol_visualization(population)
 
             file_object.write("%f \t" % gen_avg)
             file_object.write("%f \t" % gen_best)

@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation as R
 
 from src.pdb_structure import pdbstructure_from_file
 
-IP_ADDRESS = "10.8.0.6"
+IP_ADDRESS = "10.8.0.26"
 
 
 def get_pose_from_file(pose_input):
@@ -84,7 +84,7 @@ def get_rotation_euler(flexible_jump):
 
 
 def get_position_info(dock_pose):
-    flexible_jump = dock_pose.jump(1)
+    flexible_jump = dock_pose.jump(dock_pose.num_jump())
     euler_vec = get_rotation_euler(flexible_jump)
     return list(euler_vec) + list(flexible_jump.get_translation())
 

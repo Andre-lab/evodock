@@ -31,6 +31,7 @@ class GlobalGenotypeConverter:
                 g, (-1, 1), (self.bounds[i][0], self.bounds[i][1])
             )
             gen.append(new_value)
+
         return gen
 
     def convert_positions_to_genotype(self, positions):
@@ -45,8 +46,8 @@ class GlobalGenotypeConverter:
 
 class LocalGenotypeConverter(GlobalGenotypeConverter):
     def __init__(self, native_pose):
-        self.max_rot = [8, 8, 8]
-        self.max_trans = [3, 3, 3]
+        self.max_rot = [3, 3, 3]
+        self.max_trans = [1, 1, 1]
         self.pose = native_pose
         self.bounds = self.define_bounds()
 
