@@ -2,6 +2,7 @@ import logging
 import random
 import time
 
+from src.genotype_converter import generate_genotype
 from src.individual import Individual
 from src.selection import GreedySelection
 from src.single_process import SingleProcessPopulCalculator
@@ -44,13 +45,14 @@ class DifferentialEvolutionAlgorithm:
         self.ind_size = popul_calculator.cost_func.size()
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.job_id.replace("evolution", "time")
+        self.max_translation = config.get_max_translation()
         self.init_file()
 
     def init_population(self, popsize=None, docking_type="Global"):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
 
         population_calculator = SingleProcessPopulCalculator(
-            self.popul_calculator.cost_func, docking_type
+            self.popul_calculator.cost_func
         )
 
         if popsize is None:
@@ -60,14 +62,22 @@ class DifferentialEvolutionAlgorithm:
         popul = []
         for i in range(0, popsize):
             indv = []
-            for j in range(len(self.bounds)):
-                indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
+            if docking_type == "Global":
+                for j in range(len(self.bounds)):
+                    indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
+            else:
+                indv = generate_genotype(
+                    self.popul_calculator.scfxn.native_pose, self.max_translation
+                )
+
+            idx_receptor = random.randint(0, 99)
+            idx_ligand = random.randint(0, 99)
             popul.append(indv)
-            population.append(Individual(indv, 1, 1, 0, 1000))
+            population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))
 
         init_population = True
         population = population_calculator.run(popul, init_population)
-
+        self.popul_calculator.cost_func.pymol_visualization(population)
         return population
 
     def init_file(self):

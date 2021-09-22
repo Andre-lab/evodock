@@ -12,25 +12,25 @@ from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
 
 # todo: add it as a parameter at the config file
-LOW_LIMIT_INIT_DIVERSITY = 0
+LOW_LIMIT_INIT_DIVERSITY = -1
 
 
 class SingleProcessPopulCalculator:
-    def __init__(self, cost_func, docking_type="Global"):
+    def __init__(self, cost_func):
         self.size = 1
 
         self.local_search = cost_func.local_search
         self.scfxn = cost_func.local_search.scfxn
 
         selected_cost_func = FAFitnessFunction(
-            self.scfxn.native_pose, self.scfxn.trans_max_magnitude, docking_type
+            self.scfxn.native_pose, self.scfxn.trans_max_magnitude
         )
 
         self.cost_func = ScorePopulation(
             selected_cost_func, cost_func.jobid, cost_func.local_search_opt
         )
-        init_popul = LocalSearchPopulation(selected_cost_func, "mcm_rosetta")
-        self.init_population = init_popul
+        # init_popul = LocalSearchPopulation(selected_cost_func, "mcm_rosetta")
+        # self.init_population = init_popul
 
     def __make_chunks(self, popul, size):
         lst = []
@@ -68,7 +68,7 @@ class SingleProcessPopulCalculator:
                         )
 
                     if init_population:
-                        if scored_ind.rmsd > LOW_LIMIT_INIT_DIVERSITY:
+                        if scored_ind.rmsd >= LOW_LIMIT_INIT_DIVERSITY:
                             continue_score = False
                             mpi_pop.append(
                                 IndividualMPI(idx, scored_ind).convert_to_np()

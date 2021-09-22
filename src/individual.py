@@ -13,16 +13,16 @@ class Individual:
         irms=1000,
     ):
         if idx_ligand == -1:
-            idx_ligand = random.randit(0, 99)
+            idx_ligand = random.randit(1, 99)
         else:
-            if idx_ligand > 99:
+            if idx_ligand > 100:
                 print("error at ligand idx")
         idx_ligand = 1
 
         if idx_receptor == -1:
-            idx_receptor = random.randit(0, 99)
+            idx_receptor = random.randit(1, 99)
         else:
-            if idx_receptor > 99:
+            if idx_receptor > 100:
                 print("error at receptor idx")
 
         idx_receptor = 1

@@ -18,21 +18,17 @@ from src.utils import IP_ADDRESS
 
 
 class FAFitnessFunction:
-    def __init__(self, native_pose, trans_max_magnitude, local_docking="Global"):
+    def __init__(self, native_pose, trans_max_magnitude):
         self.logger = logging.getLogger("evodock.scfxn")
-        self.native_pose = native_pose
+        self.native_pose = Pose()
+        self.native_pose.assign(native_pose)
         self.input_pose = Pose()
         self.input_pose.assign(self.native_pose)
         self.logger.setLevel(logging.INFO)
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        if local_docking == "Local":
-            self.converter = LocalGenotypeConverter(self.input_pose)
-        else:
-            self.converter = GlobalGenotypeConverter(
-                self.input_pose, trans_max_magnitude
-            )
+        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude)
         self.pymover.apply(self.input_pose)
         self.trans_max_magnitude = trans_max_magnitude
         self.dock_pose.assign(self.input_pose)
