@@ -17,6 +17,10 @@ class EvodockConfig:
 
         config = self.read_config(ini_file)
 
+        # --- DOCKING PARAMS -----------------------------------+
+
+        self.docking_type_option = config["Docking"].get("type")
+
         # --- Input Params -----------------------------+
         if config.has_option("inputs", "pose_input"):
             self.pose_input = MAIN_PATH + config["inputs"].get("pose_input")
@@ -24,9 +28,18 @@ class EvodockConfig:
             logger.info("input complex not found. Use 'pose_input' parameter")
             exit()
 
-        # --- DOCKING PARAMS -----------------------------------+
+        if self.docking_type_option == "Unbound":
+            if config.has_option("inputs", "path_ligands"):
+                self.path_ligands = MAIN_PATH + config["inputs"].get("path_ligands")
+            else:
+                logger.info("input complex not found. Use 'path_ligands' parameter")
+                exit()
 
-        self.docking_type_option = config["Docking"].get("type")
+            if config.has_option("inputs", "path_receptors"):
+                self.path_receptors = MAIN_PATH + config["inputs"].get("path_receptors")
+            else:
+                logger.info("input complex not found. Use 'path_receptors' parameter")
+                exit()
 
         # --- DE PARAMS -----------------------------------+
 

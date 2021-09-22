@@ -31,7 +31,7 @@ class FAFitnessFunction:
         self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude)
         self.pymover.apply(self.input_pose)
         self.trans_max_magnitude = trans_max_magnitude
-        self.dock_pose.assign(self.input_pose)
+        self.dock_pose.assign(self.native_pose)
         self.dock_pose.pdb_info().name("INIT_STATE")
         self.pymover.apply(self.dock_pose)
         self.jump_num = 1

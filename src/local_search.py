@@ -14,25 +14,18 @@ from pyrosetta.rosetta.utility import vector1_std_string
 from src.individual import Individual
 from src.utils import get_position_info
 
-flexbb = "/home/daniel/github/evodock/"
-
 
 class LocalSearchPopulation:
     # Options:
     # None: only score and return the poses
     # only_slide: just slide_into_contact
     # mcm_rosetta: mcm protocol mover (high res) from rosetta (2 cycles)
-    def __init__(self, scfxn, packer_option="default_combination"):
-        lst_ligand = glob.glob(flexbb + "/flexbackbones/*/2jtoA/*")
-        # lst_ligand += lst_ligand
-        # lst_ligand += lst_ligand
-        # lst_ligand += lst_ligand
+    def __init__(self, scfxn, packer_option, config):
+        self.config = config
+        lst_ligand = glob.glob(config.path_ligands)
         lst_ligand = lst_ligand[:10]
 
-        lst_receptor = glob.glob(flexbb + "/flexbackbones/*/1kwmA/*")
-        # lst_receptor += lst_receptor
-        # lst_receptor += lst_receptor
-        # lst_receptor += lst_receptor
+        lst_receptor = glob.glob(config.path_receptors)
         lst_receptor = lst_receptor[:10]
 
         filenames_ligand = vector1_std_string()
@@ -70,21 +63,22 @@ class LocalSearchPopulation:
         return score
 
     def process_individual(self, ind, local_search=True):
-        idx_receptor = random.randint(1, len(self.list_receptor))
-        idx_ligand = random.randint(1, len(self.list_ligand))
-        pose2 = self.list_ligand[idx_ligand]
-        pose1 = self.list_receptor[idx_receptor]
-        join_pose = Pose()
-        join_pose.assign(pose1)
-        append_pose_to_pose(join_pose, pose2, True)
-        # print("before : ")
-        # print(join_pose.fold_tree())
-        join_pose.conformation().detect_disulfides()
-        # print("after : ")
-        # print(join_pose.fold_tree())
+        idx_ligand, idx_receptor = 0, 0
+        # idx_receptor = random.randint(1, len(self.list_receptor))
+        # idx_ligand = random.randint(1, len(self.list_ligand))
+        # pose2 = self.list_ligand[idx_ligand]
+        # pose1 = self.list_receptor[idx_receptor]
+        # join_pose = Pose()
+        # join_pose.assign(pose1)
+        # append_pose_to_pose(join_pose, pose2, True)
+        # # print("before : ")
+        # # print(join_pose.fold_tree())
+        # join_pose.conformation().detect_disulfides()
+        # # print("after : ")
+        # # print(join_pose.fold_tree())
 
-        join_pose.fold_tree(self.native_fold_tree)
-        self.scfxn.dock_pose = join_pose
+        # join_pose.fold_tree(self.native_fold_tree)
+        # self.scfxn.dock_pose = join_pose
 
         pose = self.scfxn.apply_genotype_to_pose(ind)
 
