@@ -33,6 +33,7 @@ def ensure_bounds(vec, bounds):
 
 class DifferentialEvolutionAlgorithm:
     def __init__(self, popul_calculator, config):
+        self.config = config
         self.scheme = config.scheme
         self.logger = logging.getLogger("evodock.de")
         self.logger.setLevel(logging.INFO)
@@ -52,8 +53,10 @@ class DifferentialEvolutionAlgorithm:
         # --- INITIALIZE A POPULATION (step #1) ----------------+
 
         population_calculator = SingleProcessPopulCalculator(
-            self.popul_calculator.cost_func
+            self.popul_calculator.cost_func, self.config
         )
+
+        # population_calculator = self.popul_calculator
 
         if popsize is None:
             popsize = self.popsize
@@ -70,8 +73,8 @@ class DifferentialEvolutionAlgorithm:
                     self.popul_calculator.scfxn.native_pose, self.max_translation
                 )
 
-            idx_receptor = random.randint(0, 99)
-            idx_ligand = random.randint(0, 99)
+            idx_receptor = random.randint(1, 100)
+            idx_ligand = random.randint(1, 100)
             popul.append(indv)
             population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))
 

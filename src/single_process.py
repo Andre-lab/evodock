@@ -16,7 +16,8 @@ LOW_LIMIT_INIT_DIVERSITY = -1
 
 
 class SingleProcessPopulCalculator:
-    def __init__(self, cost_func):
+    def __init__(self, cost_func, config):
+        self.config = config
         self.size = 1
 
         self.local_search = cost_func.local_search
@@ -27,10 +28,8 @@ class SingleProcessPopulCalculator:
         )
 
         self.cost_func = ScorePopulation(
-            selected_cost_func, cost_func.jobid, cost_func.local_search_opt
+            selected_cost_func, cost_func.jobid, cost_func.local_search_opt, config
         )
-        # init_popul = LocalSearchPopulation(selected_cost_func, "mcm_rosetta")
-        # self.init_population = init_popul
 
     def __make_chunks(self, popul, size):
         lst = []

@@ -7,7 +7,8 @@ from src.utils import IP_ADDRESS
 
 
 class ScorePopulation:
-    def __init__(self, scfxn, jobid, local_search_opt="None"):
+    def __init__(self, scfxn, jobid, local_search_opt, config):
+        self.config = config
         self.name = "ScorePopulation"
         self.jobid = jobid
         self.scfxn = scfxn
@@ -16,7 +17,7 @@ class ScorePopulation:
         self.log_interface = jobid.replace("evolution", "interface")
         self.log_popul = jobid.replace("evolution", "popul")
         self.log_trials = jobid.replace("evolution", "trials")
-        self.local_search = LocalSearchPopulation(scfxn, local_search_opt)
+        self.local_search = LocalSearchPopulation(scfxn, local_search_opt, config)
         with open(self.log_best, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
         with open(self.log_trials, "w") as file_object:

@@ -13,7 +13,7 @@ from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
 from src.options import init_global_docking, init_local_docking
 from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
-from src.single_process import SingleProcessPopulCalculator as PopulCalculator
+from src.single_process import SingleProcessPopulCalculator
 from src.utils import get_pose_from_file, get_position_info
 
 MAIN_PATH = os.getcwd()
@@ -25,7 +25,7 @@ def main():
     config = EvodockConfig(sys.argv[-1])
 
     pose_input = config.pose_input
-    if config.docking_type_option == "Local":
+    if config.docking_type_option in ["Local", "Unbound"]:
         init(extra_options=init_local_docking(pose_input))
     else:
         init(extra_options=init_global_docking(pose_input))
@@ -56,8 +56,8 @@ def main():
     )
     native_score = scfxn.scfxn_rosetta.score(native_pose)
 
-    score_popul = ScorePopulation(scfxn, jobid, local_search_option)
-    popul_calculator = PopulCalculator(score_popul)
+    score_popul = ScorePopulation(scfxn, jobid, local_search_option, config)
+    popul_calculator = SingleProcessPopulCalculator(score_popul, config)
 
     logger.info("==============================")
     logger.info(" native information ")
