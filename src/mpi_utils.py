@@ -41,7 +41,6 @@ class IndividualMPI:
         a.append(self.score)
         a.append(self.idx_ligand)
         a.append(self.idx_receptor)
-        a.append(self.score)
         a.append(self.rmsd)
         a.append(self.i_sc)
         a.append(self.irms)
