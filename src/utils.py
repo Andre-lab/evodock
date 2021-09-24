@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation as R
 
 from src.pdb_structure import pdbstructure_from_file
 
-IP_ADDRESS = "10.8.0.6"
+IP_ADDRESS = "10.8.0.18"
 
 
 def get_pose_from_file(pose_input):
