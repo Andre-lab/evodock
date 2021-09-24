@@ -28,6 +28,12 @@ class EvodockConfig:
             logger.info("input complex not found. Use 'pose_input' parameter")
             exit()
 
+        if config.has_option("inputs", "native_input"):
+            self.native_input = MAIN_PATH + config["inputs"].get("native_input")
+        else:
+            logger.info("input complex not found. Use 'pose_input' parameter")
+            exit()
+
         if self.docking_type_option == "Unbound":
             if config.has_option("inputs", "path_ligands"):
                 self.path_ligands = MAIN_PATH + config["inputs"].get("path_ligands")
