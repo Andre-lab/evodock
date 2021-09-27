@@ -1,9 +1,11 @@
+import glob
 import logging
 import random
 import time
 
 from src.genotype_converter import generate_genotype
 from src.individual import Individual
+from src.mpi_utils import IndividualMPI
 from src.selection import GreedySelection
 from src.single_process import SingleProcessPopulCalculator
 
@@ -31,6 +33,18 @@ def ensure_bounds(vec, bounds):
 # --- MAIN ---------------------------------------------------------------------+
 
 
+def make_trial(idx, genotype, ligand, receptor):
+    ind = IndividualMPI(idx, genotype)
+    ind.genotype = genotype
+    ind.score = 1000
+    ind.idx_ligand = ligand
+    ind.idx_receptor = receptor
+    ind.rmsd = 0
+    ind.i_sc = 0
+    ind.irms = 0
+    return ind
+
+
 class DifferentialEvolutionAlgorithm:
     def __init__(self, popul_calculator, config):
         self.config = config
@@ -52,11 +66,11 @@ class DifferentialEvolutionAlgorithm:
     def init_population(self, popsize=None, docking_type="Global"):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
 
-        population_calculator = SingleProcessPopulCalculator(
-            self.popul_calculator.cost_func, self.config
-        )
+        # population_calculator = SingleProcessPopulCalculator(
+        #     self.popul_calculator.cost_func, self.config
+        # )
 
-        # population_calculator = self.popul_calculator
+        population_calculator = self.popul_calculator
 
         if popsize is None:
             popsize = self.popsize
@@ -73,9 +87,11 @@ class DifferentialEvolutionAlgorithm:
                     self.popul_calculator.scfxn.native_pose, self.max_translation
                 )
 
-            idx_receptor = random.randint(1, 100)
-            idx_ligand = random.randint(1, 100)
-            popul.append(indv)
+            # todo: read file and count *.pdb
+            idx_receptor = random.randint(1, 10)
+            idx_ligand = random.randint(1, 10)
+
+            popul.append(make_trial(i, indv, idx_ligand, idx_receptor))
             population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))
 
         init_population = True
@@ -115,6 +131,7 @@ class DifferentialEvolutionAlgorithm:
             file_object.write("GENERATION: \t" + str(i) + "\t")
             gen_scores = [ind.score for ind in population]
 
+            gen_sol = population[gen_scores.index(min(gen_scores))]
             # cycle through each individual in the population
             trials = []
             for j in range(0, self.popsize):
@@ -159,6 +176,10 @@ class DifferentialEvolutionAlgorithm:
                 trials.append(v_trial)
 
             # --- SELECTION (step #3.C) -------------+
+            trials = [
+                make_trial(idx, t, gen_sol.idx_ligand, gen_sol.idx_receptor)
+                for idx, t in enumerate(trials)
+            ]
             trial_inds = self.popul_calculator.run(trials)
             self.popul_calculator.cost_func.print_information(trial_inds, True)
 

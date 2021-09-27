@@ -2,22 +2,21 @@ import os
 
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
-from src.local_search import LocalSearchPopulation
 from src.utils import IP_ADDRESS
 
 
 class ScorePopulation:
-    def __init__(self, scfxn, jobid, local_search_opt, config):
+    def __init__(self, scfxn, jobid, local_search, config):
         self.config = config
         self.name = "ScorePopulation"
         self.jobid = jobid
         self.scfxn = scfxn
-        self.local_search_opt = local_search_opt
         self.log_best = jobid.replace("evolution", "best")
         self.log_interface = jobid.replace("evolution", "interface")
+        self.log_flexbb = jobid.replace("evolution", "flexbb")
         self.log_popul = jobid.replace("evolution", "popul")
         self.log_trials = jobid.replace("evolution", "trials")
-        self.local_search = LocalSearchPopulation(scfxn, local_search_opt, config)
+        self.local_search = local_search
         with open(self.log_best, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
         with open(self.log_trials, "w") as file_object:
@@ -25,6 +24,8 @@ class ScorePopulation:
         with open(self.log_popul, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
         with open(self.log_interface, "w") as file_object:
+            file_object.write("#{}\n".format(jobid))
+        with open(self.log_flexbb, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
 
     def get_sol_string(self, sol):
@@ -38,7 +39,8 @@ class ScorePopulation:
             vector_str = ",".join(["{}".format(i) for i in DoFs_vector])
             file_object.write("{}\n".format(vector_str))
 
-        best_pdb = self.scfxn.apply_genotype_to_pose(best_solution.genotype)
+        # best_pdb = self.scfxn.apply_genotype_to_pose(best_solution.genotype)
+        best_pdb = self.local_search.best_pose
         return best_pdb, DoFs_vector, rmsd
 
     def size(self):
@@ -64,6 +66,13 @@ class ScorePopulation:
                 popul_irmsd_str = ",".join(["{:.2f}".format(i) for i in popul_irmsd])
                 file_object.write("{}\n".format(popul_interface_str))
                 file_object.write("{}\n".format(popul_irmsd_str))
+
+            popul_flexbb = [(ind.idx_ligand, ind.idx_receptor) for ind in popul]
+            with open(self.log_flexbb, "a") as file_object:
+                popul_flexbb_str = ",".join(
+                    ["({:.0f},{:.0f})".format(i[0], i[1]) for i in popul_flexbb]
+                )
+                file_object.write("{}\n".format(popul_flexbb_str))
 
     def print_information(self, popul, trial_popul=False):
         if trial_popul is False:

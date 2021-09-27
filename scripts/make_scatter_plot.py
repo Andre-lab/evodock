@@ -23,7 +23,7 @@ def logfile_to_dataframe(log):
     ]
 
     df = pd.DataFrame(individuals)
-    print(df)
+    # print(df)
     return df
 
 
@@ -51,6 +51,8 @@ def main():
     fig.tight_layout()
     fig.savefig("scatterplot.png")
     plt.close()
+
+    print("min rmsd {}".format(df.rmsd.min()))
 
 
 main()

@@ -10,6 +10,7 @@ from pyrosetta import init
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
+from src.local_search import LocalSearchPopulation
 from src.options import init_global_docking, init_local_docking
 from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
@@ -48,23 +49,33 @@ def main():
         os.makedirs("/".join(jobid.split("/")[:-1]), exist_ok=True)
 
     # --- INIT -----------------------------------------+
-    native_pose = get_pose_from_file(pose_input)
-    scfxn = FAFitnessFunction(native_pose, trans_max_magnitude)
+    native_input = config.native_input
+    input_pose = get_pose_from_file(pose_input)
+    native_pose = get_pose_from_file(native_input)
+    scfxn = FAFitnessFunction(input_pose, native_pose, trans_max_magnitude)
 
     position_str = ", ".join(
+        ["{:.2f}".format(e) for e in get_position_info(input_pose)]
+    )
+    native_position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(native_pose)]
     )
-    native_score = scfxn.scfxn_rosetta.score(native_pose)
 
-    score_popul = ScorePopulation(scfxn, jobid, local_search_option, config)
+    native_score = scfxn.scfxn_rosetta.score(native_pose)
+    input_score = scfxn.scfxn_rosetta.score(input_pose)
+
+    local_search = LocalSearchPopulation(scfxn, local_search_option, config)
+    score_popul = ScorePopulation(scfxn, jobid, local_search, config)
     popul_calculator = SingleProcessPopulCalculator(score_popul, config)
 
     logger.info("==============================")
-    logger.info(" native information ")
-    logger.info(" native position: " + position_str)
+    logger.info(" input information ")
+    logger.info(" input position: " + position_str)
+    logger.info(" input pose score {:.2f}".format(input_score))
     logger.info(" native pose score {:.2f}".format(native_score))
-
+    logger.info(" native position: " + native_position_str)
     logger.info("==============================")
+
     alg = DE(popul_calculator, config)
     init_population = alg.init_population(config.popsize, docking_type_option)
 

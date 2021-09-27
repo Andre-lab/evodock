@@ -17,7 +17,6 @@ class Individual:
         else:
             if idx_ligand > 100:
                 print("error at ligand idx")
-        idx_ligand = 1
 
         if idx_receptor == -1:
             idx_receptor = random.randit(1, 99)
@@ -25,7 +24,6 @@ class Individual:
             if idx_receptor > 100:
                 print("error at receptor idx")
 
-        idx_receptor = 1
         self.idx_ligand = idx_receptor
         self.idx_receptor = idx_ligand
         self.genotype = genotype
