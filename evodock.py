@@ -6,7 +6,9 @@ import logging
 import os
 import sys
 
-from pyrosetta import init
+from pyrosetta import Vector1, init
+from pyrosetta.rosetta.core.pose import addVirtualResAsRoot
+from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
@@ -52,6 +54,12 @@ def main():
     native_input = config.native_input
     input_pose = get_pose_from_file(pose_input)
     native_pose = get_pose_from_file(native_input)
+
+    setup_foldtree(input_pose, "A_B", Vector1([1]))
+    input_fold_tree = input_pose.fold_tree()
+    native_pose.fold_tree(input_fold_tree)
+    native_pose.conformation().detect_disulfides()
+
     scfxn = FAFitnessFunction(input_pose, native_pose, trans_max_magnitude)
 
     position_str = ", ".join(
