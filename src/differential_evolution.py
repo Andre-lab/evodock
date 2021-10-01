@@ -84,7 +84,7 @@ class DifferentialEvolutionAlgorithm:
                     indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
             else:
                 indv = generate_genotype(
-                    self.popul_calculator.scfxn.native_pose, self.max_translation
+                    self.popul_calculator.scfxn.input_pose, self.max_translation
                 )
 
             # todo: read file and count *.pdb

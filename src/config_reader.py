@@ -31,20 +31,30 @@ class EvodockConfig:
         if config.has_option("inputs", "native_input"):
             self.native_input = MAIN_PATH + config["inputs"].get("native_input")
         else:
-            logger.info("input complex not found. Use 'pose_input' parameter")
+            logger.info("native complex not found. Use 'native_input' parameter")
             exit()
 
         if self.docking_type_option == "Unbound":
             if config.has_option("inputs", "path_ligands"):
                 self.path_ligands = MAIN_PATH + config["inputs"].get("path_ligands")
             else:
-                logger.info("input complex not found. Use 'path_ligands' parameter")
+                logger.info(
+                    "path for ligand flexible BB not found. Use 'path_ligands' parameter"
+                )
                 exit()
 
             if config.has_option("inputs", "path_receptors"):
                 self.path_receptors = MAIN_PATH + config["inputs"].get("path_receptors")
             else:
-                logger.info("input complex not found. Use 'path_receptors' parameter")
+                logger.info(
+                    "path for receptor flexible BB not found. Use 'path_receptors' parameter"
+                )
+                exit()
+
+            if config.has_option("Docking", "bb_strategy"):
+                self.bb_strategy = config["Docking"].get("bb_strategy")
+            else:
+                logger.info("BB strategy not found. Use 'bb_strategy' parameter")
                 exit()
 
         # --- DE PARAMS -----------------------------------+
