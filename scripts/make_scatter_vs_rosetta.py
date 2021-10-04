@@ -52,13 +52,16 @@ def main():
     df = pd.concat([df_rosetta, df], ignore_index=True)
     print(df_rosetta.head())
 
+    min_value = df[df.rmsd == df.rmsd.min()]
+    print(min_value.head())
+    print(min_value.iloc[0].id)
     ax = sns.scatterplot(
         x="rmsd", y="score", data=df, hue="source", alpha=0.4, markers=["s"],
     )
     ax.set_xlim([0, min(df["rmsd"].values.tolist()) + 5])
-    ax.set_ylim(
-        [min(df["score"].values.tolist()) - 10, min(df["score"].values.tolist()) + 50]
-    )
+    # ax.set_ylim(
+    #     [min(df["score"].values.tolist()) - 10, min(df["score"].values.tolist()) + 50]
+    # )
 
     # ax.get_legend().remove()
     if "interface" in input_files[0]:
