@@ -41,17 +41,19 @@ python ./scripts/prepacking.py <input_pdb>
 1. Create a configuration file following the example found at [sample\_dock.ini](https://github.com/Andre-lab/evodock/blob/2fbc755cf84f64641153ad75757ad4bb3bf6ff3f/configs/sample_dock.ini)
 
 ```dosini
-[inputs]
-# complex pdb
-pose_input=./inputs/pdbs/1ppe_IE.prepack.pdb
-
-[outputs]
-# output file log
-output_file=quick_evolution_sample.log
-
 [Docking]
 # selects docking protocl [Global, Local]
 type=Global
+
+
+[inputs]
+# complex pdb
+pose_input=./inputs/pdbs/1ppe_IE.prepack.pdb
+native_input=./inputs/pdbs/1ppe_IE.prepack.pdb
+
+[outputs]
+# output file log
+output_file=sample_dock/quick_evolution_sample.log
 
 [DE]
 # evolution algorithm parent strategy [RANDOM, BEST] 
@@ -59,9 +61,9 @@ scheme=BEST
 # population size
 popsize=10
 # mutation rate (weight factor F) 
-mutate=0.9
+mutate=0.3
 # crossover probability (CR) 
-recombination=0.6
+recombination=0.9
 # maximum number of generations/iterations (stopping criteria)
 maxiter=10
 # hybrid local search strategy [None, only_slide, mcm_rosetta]
