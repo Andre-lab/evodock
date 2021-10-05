@@ -10,8 +10,8 @@ from pyrosetta.rosetta.core.import_pose import poses_from_files
 from pyrosetta.rosetta.core.pose import (append_pose_to_pose, chain_end_res,
                                          remove_virtual_residues)
 from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
-from pyrosetta.rosetta.protocols.docking import (DockMCMProtocol,
-                                                 FaDockingSlideIntoContact)
+from pyrosetta.rosetta.protocols.docking import (DockingSlideIntoContact,
+                                                 DockMCMProtocol)
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.utility import vector1_std_string
 
@@ -37,7 +37,7 @@ class LocalSearchStrategy:
             self.docking.set_task_factory(mcm_docking.task_factory())
             self.docking.set_ignore_default_task(True)
 
-        self.slide_into_contact = FaDockingSlideIntoContact(dock_pose.num_jump())
+        self.slide_into_contact = DockingSlideIntoContact(dock_pose.num_jump())
         if config.docking_type_option == "Unbound":
             lst_ligand = glob.glob(config.path_ligands)
             lst_receptor = glob.glob(config.path_receptors)
@@ -63,7 +63,23 @@ class LocalSearchStrategy:
     def apply_bb_strategy(self, ind, pose):
         bb_strategy = self.config.bb_strategy
         if bb_strategy == "library":
-            join_pose, idx_receptor, idx_ligand = self.define_ensemble(ind, pose)
+            pose_explore_position = Pose()
+            pose_explore_position.assign(pose)
+            join_pose1, idx_receptor1, idx_ligand1 = self.define_ensemble(
+                ind, pose_explore_position, False
+            )
+
+            pose_explore_bb_flexibility = Pose()
+            pose_explore_bb_flexibility.assign(pose)
+            join_pose2, idx_receptor2, idx_ligand2 = self.define_ensemble(
+                ind, pose_explore_bb_flexibility, True
+            )
+            score1 = self.energy_score(join_pose1)
+            score2 = self.energy_score(join_pose2)
+            if score1 < score2:
+                return join_pose1, idx_receptor1, idx_ligand1
+            else:
+                return join_pose2, idx_receptor2, idx_ligand2
         if bb_strategy == "relax":
             join_pose, idx_receptor, idx_ligand = self.define_relaxedbackbone(pose)
         if bb_strategy == "fixed":
@@ -71,13 +87,16 @@ class LocalSearchStrategy:
             idx_receptor, idx_ligand = 1, 1
         return join_pose, idx_receptor, idx_ligand
 
-    def define_ensemble(self, ind, reference_pose):
-        if random.uniform(0, 1) < 0.5:
-            idx_receptor = ind.idx_receptor
-            idx_ligand = random.randint(1, len(self.list_ligand))
+    def define_ensemble(self, ind, reference_pose, randomize_bb=True):
+        if randomize_bb is True:
+            if random.uniform(0, 1) < 0.5:
+                idx_receptor = ind.idx_receptor
+                idx_ligand = random.randint(1, len(self.list_ligand))
+            else:
+                idx_receptor = random.randint(1, len(self.list_receptor))
+                idx_ligand = ind.idx_ligand
         else:
-            idx_receptor = random.randint(1, len(self.list_receptor))
-            idx_ligand = ind.idx_ligand
+            idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
         pose_chainA = self.list_receptor[idx_receptor]
         pose_chainB = self.list_ligand[idx_ligand]
 
@@ -144,6 +163,7 @@ class LocalSearchStrategy:
             else:
                 prob = random.uniform(0, 1)
             if prob > 0.1:
+                self.slide_into_contact.apply(pose)
                 self.docking.apply(pose)
             else:
                 self.relax.apply(pose)
