@@ -57,6 +57,15 @@ class EvodockConfig:
                 logger.info("BB strategy not found. Use 'bb_strategy' parameter")
                 exit()
 
+        if self.docking_type_option == "RefineCluspro":
+            if config.has_option("inputs", "cluspro_pdbs"):
+                self.cluspro_pdbs = config["inputs"].get("cluspro_pdbs")
+            else:
+                logger.info(
+                    "Cluspro models are not found. Use 'cluspro_pdbs' parameter"
+                )
+                exit()
+
         # --- DE PARAMS -----------------------------------+
 
         self.scheme = config["DE"].get("scheme")

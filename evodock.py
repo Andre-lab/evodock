@@ -28,7 +28,7 @@ def main():
     config = EvodockConfig(sys.argv[-1])
 
     pose_input = config.pose_input
-    if config.docking_type_option in ["Local", "Unbound"]:
+    if config.docking_type_option in ["Local", "Unbound", "RefineCluspro"]:
         init(extra_options=init_local_docking(pose_input))
     else:
         init(extra_options=init_global_docking(pose_input))

@@ -3,7 +3,7 @@ import logging
 import random
 import time
 
-from src.genotype_converter import generate_genotype
+from src.genotype_converter import RefineCluspro, generate_genotype
 from src.individual import Individual
 from src.mpi_utils import IndividualMPI
 from src.selection import GreedySelection
@@ -72,6 +72,9 @@ class DifferentialEvolutionAlgorithm:
 
         population_calculator = self.popul_calculator
 
+        if docking_type == "RefineCluspro":
+            refCluspro = RefineCluspro(self.config, self.max_translation)
+
         if popsize is None:
             popsize = self.popsize
         self.logger.info(" init population")
@@ -83,13 +86,16 @@ class DifferentialEvolutionAlgorithm:
                 for j in range(len(self.bounds)):
                     indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
             else:
-                indv = generate_genotype(
-                    self.popul_calculator.scfxn.input_pose, self.max_translation
-                )
+                if docking_type == "RefineCluspro":
+                    indv = refCluspro.refine_cluspro(i)
+                else:
+                    indv = generate_genotype(
+                        self.popul_calculator.scfxn.input_pose, self.max_translation
+                    )
 
             # todo: read file and count *.pdb
-            idx_receptor = random.randint(1, 10)
-            idx_ligand = random.randint(1, 10)
+            idx_receptor = random.randint(1, 100)
+            idx_ligand = random.randint(1, 100)
 
             popul.append(make_trial(i, indv, idx_ligand, idx_receptor))
             population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))
