@@ -1,10 +1,32 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import glob
 import random
 
+from pyrosetta.rosetta.core.import_pose import poses_from_files
+from pyrosetta.rosetta.utility import vector1_std_string
+
 from src.distance_axes import calculate_local_coordinates
-from src.utils import convert_range, get_position_info
+from src.utils import convert_range, get_pose_from_file, get_position_info
+
+
+class RefineCluspro:
+    def __init__(self, config, max_trans):
+        input_pose = get_pose_from_file(config.pose_input)
+        lst = glob.glob(config.cluspro_pdbs)
+        filenames = vector1_std_string()
+        for f in lst:
+            filenames.append(f)
+        self.list_models = poses_from_files(filenames)
+        self.positions = [get_position_info(p) for p in self.list_models]
+        max_boundaries = [max([abs(x[i]) for x in self.positions]) for i in range(6)]
+        max_boundaries = list(map(lambda i: (i, i * -1), max_boundaries))
+        self.converter = GlobalGenotypeConverter(input_pose, max_trans)
+
+    def refine_cluspro(self, idx):
+        idx = int(idx % len(self.list_models))
+        return self.converter.convert_positions_to_genotype(self.positions[idx])
 
 
 def generate_genotype(pose_input, max_trans):

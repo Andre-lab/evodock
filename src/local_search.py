@@ -1,21 +1,11 @@
-import glob
 import logging
-import random
 
-from pyrosetta import Pose, SwitchResidueTypeSetMover, Vector1
-from pyrosetta.rosetta.core.import_pose import poses_from_files
-from pyrosetta.rosetta.core.pose import append_pose_to_pose
-from pyrosetta.rosetta.core.scoring import ScoreFunctionFactory
-from pyrosetta.rosetta.protocols.docking import (ConformerSwitchMover,
-                                                 DockingEnsemble,
-                                                 DockMCMProtocol,
-                                                 FaDockingSlideIntoContact,
-                                                 calc_interaction_energy,
+from pyrosetta import Pose, Vector1
+from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
                                                  calc_Irmsd)
-from pyrosetta.rosetta.protocols.simple_moves import ReturnSidechainMover
-from pyrosetta.rosetta.utility import vector1_std_string
 
 from src.individual import Individual
+from src.local_search_strategy import LocalSearchStrategy
 from src.utils import get_position_info
 
 
@@ -37,36 +27,17 @@ def ConformerSwitchCreator(config):
 
 
 class LocalSearchPopulation:
-    # Options:
-    # None: only score and return the poses
-    # only_slide: just slide_into_contact
-    # mcm_rosetta: mcm protocol mover (high res) from rosetta (2 cycles)
     def __init__(self, scfxn, packer_option, config):
         self.config = config
-        self.conformer1_, self.conformer2_ = ConformerSwitchCreator(config)
-        self.packer_option = packer_option
         self.scfxn = scfxn
         self.local_logger = logging.getLogger("evodock.local")
         self.local_logger.setLevel(logging.INFO)
-        self.native_fold_tree = scfxn.dock_pose.fold_tree()
-        # self.slide_into_contact = DockingSlideIntoContact(1)
-
-        self.recover_sidechains = ReturnSidechainMover(scfxn.native_pose)
-        self.to_centroid = SwitchResidueTypeSetMover("centroid")
-        self.to_fullatom = SwitchResidueTypeSetMover("fa_standard")
-        if packer_option == "mcm_rosetta":
-            mcm_docking = DockMCMProtocol()
-            mcm_docking.set_native_pose(scfxn.dock_pose)
-            mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
-            mcm_docking.set_rt_min(False)
-            mcm_docking.set_sc_min(False)
-            mock_pose = Pose()
-            mock_pose.assign(scfxn.dock_pose)
-            mcm_docking.apply(mock_pose)
-            self.docking = mcm_docking
-            self.docking.set_task_factory(mcm_docking.task_factory())
-            self.docking.set_ignore_default_task(True)
-
+        self.local_search_strategy = LocalSearchStrategy(config, scfxn, scfxn.dock_pose)
+        self.starting_pose = Pose()
+        self.starting_pose.assign(scfxn.dock_pose)
+        self.best_pose = Pose()
+        self.best_pose.assign(scfxn.dock_pose)
+        self.best_score = 100000000
         self.best_pose = Pose()
         self.best_pose.assign(scfxn.dock_pose)
         self.best_score = 1000
@@ -93,44 +64,31 @@ class LocalSearchPopulation:
         return idx_ligand, idx_receptor, join_pose
 
     def process_individual(self, ind, local_search=True):
-        idx_ligand, idx_receptor, join_pose = self.build_essemble_pose(ind)
-        self.scfxn.dock_pose = join_pose
-        # idx_ligand, idx_receptor = 1, 1
-
-        pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
-
-        slide_into_contact = FaDockingSlideIntoContact(pose.num_jump())
-        pose.dump_pdb("test_join.pdb")
-        before = self.energy_score(pose)
-        if local_search and self.packer_option != "None":
-            slide_into_contact.apply(pose)
-            if self.packer_option != "only_slide":
-                self.docking.apply(pose)
-            after = self.energy_score(pose)
-        else:
-            after = before
-
+        data = self.local_search_strategy.apply(ind, local_search)
+        pose = data["pose"]
         rmsd = self.scfxn.get_rmsd(pose)
-
         interface = calc_interaction_energy(
-            pose, self.scfxn.scfxn_rosetta, Vector1([pose.num_jump()])
+            pose, self.scfxn.scfxn_rosetta, Vector1([1])
         )
         irms = calc_Irmsd(
-            self.scfxn.native_pose,
-            pose,
-            self.scfxn.scfxn_rosetta,
-            Vector1([pose.num_jump()]),
+            self.scfxn.native_pose, pose, self.scfxn.scfxn_rosetta, Vector1([1]),
         )
-
-        if after < self.best_score:
+        if data["after"] < self.best_score:
+            self.best_score = data["after"]
             self.best_pose.assign(pose)
-
         # get position from pose
         positions = get_position_info(pose)
         # replace trial with this new positions
         genotype = self.scfxn.convert_positions_to_genotype(positions)
         result_individual = Individual(
-            genotype, after, idx_ligand, idx_receptor, rmsd, interface, irms
+            genotype,
+            data["after"],
+            data["idx_ligand"],
+            data["idx_receptor"],
+            rmsd,
+            interface,
+            irms,
         )
+        self.scfxn.dock_pose.assign(self.starting_pose)
 
-        return result_individual, before, after
+        return result_individual, data["before"], data["after"]
