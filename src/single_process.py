@@ -26,7 +26,6 @@ class SingleProcessPopulCalculator:
                 ) = self.cost_func.local_search.process_individual(ind, True)
             else:
                 scored_ind, _, _ = self.local_search.process_individual(ind)
-
             result_pop.append(scored_ind)
         return result_pop
 
