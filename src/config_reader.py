@@ -57,6 +57,17 @@ class EvodockConfig:
                 logger.info("BB strategy not found. Use 'bb_strategy' parameter")
                 exit()
 
+            if self.bb_strategy == "relax":
+                if config.has_option("Docking", "relax_prob"):
+                    self.relax_prob = config["Docking"].getfloat("relax_prob")
+                else:
+                    logger.info(
+                        "relax probability not found. Use 'relax_prob' parameter"
+                    )
+                    exit()
+            else:
+                self.relax_prob = -1
+
         if self.docking_type_option == "RefineCluspro":
             if config.has_option("inputs", "cluspro_pdbs"):
                 self.cluspro_pdbs = config["inputs"].get("cluspro_pdbs")
