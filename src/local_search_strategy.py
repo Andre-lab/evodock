@@ -63,14 +63,14 @@ class LocalSearchStrategy:
     def apply_bb_strategy(self, ind, pose):
         bb_strategy = self.config.bb_strategy
         if bb_strategy == "library":
-            pose_explore_bb_flexibility = Pose()
-            pose_explore_bb_flexibility.assign(pose)
-            join_pose2, idx_receptor2, idx_ligand2 = self.define_ensemble(
-                ind, pose_explore_bb_flexibility, True
-            )
-            return join_pose2, idx_receptor2, idx_ligand2
+            join_pose, idx_receptor, idx_ligand = self.define_ensemble(ind, pose)
+            return join_pose, idx_receptor, idx_ligand
         if bb_strategy == "relax":
-            join_pose, idx_receptor, idx_ligand = self.define_relaxedbackbone(pose)
+            if self.config.relax_prob > random.uniform(0, 1):
+                join_pose, idx_receptor, idx_ligand = self.define_relaxedbackbone(pose)
+            else:
+                join_pose, idx_receptor, idx_ligand = self.define_ensemble(ind, pose)
+            return join_pose, idx_receptor, idx_ligand
         if bb_strategy == "fixed":
             join_pose = pose
             idx_receptor, idx_ligand = 1, 1
@@ -142,22 +142,13 @@ class LocalSearchStrategy:
         return return_data
 
     def apply_unbound_docking(self, ind, local_search=True):
+        relax_prob = self.config.relax_prob
         pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
-        if self.config.bb_strategy == "library":
-            join_pose, idx_receptor, idx_ligand = self.apply_bb_strategy(ind, pose)
-        else:
-            if random.uniform(0, 1) > 0.1:
-                join_pose, idx_receptor, idx_ligand = self.apply_bb_strategy(ind, pose)
-            else:
-                join_pose, idx_receptor, idx_ligand = self.apply_bb_strategy(ind, pose)
-
+        join_pose, idx_receptor, idx_ligand = self.apply_bb_strategy(ind, pose)
         before = self.energy_score(join_pose)
         if local_search and self.packer_option != "None":
-            if self.config.bb_strategy == "library":
-                prob = 1.0
-            else:
-                prob = random.uniform(0, 1)
-            if prob > 0.1:
+            apply_relax = relax_prob > random.uniform(0, 1)
+            if not apply_relax:
                 self.slide_into_contact.apply(join_pose)
                 self.docking.apply(join_pose)
             else:
