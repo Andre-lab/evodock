@@ -76,7 +76,7 @@ class FAFitnessFunction:
         flexible_jump.set_rotation(rosetta_rotation)
         flexible_jump.set_translation(rosetta_translation)
         ind_pose.set_jump(ind_pose.num_jump(), flexible_jump)
-        # now is time to score the join_pose
+        # now is time to score the joined pose (ind_pose)
         return ind_pose
 
     def render_individual(self, pdb_id, individual, is_best=None, interface=False):

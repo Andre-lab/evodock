@@ -63,23 +63,12 @@ class LocalSearchStrategy:
     def apply_bb_strategy(self, ind, pose):
         bb_strategy = self.config.bb_strategy
         if bb_strategy == "library":
-            pose_explore_position = Pose()
-            pose_explore_position.assign(pose)
-            join_pose1, idx_receptor1, idx_ligand1 = self.define_ensemble(
-                ind, pose_explore_position, False
-            )
-
             pose_explore_bb_flexibility = Pose()
             pose_explore_bb_flexibility.assign(pose)
             join_pose2, idx_receptor2, idx_ligand2 = self.define_ensemble(
                 ind, pose_explore_bb_flexibility, True
             )
-            score1 = self.energy_score(join_pose1)
-            score2 = self.energy_score(join_pose2)
-            if score1 < score2:
-                return join_pose1, idx_receptor1, idx_ligand1
-            else:
-                return join_pose2, idx_receptor2, idx_ligand2
+            return join_pose2, idx_receptor2, idx_ligand2
         if bb_strategy == "relax":
             join_pose, idx_receptor, idx_ligand = self.define_relaxedbackbone(pose)
         if bb_strategy == "fixed":
@@ -89,14 +78,19 @@ class LocalSearchStrategy:
 
     def define_ensemble(self, ind, reference_pose, randomize_bb=True):
         if randomize_bb is True:
-            if random.uniform(0, 1) < 0.5:
-                idx_receptor = ind.idx_receptor
+            if ind.idx_receptor == ind.idx_ligand:
                 idx_ligand = random.randint(1, len(self.list_ligand))
-            else:
                 idx_receptor = random.randint(1, len(self.list_receptor))
-                idx_ligand = ind.idx_ligand
+            else:
+                if random.uniform(0, 1) < 0.5:
+                    idx_receptor = ind.idx_receptor
+                    idx_ligand = random.randint(1, len(self.list_ligand))
+                else:
+                    idx_receptor = random.randint(1, len(self.list_receptor))
+                    idx_ligand = ind.idx_ligand
         else:
             idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
+
         pose_chainA = self.list_receptor[idx_receptor]
         pose_chainB = self.list_ligand[idx_ligand]
 
@@ -111,9 +105,11 @@ class LocalSearchStrategy:
         join_pose = Pose()
         join_pose.assign(pose_chainA)
         append_pose_to_pose(join_pose, pose_chainB, True)
+        join_pose.pdb_info().rebuild_pdb2pose()
 
         join_pose.fold_tree(self.native_fold_tree)
         join_pose.conformation().detect_disulfides()
+
         return join_pose, idx_receptor, idx_ligand
 
     def define_relaxedbackbone(self, pose):
@@ -155,28 +151,27 @@ class LocalSearchStrategy:
             else:
                 join_pose, idx_receptor, idx_ligand = self.apply_bb_strategy(ind, pose)
 
-        self.scfxn.dock_pose = join_pose
-        before = self.energy_score(pose)
+        before = self.energy_score(join_pose)
         if local_search and self.packer_option != "None":
             if self.config.bb_strategy == "library":
                 prob = 1.0
             else:
                 prob = random.uniform(0, 1)
             if prob > 0.1:
-                self.slide_into_contact.apply(pose)
-                self.docking.apply(pose)
+                self.slide_into_contact.apply(join_pose)
+                self.docking.apply(join_pose)
             else:
-                self.relax.apply(pose)
-                self.relaxed_backbones.append(pose)
+                self.relax.apply(join_pose)
+                self.relaxed_backbones.append(join_pose)
                 if len(self.relaxed_backbones) > 100:
                     self.relaxed_backbones = sample(self.relaxed_backbones, 100)
-                remove_virtual_residues(pose)
-                pose.fold_tree(self.native_fold_tree)
-            after = self.energy_score(pose)
+                remove_virtual_residues(join_pose)
+                join_pose.fold_tree(self.native_fold_tree)
+            after = self.energy_score(join_pose)
         else:
             after = before
         return_data = {
-            "pose": pose,
+            "pose": join_pose,
             "before": before,
             "after": after,
             "idx_ligand": idx_ligand,
