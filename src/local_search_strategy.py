@@ -67,7 +67,9 @@ class LocalSearchStrategy:
             return join_pose, idx_receptor, idx_ligand
         if bb_strategy == "relax":
             if self.config.relax_prob > random.uniform(0, 1):
-                join_pose, idx_receptor, idx_ligand = self.define_relaxedbackbone(pose)
+                join_pose, idx_receptor, idx_ligand = self.define_relaxedbackbone(
+                    ind, pose
+                )
             else:
                 join_pose, idx_receptor, idx_ligand = self.define_ensemble(ind, pose)
             return join_pose, idx_receptor, idx_ligand
@@ -112,8 +114,12 @@ class LocalSearchStrategy:
 
         return join_pose, idx_receptor, idx_ligand
 
-    def define_relaxedbackbone(self, pose):
+    def define_relaxedbackbone(self, ind, pose):
+        print("relax backbone")
         idx = random.randint(0, len(self.relaxed_backbones) - 1)
+        if idx > len(self.relaxed_backbones):
+            idx = random.randint(0, len(self.relaxed_backbones) - 1)
+
         join_pose = self.relaxed_backbones[idx]
         idx_receptor, idx_ligand = idx, idx
 
@@ -154,8 +160,13 @@ class LocalSearchStrategy:
             else:
                 self.relax.apply(join_pose)
                 self.relaxed_backbones.append(join_pose)
+                print("backbone")
                 if len(self.relaxed_backbones) > 100:
                     self.relaxed_backbones = sample(self.relaxed_backbones, 100)
+                idx_ligand, idx_receptor = (
+                    len(self.relaxed_backbones),
+                    len(self.relaxed_backbones),
+                )
                 remove_virtual_residues(join_pose)
                 join_pose.fold_tree(self.native_fold_tree)
             after = self.energy_score(join_pose)
