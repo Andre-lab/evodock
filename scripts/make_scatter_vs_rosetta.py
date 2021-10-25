@@ -2,6 +2,8 @@
 # coding: utf-8
 
 import glob
+import os
+import shutil
 import sys
 
 import matplotlib.pyplot as plt
@@ -52,9 +54,6 @@ def main():
     df = pd.concat([df_rosetta, df], ignore_index=True)
     print(df_rosetta.head())
 
-    min_value = df[df.rmsd == df.rmsd.min()]
-    print(min_value.head())
-    print(min_value.iloc[0].id)
     ax = sns.scatterplot(
         x="rmsd", y="score", data=df, hue="source", alpha=0.4, markers=["s"],
     )
@@ -63,6 +62,16 @@ def main():
     #     [min(df["score"].values.tolist()) - 10, min(df["score"].values.tolist()) + 50]
     # )
 
+    df = df[df.source == "evodock"]
+    min_value = df[df.rmsd == df.rmsd.min()]
+    print(min_value.head())
+    print(min_value.iloc[0].id)
+    pdb = (
+        "/".join(min_value.iloc[0].id.split("/")[:-1])
+        + "/evolution_f03_cr09_final_docked_evo.pdb"
+    )
+    if os.path.isfile(pdb):
+        shutil.copy(pdb, "best_found.pdb")
     # ax.get_legend().remove()
     if "interface" in input_files[0]:
         ax.set_xlabel("iRMSD")

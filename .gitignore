@@ -20,3 +20,5 @@
 
 !images/
 !images/*png
+
+configs/sample_config_mass.ini
