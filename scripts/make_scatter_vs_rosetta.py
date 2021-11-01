@@ -30,6 +30,46 @@ def logfile_to_dataframe(log):
     return df
 
 
+def best_pdb(df):
+    df = df[df.source == "evodock"]
+    min_value = df[df.rmsd == df.rmsd.min()]
+    print(min_value.head())
+    print(min_value.iloc[0].id)
+    pdb = (
+        "/".join(min_value.iloc[0].id.split("/")[:-1])
+        + "/evolution_f03_cr09_final_docked_evo.pdb"
+    )
+    if os.path.isfile(pdb):
+        shutil.copy(pdb, "best_found.pdb")
+
+
+def print_plot(name, df, interface=False, zoom=False):
+    ax = sns.scatterplot(
+        x="rmsd", y="score", data=df, hue="source", alpha=0.4, markers=["s"],
+    )
+    if zoom:
+        ax.set_xlim([0, min(df["rmsd"].values.tolist()) + 10])
+        ax.set_ylim(
+            [
+                min(df["score"].values.tolist()) - 10,
+                min(df["score"].values.tolist()) + 30,
+            ]
+        )
+    if interface:
+        ax.set_xlabel("iRMSD")
+        ax.set_ylabel("interface REU (Rosetta Energy Units)")
+    else:
+        ax.set_xlabel("RMSD")
+        ax.set_ylabel("REU (Rosetta Energy Units)")
+    fig = ax.get_figure()
+    fig.tight_layout()
+
+    name = "interface_" + name if interface else name
+    name = "zoom_" + name if zoom else name
+    fig.savefig(name)
+    plt.close()
+
+
 def main():
     input_files = glob.glob(sys.argv[-1])
     print(input_files)
@@ -54,37 +94,12 @@ def main():
     df = pd.concat([df_rosetta, df], ignore_index=True)
     print(df_rosetta.head())
 
-    ax = sns.scatterplot(
-        x="rmsd", y="score", data=df, hue="source", alpha=0.4, markers=["s"],
-    )
-    ax.set_xlim([0, min(df["rmsd"].values.tolist()) + 5])
-    # ax.set_ylim(
-    #     [min(df["score"].values.tolist()) - 10, min(df["score"].values.tolist()) + 50]
-    # )
-
-    df = df[df.source == "evodock"]
-    min_value = df[df.rmsd == df.rmsd.min()]
-    print(min_value.head())
-    print(min_value.iloc[0].id)
-    pdb = (
-        "/".join(min_value.iloc[0].id.split("/")[:-1])
-        + "/evolution_f03_cr09_final_docked_evo.pdb"
-    )
-    if os.path.isfile(pdb):
-        shutil.copy(pdb, "best_found.pdb")
-    # ax.get_legend().remove()
-    if "interface" in input_files[0]:
-        ax.set_xlabel("iRMSD")
-        ax.set_ylabel("interface REU (Rosetta Energy Units)")
-    else:
-        ax.set_xlabel("RMSD")
-        ax.set_ylabel("REU (Rosetta Energy Units)")
-    fig = ax.get_figure()
-    fig.tight_layout()
-    fig.savefig("scatterplot.png")
-    plt.close()
-
-    print("min rmsd {}".format(df.rmsd.min()))
+    name = input_files[0].split("/")[0] + ".png"
+    interface = "interface" in input_files[0]
+    print_plot(name, df, interface)
+    print_plot(name, df, interface, zoom=True)
+    best_pdb(df)
 
 
-main()
+if __name__ == "__main__":
+    main()
