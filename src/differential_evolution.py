@@ -94,8 +94,8 @@ class DifferentialEvolutionAlgorithm:
                     )
 
             # todo: read file and count *.pdb
-            idx_receptor = random.randint(1, 100)
-            idx_ligand = random.randint(1, 100)
+            idx_receptor = random.randint(0, 82)
+            idx_ligand = random.randint(0, 99)
 
             popul.append(make_trial(i, indv, idx_ligand, idx_receptor))
             population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))

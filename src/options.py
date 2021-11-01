@@ -19,6 +19,7 @@ def init_global_docking(filename):
 def init_local_docking(filename):
     opts = [
         "-mute all",
+        # "-out:level 9999",
         "-output_virtual True",
         "-detect_disulf True",
         "-docking:dock_mcm_first_cycles 1",
@@ -26,7 +27,7 @@ def init_local_docking(filename):
         "-dock_pert 3 8",
         "-relax:default_repeats 1",
         "-relax:jump_move true",
-        "-relax:constrain_relax_to_start_coords",
+        # "-relax:constrain_relax_to_start_coords",
         "-docking:docking_centroid_inner_cycles 1",
         "-docking:docking_centroid_outer_cycles 1",
         "-include_current True",
