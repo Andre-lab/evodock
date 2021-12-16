@@ -21,6 +21,8 @@ class EvodockConfig:
 
         self.docking_type_option = config["Docking"].get("type")
 
+        self.bb_strategy = "None"
+        self.relax_prob = -1
         # --- Input Params -----------------------------+
         if config.has_option("inputs", "pose_input"):
             self.pose_input = MAIN_PATH + config["inputs"].get("pose_input")
@@ -34,29 +36,31 @@ class EvodockConfig:
             logger.info("native complex not found. Use 'native_input' parameter")
             exit()
 
+        if config.has_option("Docking", "bb_strategy"):
+            self.bb_strategy = config["Docking"].get("bb_strategy")
+        else:
+            logger.info("BB strategy not found. Use 'bb_strategy' parameter")
+            exit()
+            
+        if config.has_option("inputs", "path_ligands"):
+            self.path_ligands = MAIN_PATH + config["inputs"].get("path_ligands")
+        else:
+            logger.info(
+                "path for ligand flexible BB not found. Use 'path_ligands' parameter"
+            )
+            exit()
+
+        if config.has_option("inputs", "path_receptors"):
+            self.path_receptors = MAIN_PATH + config["inputs"].get("path_receptors")
+        else:
+            logger.info(
+                "path for receptor flexible BB not found. Use 'path_receptors' parameter"
+            )
+            exit()
+
+
+
         if self.docking_type_option == "Unbound":
-            if config.has_option("inputs", "path_ligands"):
-                self.path_ligands = MAIN_PATH + config["inputs"].get("path_ligands")
-            else:
-                logger.info(
-                    "path for ligand flexible BB not found. Use 'path_ligands' parameter"
-                )
-                exit()
-
-            if config.has_option("inputs", "path_receptors"):
-                self.path_receptors = MAIN_PATH + config["inputs"].get("path_receptors")
-            else:
-                logger.info(
-                    "path for receptor flexible BB not found. Use 'path_receptors' parameter"
-                )
-                exit()
-
-            if config.has_option("Docking", "bb_strategy"):
-                self.bb_strategy = config["Docking"].get("bb_strategy")
-            else:
-                logger.info("BB strategy not found. Use 'bb_strategy' parameter")
-                exit()
-
             if self.bb_strategy == "relax":
                 if config.has_option("Docking", "relax_prob"):
                     self.relax_prob = config["Docking"].getfloat("relax_prob")
@@ -98,6 +102,17 @@ class EvodockConfig:
         # --- CONFIG STRUCTURE -----------------------------------+
         self.config = config
 
+    def get_constraint_weight(self):
+        if self.config.has_option("Docking", "cst_weight"):
+            self.constraint_weight = self.config["Docking"].getint(
+                "cst_weight"
+            )
+        else:
+            self.constraint_weight = 0 
+        return self.constraint_weight
+
+
+        
     def get_max_translation(self):
         # --- Position Params -----------------------------+
         if self.config.has_option("position", "trans_max_magnitude"):

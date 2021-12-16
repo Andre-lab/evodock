@@ -5,6 +5,7 @@
 !*.py
 !src/
 !src/**.py
+flycheck*py
 
 !configs/
 !configs/**.ini

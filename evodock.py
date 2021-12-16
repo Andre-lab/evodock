@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
 import logging
 import os
 import sys
 
 from pyrosetta import Vector1, init
-from pyrosetta.rosetta.core.pose import addVirtualResAsRoot
+from pyrosetta.rosetta.core.scoring import CA_rmsd
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
 from src.config_reader import EvodockConfig
@@ -60,7 +59,7 @@ def main():
     native_pose.fold_tree(input_fold_tree)
     native_pose.conformation().detect_disulfides()
 
-    scfxn = FAFitnessFunction(input_pose, native_pose, trans_max_magnitude)
+    scfxn = FAFitnessFunction(input_pose, native_pose, config)
 
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(input_pose)]
@@ -82,6 +81,7 @@ def main():
     logger.info(" input pose score {:.2f}".format(input_score))
     logger.info(" native pose score {:.2f}".format(native_score))
     logger.info(" native position: " + native_position_str)
+    logger.info(" input vs native rmsd: " + str(CA_rmsd(input_pose, native_pose)))
     logger.info("==============================")
 
     alg = DE(popul_calculator, config)

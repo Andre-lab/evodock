@@ -24,8 +24,8 @@ class Individual:
             if idx_receptor > 100:
                 print("error at receptor idx")
 
-        self.idx_ligand = idx_receptor
-        self.idx_receptor = idx_ligand
+        self.idx_receptor = idx_receptor
+        self.idx_ligand = idx_ligand
         self.genotype = genotype
         self.score = score
         self.rmsd = rmsd
