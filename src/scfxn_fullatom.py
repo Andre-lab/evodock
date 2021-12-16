@@ -5,21 +5,24 @@ import logging
 import numpy as np
 from pyrosetta import Pose, Vector1
 from pyrosetta.rosetta.core.pose import get_jump_id_from_chain
-from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory
-from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
-                                                 calc_Irmsd, setup_foldtree)
+from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory, ScoreType
+from pyrosetta.rosetta.protocols.docking import (
+    calc_interaction_energy,
+    calc_Irmsd,
+    setup_foldtree,
+)
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from scipy.spatial.transform import Rotation as R
 
-from src.genotype_converter import (GlobalGenotypeConverter,
-                                    LocalGenotypeConverter)
+from src.genotype_converter import GlobalGenotypeConverter, LocalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
 from src.utils import IP_ADDRESS
 
 
 class FAFitnessFunction:
-    def __init__(self, input_pose, native_pose, trans_max_magnitude):
+    def __init__(self, input_pose, native_pose, config):
         self.logger = logging.getLogger("evodock.scfxn")
+        self.trans_max_magnitude = config.get_max_translation()
         self.native_pose = Pose()
         self.native_pose.assign(native_pose)
         self.input_pose = Pose()
@@ -28,9 +31,11 @@ class FAFitnessFunction:
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude)
+        self.converter = GlobalGenotypeConverter(
+            self.input_pose, self.trans_max_magnitude
+        )
         self.pymover.apply(self.input_pose)
-        self.trans_max_magnitude = trans_max_magnitude
+
         self.dock_pose.assign(self.input_pose)
         self.dock_pose.pdb_info().name("INIT_STATE")
         self.pymover.apply(self.dock_pose)
