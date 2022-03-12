@@ -38,9 +38,9 @@ class SingleProcessPopulCalculator:
                     before,
                     after,
                 ) = self.cost_func.local_search.process_individual(ind, True)
-                # if LOW_LIMIT_INIT_DIVERSITY > 0:
-                #     while scored_ind.rmsd < LOW_LIMIT_INIT_DIVERSITY:
-                #         (scored_ind, before, after) = self.randomize_ind(scored_ind)
+                if self.config.docking_type_option and LOW_LIMIT_INIT_DIVERSITY > 0:
+                    while scored_ind.rmsd < LOW_LIMIT_INIT_DIVERSITY:
+                        (scored_ind, before, after) = self.randomize_ind(scored_ind)
             else:
                 scored_ind, _, _ = self.local_search.process_individual(ind)
             result_pop.append(scored_ind)
