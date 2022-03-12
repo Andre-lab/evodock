@@ -63,9 +63,13 @@ class DifferentialEvolutionAlgorithm:
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.job_id.replace("evolution", "time")
         self.max_translation = config.get_max_translation()
-        self.relax_operator = RelaxOperator(config, self.popul_calculator.scfxn, self.popul_calculator.local_search)
+        self.relax_operator = RelaxOperator(
+            config, self.popul_calculator.scfxn, self.popul_calculator.local_search
+        )
         if self.config.bb_strategy == "popul_library":
-            self.flexbb_swap_operator = PopulationSwapOperator(config, self.popul_calculator.scfxn, self.popul_calculator.local_search)
+            self.flexbb_swap_operator = PopulationSwapOperator(
+                config, self.popul_calculator.scfxn, self.popul_calculator.local_search
+            )
         else:
             self.flexbb_swap_operator = None
         self.init_file()
@@ -101,26 +105,29 @@ class DifferentialEvolutionAlgorithm:
                     )
 
             # todo: read file and count *.pdb
-            
+
             len_receptors = len(glob.glob(self.config.path_receptors)) - 1
             len_ligands = len(glob.glob(self.config.path_ligands)) - 1
-               
+
             if self.config.docking_type_option == "Unbound":
                 idx_receptor = random.randint(0, len_receptors)
-                idx_ligand = random.randint(0,len_ligands)
+                idx_ligand = random.randint(0, len_ligands)
             else:
                 if self.config.bb_strategy == "popul_library":
                     idx_receptor = random.randint(0, len_receptors)
-                    idx_ligand = random.randint(0,len_ligands)
+                    idx_ligand = random.randint(0, len_ligands)
                 else:
-                    idx_ligand, idx_receptor = 1, 1 
+                    idx_ligand, idx_receptor = 1, 1
 
             popul.append(make_trial(i, indv, idx_ligand, idx_receptor))
             population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))
 
         init_population = True
+        start = time.time()
         population = population_calculator.run(popul, init_population)
-        self.popul_calculator.cost_func.pymol_visualization(population)
+        end = time.time()
+        self.logger.info(f"population init in {end - start} seconds")
+        # self.popul_calculator.cost_func.pymol_visualization(population)
         return population
 
     def init_file(self):
@@ -148,7 +155,7 @@ class DifferentialEvolutionAlgorithm:
         # cycle through each generation (step #2)
         for i in range(1, self.maxiter + 1):
             self.logger.info(" GENERATION:" + str(i))
-            start = time.time()
+            gen_start = time.time()
             file_object = open(self.job_id, "a")
             file_time = open(self.file_time_name, "a")
 
@@ -200,6 +207,7 @@ class DifferentialEvolutionAlgorithm:
                 trials.append(v_trial)
 
             # --- SELECTION (step #3.C) -------------+
+            start = time.time()
             trials = [
                 make_trial(idx, t, gen_sol.idx_ligand, gen_sol.idx_receptor)
                 for idx, t in enumerate(trials)
@@ -210,6 +218,9 @@ class DifferentialEvolutionAlgorithm:
             population, gen_scores, trial_scores = GreedySelection().apply(
                 trial_inds, population
             )
+
+            end = time.time()
+            self.logger.info(f"selection stage in {end - start} seconds")
 
             # --- SCORE KEEPING --------------------------------+
             gen_avg = sum(gen_scores) / self.popsize
@@ -236,10 +247,10 @@ class DifferentialEvolutionAlgorithm:
             )
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
             self.popul_calculator.cost_func.print_information(population)
-            self.popul_calculator.cost_func.pymol_visualization(population)
+            # self.popul_calculator.cost_func.pymol_visualization(population)
 
             # best_pdb, population = self.apply_popul_flexbb(population)
-            best_pdb = self.apply_bb_flexibility(best_pdb)
+            # best_pdb = self.apply_bb_flexibility(best_pdb)
             name = self.job_id.replace(".log", "_evolved.pdb")
             best_pdb.dump_pdb(name)
 
@@ -247,18 +258,24 @@ class DifferentialEvolutionAlgorithm:
             file_object.write("%f \t" % gen_best)
             file_object.write("%f \n" % best_rmsd)
             file_object.close()
-            end = time.time()
-            file_time.write("%f \n" % (end - start))
+            gen_end = time.time()
+            self.logger.info(f"selection stage in {gen_end - gen_start} seconds")
+            file_time.write("%f \n" % (gen_end - gen_start))
             file_time.close()
 
         return population, best_pdb
 
     def apply_popul_flexbb(self, population):
         return self.flexbb_swap_operator.apply(population)
-    
+
     def apply_bb_flexibility(self, best_pdb):
-        if self.config.docking_type_option == "Unbound" and self.config.bb_strategy == "relax_best":
+        if (
+            self.config.docking_type_option == "Unbound"
+            and self.config.bb_strategy == "relax_best"
+        ):
             best_pdb, start_energy, final_energy = self.relax_operator.apply(best_pdb)
             if final_energy < start_energy:
-                self.logger.info("   !! Improved relax {} {}".format(init_score, final_score))
-        return best_pdb 
+                self.logger.info(
+                    "   !! Improved relax {} {}".format(init_score, final_score)
+                )
+        return best_pdb

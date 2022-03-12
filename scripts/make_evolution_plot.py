@@ -14,7 +14,8 @@ def plots_during_evolution(df, name):
     sns.lineplot(x="gen", y="avg", data=df, ax=ax)
     sns.lineplot(x="gen", y="rmsd", data=df, ax=axes[1])
     fig.tight_layout()
-    fig_name = name.replace(".log", ".png")
+    # fig_name = name.replace(".log", ".png")
+    fig_name = "check_evolution.png"
     fig.savefig(fig_name)
     plt.close()
     return fig_name.replace(".png", "")
