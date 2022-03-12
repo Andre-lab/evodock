@@ -28,17 +28,17 @@ class FAFitnessFunction:
         self.input_pose = Pose()
         self.input_pose.assign(input_pose)
         self.logger.setLevel(logging.INFO)
-        self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
+        # self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
         self.converter = GlobalGenotypeConverter(
             self.input_pose, self.trans_max_magnitude
         )
-        self.pymover.apply(self.input_pose)
+        # self.pymover.apply(self.input_pose)
 
         self.dock_pose.assign(self.input_pose)
         self.dock_pose.pdb_info().name("INIT_STATE")
-        self.pymover.apply(self.dock_pose)
+        # self.pymover.apply(self.dock_pose)
         self.jump_num = 1
         self.ax1, self.ax2, self.ax3 = build_axis()
         mros_temp = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
@@ -106,7 +106,7 @@ class FAFitnessFunction:
             dst = 10000
         prot_name = "popul" if is_best is None else is_best
         pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        self.pymover.apply(pose)
+        # self.pymover.apply(pose)
         rmsd = self.get_rmsd(pose)
         return dst, rmsd, interface, irms
 
@@ -119,6 +119,6 @@ class FAFitnessFunction:
             dst = 10000
         prot_name = "popul" if is_best is None else is_best
         pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        self.pymover.apply(pose)
+        # self.pymover.apply(pose)
         rmsd = self.get_rmsd(pose)
         return dst, rmsd, interface, irms
