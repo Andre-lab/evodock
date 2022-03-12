@@ -9,11 +9,16 @@ from src.flexbb_swap_operator import FlexbbSwapOperator
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from pyrosetta import Pose
 from pyrosetta.rosetta.core.import_pose import poses_from_files
-from pyrosetta.rosetta.core.pose import (append_pose_to_pose, chain_end_res,
-                                         remove_virtual_residues)
+from pyrosetta.rosetta.core.pose import (
+    append_pose_to_pose,
+    chain_end_res,
+    remove_virtual_residues,
+)
 from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
-from pyrosetta.rosetta.protocols.docking import (DockMCMProtocol,
-                                                 FaDockingSlideIntoContact)
+from pyrosetta.rosetta.protocols.docking import (
+    DockMCMProtocol,
+    FaDockingSlideIntoContact,
+)
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.utility import vector1_std_string
 
@@ -22,18 +27,25 @@ from pyrosetta import Pose, Vector1, standard_packer_task
 from pyrosetta.rosetta.core.kinematics import MoveMap
 from pyrosetta.rosetta.core.pack.task import PackerTask, TaskFactory, operation
 from pyrosetta.rosetta.core.pack.task.operation import (
-    IncludeCurrent, InitializeFromCommandline, NoRepackDisulfides,
-    RestrictToRepacking)
+    IncludeCurrent,
+    InitializeFromCommandline,
+    NoRepackDisulfides,
+    RestrictToRepacking,
+)
 from pyrosetta.rosetta.protocols.docking import DockMCMProtocol
 from pyrosetta.rosetta.protocols.minimization_packing import (
-    MinMover, PackRotamersMover, RotamerTrialsMover)
-from pyrosetta.rosetta.protocols.moves import (JumpOutMover, MonteCarlo,
-                                               SequenceMover, TrialMover)
-from pyrosetta.rosetta.protocols.rigid import (RigidBodyPerturbMover,
-                                               partner_downstream)
-from pyrosetta.rosetta.protocols.simple_task_operations import \
-    RestrictToInterface
-
+    MinMover,
+    PackRotamersMover,
+    RotamerTrialsMover,
+)
+from pyrosetta.rosetta.protocols.moves import (
+    JumpOutMover,
+    MonteCarlo,
+    SequenceMover,
+    TrialMover,
+)
+from pyrosetta.rosetta.protocols.rigid import RigidBodyPerturbMover, partner_downstream
+from pyrosetta.rosetta.protocols.simple_task_operations import RestrictToInterface
 
 
 class LocalSearchStrategy:
@@ -86,11 +98,14 @@ class LocalSearchStrategy:
             self.docking.set_ignore_default_task(True)
 
         self.slide_into_contact = FaDockingSlideIntoContact(dock_pose.num_jump())
-        if self.config.docking_type_option == "Unbound" and self.config.bb_strategy != "relax_best":
-            self.swap_operator = FlexbbSwapOperator(config, scfxn, None)
-            self.relax = FastRelax(0)
-            self.relax.set_scorefxn(self.scfxn.scfxn_rosetta)
-            self.relax.max_iter(1)
+        # if (
+        #     self.config.docking_type_option == "Unbound"
+        #     and self.config.bb_strategy != "relax_best"
+        # ):
+        #     self.swap_operator = FlexbbSwapOperator(config, scfxn, None)
+        #     self.relax = FastRelax(0)
+        #     self.relax.set_scorefxn(self.scfxn.scfxn_rosetta)
+        #     self.relax.max_iter(1)
 
     def energy_score(self, pose):
         score = self.scfxn.scfxn_rosetta(pose)
@@ -109,12 +124,14 @@ class LocalSearchStrategy:
                 join_pose, idx_receptor, idx_ligand = self.define_ensemble(ind, pose)
             return join_pose, idx_receptor, idx_ligand
         if bb_strategy == "popul_library":
-            idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
-            pose_chainA = self.swap_operator.list_receptor[idx_receptor]
-            pose_chainB = self.swap_operator.list_ligand[idx_ligand]
-            join_pose = self.swap_operator.make_pose_with_chains(pose, pose_chainA, pose_chainB)
-            return join_pose, idx_receptor, idx_ligand
-
+            if random.uniform(0, 1) < 0.3:
+                idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
+                pose_chainA = self.swap_operator.list_receptor[idx_receptor]
+                pose_chainB = self.swap_operator.list_ligand[idx_ligand]
+                join_pose = self.swap_operator.make_pose_with_chains(
+                    pose, pose_chainA, pose_chainB
+                )
+                return join_pose, idx_receptor, idx_ligand
 
         join_pose = pose
         idx_receptor, idx_ligand = ind.idx_receptor, idx_ligand
@@ -165,10 +182,10 @@ class LocalSearchStrategy:
 
     def apply_unbound_docking(self, ind, local_search=True):
         pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
-        # pose.pdb_info().name("apply_gen_" + str(ind.idx)) 
+        # pose.pdb_info().name("apply_gen_" + str(ind.idx))
         # self.pymover.apply(pose)
         join_pose, idx_receptor, idx_ligand = self.apply_bb_strategy(ind, pose)
-        # join_pose.pdb_info().name("apply_bb_" + str(ind.idx)) 
+        # join_pose.pdb_info().name("apply_bb_" + str(ind.idx))
         # print("apply_bb_" + str(ind.idx) + " : " + str(self.energy_score(join_pose)))
         # self.pymover.apply(join_pose)
         before = self.energy_score(join_pose)
@@ -187,7 +204,7 @@ class LocalSearchStrategy:
                 join_pose.fold_tree(self.native_fold_tree)
                 after = self.energy_score(join_pose)
                 if self.config.bb_strategy == "only_relax":
-                    self.dock_pose = join_pose 
+                    self.dock_pose = join_pose
                 else:
                     self.add_relaxed_backbones_to_list(ind, after, join_pose)
         else:
@@ -202,7 +219,11 @@ class LocalSearchStrategy:
         return return_data
 
     def apply(self, ind, local_search=True):
-        if self.config.docking_type_option == "Unbound" and self.config.bb_strategy != "relax_best":
-            return self.apply_unbound_docking(ind, local_search)
-        else:
-            return self.apply_bound_docking(ind, local_search)
+        # if (
+        #     self.config.docking_type_option == "Unbound"
+        #     and self.config.bb_strategy != "relax_best"
+        # ):
+        #     return self.apply_unbound_docking(ind, local_search)
+        # else:
+
+        return self.apply_bound_docking(ind, local_search)

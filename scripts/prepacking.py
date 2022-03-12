@@ -6,11 +6,16 @@ import sys
 from pyrosetta import Pose, init, pose_from_file, standard_packer_task
 from pyrosetta.rosetta.core.pack.task import TaskFactory
 from pyrosetta.rosetta.core.pack.task.operation import (
-    IncludeCurrent, InitializeFromCommandline, NoRepackDisulfides,
-    RestrictToRepacking)
+    IncludeCurrent,
+    InitializeFromCommandline,
+    NoRepackDisulfides,
+    RestrictToRepacking,
+)
 from pyrosetta.rosetta.protocols.loops import get_fa_scorefxn
 from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
+
+from pyrosetta.rosetta.core.scoring import all_atom_rmsd
 
 
 class PosePacker:
@@ -66,20 +71,25 @@ def run_repacking(filename, opts, pymover=None):
     init(extra_options=opts)
     pose = Pose()
     pose_from_file(pose, filename)
+    native = Pose()
+    pose_from_file(native, filename)
     pose.pdb_info().name("INIT_STATE")
     if pymover is not None:
         pymover.apply(pose)
     scorefxn = get_fa_scorefxn()
-    print("INIT ENERGY ", scorefxn.score(pose))
+    init_energy = scorefxn.score(pose)
+    print(f"INIT ENERGY {init_energy}")
     packer = PosePacker(pose, filename, "custom")
     packed_pdb = packer.run()
     final_energy = scorefxn.score(packed_pdb)
-    print("FINAL ENERGY ", final_energy)
+    print(f"FINAL ENERGY {final_energy}")
     packed_pdb.pdb_info().name("PACKED")
 
+    rmsd_diff = all_atom_rmsd(native, packed_pdb)
+    print(f"rmsd difference (all atom) {rmsd_diff}")
     if pymover is not None:
         pymover.apply(packed_pdb)
-    return final_energy, packed_pdb
+    return final_energy, rmsd_diff, packed_pdb
 
 
 def main():
@@ -96,7 +106,15 @@ def main():
             # "-unboundrot {}".format(filename),
         ]
     )
-    run_repacking(filename, opts, pymover)
+
+    data = []
+    for i in range(10):
+        energy, rmsd_diff, _ = run_repacking(filename, opts, pymover)
+        data.append(rmsd_diff)
+
+    tokens = filename.split("/")
+    with open(tokens[-2] + "_" + tokens[-1][0] + ".log", "w") as f:
+        f.write(f"{sum(data) / len(data)}\n")
 
 
 if __name__ == "__main__":

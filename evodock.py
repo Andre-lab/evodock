@@ -54,11 +54,13 @@ def main():
     input_pose = get_pose_from_file(pose_input)
     native_pose = get_pose_from_file(native_input)
 
-    setup_foldtree(input_pose, "A_B", Vector1([1]))
-    input_fold_tree = input_pose.fold_tree()
-    native_pose.fold_tree(input_fold_tree)
     native_pose.conformation().detect_disulfides()
+    input_pose.conformation().detect_disulfides()
 
+    setup_foldtree(input_pose, "A_B", Vector1([1]))
+    input_fold_tree = native_pose.fold_tree()
+    native_pose.fold_tree(input_fold_tree)
+    input_pose.fold_tree(input_fold_tree)
     scfxn = FAFitnessFunction(input_pose, native_pose, config)
 
     position_str = ", ".join(

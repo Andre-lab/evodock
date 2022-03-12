@@ -70,6 +70,19 @@ class FAFitnessFunction:
     def get_sol_string(self, sol):
         return " , ".join(["{:.2f}".format(e) for e in sol])
 
+    def get_solution_from_positions(self, DoFs_vector):
+        ind_pose = Pose()
+        ind_pose.assign(self.dock_pose)
+        euler = np.asarray(DoFs_vector[0:3])
+        r = R.from_euler("xyz", euler, degrees=True).as_matrix()
+        flexible_jump = ind_pose.jump(ind_pose.num_jump())
+        rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
+        flexible_jump.set_rotation(rosetta_rotation)
+        flexible_jump.set_translation(rosetta_translation)
+        ind_pose.set_jump(ind_pose.num_jump(), flexible_jump)
+        # now is time to score the joined pose (ind_pose)
+        return ind_pose
+
     def apply_genotype_to_pose(self, genotype):
         DoFs_vector = self.convert_genotype_to_positions(genotype)
         ind_pose = Pose()

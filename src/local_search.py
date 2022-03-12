@@ -1,8 +1,7 @@
 import logging
 
 from pyrosetta import Pose, Vector1
-from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
-                                                 calc_Irmsd)
+from pyrosetta.rosetta.protocols.docking import calc_interaction_energy, calc_Irmsd
 
 from src.individual import Individual
 from src.local_search_strategy import LocalSearchStrategy
@@ -71,7 +70,10 @@ class LocalSearchPopulation:
             pose, self.scfxn.scfxn_rosetta, Vector1([1])
         )
         irms = calc_Irmsd(
-            self.scfxn.native_pose, pose, self.scfxn.scfxn_rosetta, Vector1([1]),
+            self.scfxn.native_pose,
+            pose,
+            self.scfxn.scfxn_rosetta,
+            Vector1([1]),
         )
         if data["after"] < self.best_score:
             self.best_score = data["after"]
@@ -89,10 +91,11 @@ class LocalSearchPopulation:
             interface,
             irms,
         )
-        if self.config.bb_strategy == "only_relax": 
-            if score(self.scfxn.dock_pose) > data["after"]:
-                self.scfxn.dock_pose.assign(pose)
-        else:
-            self.scfxn.dock_pose.assign(self.starting_pose)
-        
+        # if self.config.bb_strategy == "only_relax":
+        #     if score(self.scfxn.dock_pose) > data["after"]:
+        #         self.scfxn.dock_pose.assign(pose)
+        # else:
+
+        self.scfxn.dock_pose.assign(self.starting_pose)
+
         return result_individual, data["before"], data["after"]
