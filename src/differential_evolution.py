@@ -62,7 +62,10 @@ class DifferentialEvolutionAlgorithm:
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.job_id.replace("evolution", "time")
         self.max_translation = config.get_max_translation()
-        if self.config.bb_strategy == "popul_library":
+        if (
+            self.config.docking_type_option == "Unbound"
+            and self.config.bb_strategy == "popul_library"
+        ):
             self.flexbb_swap_operator = PopulationSwapOperator(
                 config, self.popul_calculator.scfxn, self.popul_calculator.local_search
             )

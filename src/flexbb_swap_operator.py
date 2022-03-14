@@ -6,14 +6,17 @@ import random
 from random import sample
 
 
-
-
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
-from pyrosetta.rosetta.core.pose import append_pose_to_pose, chain_end_res, remove_virtual_residues
+from pyrosetta.rosetta.core.pose import (
+    append_pose_to_pose,
+    chain_end_res,
+    remove_virtual_residues,
+)
 from pyrosetta.rosetta.core.import_pose import poses_from_files
 from pyrosetta.rosetta.utility import vector1_std_string
 from pyrosetta import Pose
+
 
 class FlexbbSwapOperator:
     def __init__(self, config, scfxn, local_search):
@@ -34,8 +37,8 @@ class FlexbbSwapOperator:
         self.list_receptor = poses_from_files(filenames_receptor)
         self.list_ligand = [Pose(p) for p in self.list_ligand]
         self.list_receptor = [Pose(p) for p in self.list_receptor]
-        print("list ligand {}".format(len(self.list_ligand)))
-        print("list receptor {}".format(len(self.list_receptor)))
+        # print("list ligand {}".format(len(self.list_ligand)))
+        # print("list receptor {}".format(len(self.list_receptor)))
         self.relaxed_backbones_ligand = [Pose(p) for p in self.list_ligand]
         self.relaxed_backbones_receptor = [Pose(p) for p in self.list_receptor]
         self.relax = FastRelax(1)
@@ -79,10 +82,10 @@ class FlexbbSwapOperator:
             after = self.scfxn.scfxn_rosetta(join_pose)
             # join_pose.dump_scored_pdb("after.pdb", self.scfxn.scfxn_rosetta)
             print("before {} after {}".format(before, after))
-            if after < before: 
+            if after < before:
                 self.add_relaxed_backbones_to_list(ind, after, join_pose)
                 improve_relax = True
-                
+
         return join_pose, idx_receptor, idx_ligand, improve_relax
 
     def make_pose_with_chains(self, reference_pose, pose_chainA, pose_chainB):
@@ -103,7 +106,7 @@ class FlexbbSwapOperator:
         return join_pose
 
     def apply_bb_strategy(self, ind, pose):
-        join_pose, idx_receptor, idx_ligand, improve_relax = self.define_ensemble(ind, pose)
+        join_pose, idx_receptor, idx_ligand, improve_relax = self.define_ensemble(
+            ind, pose
+        )
         return join_pose, idx_receptor, idx_ligand, improve_relax
-
-
