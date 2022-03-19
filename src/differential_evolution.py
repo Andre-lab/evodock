@@ -9,27 +9,9 @@ from src.mpi_utils import IndividualMPI
 from src.population_swap_operator import PopulationSwapOperator
 from src.selection import GreedySelection
 from src.single_process import SingleProcessPopulCalculator
+from src.mutation_strategies import MutationStrategyBuilder
 
-
-def ensure_bounds(vec, bounds):
-    vec_new = []
-    # cycle through each variable in vector
-    for i, k in enumerate(vec):
-
-        # variable exceedes the minimum boundary
-        if vec[i] < bounds[i][0]:
-            vec_new.append(bounds[i][0])
-
-        # variable exceedes the maximum boundary
-        if vec[i] > bounds[i][1]:
-            vec_new.append(bounds[i][1])
-
-        # the variable is fine
-        if bounds[i][0] <= vec[i] <= bounds[i][1]:
-            vec_new.append(vec[i])
-
-    return vec_new
-
+from src.trial_generator import TrialGenerator, CodeGenerator
 
 # --- MAIN ---------------------------------------------------------------------+
 
@@ -62,6 +44,7 @@ class DifferentialEvolutionAlgorithm:
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.job_id.replace("evolution", "time")
         self.max_translation = config.get_max_translation()
+        self.mutation_strategy = MutationStrategyBuilder(config).build()
         if (
             self.config.docking_type_option == "Unbound"
             and self.config.bb_strategy == "popul_library"
@@ -159,62 +142,30 @@ class DifferentialEvolutionAlgorithm:
             gen_sol = population[gen_scores.index(min(gen_scores))]
             # cycle through each individual in the population
             trials = []
+
+            rmax = 1
+            rmin = 0.1
+            rgen = rmax - ((i / self.maxiter) * (rmax - rmin))
+
             for j in range(0, self.popsize):
 
                 # --- MUTATION (step #3.A) ---------------------+
                 # select 3 random vector index positions [0, self.popsize)
                 # not including current vector (j)
-                candidates = list(range(0, self.popsize))
-                candidates.remove(j)
-                random_index = random.sample(candidates, 3)
 
-                if self.scheme == "CURRENT":
-                    x_1 = population[j].genotype
-                if self.scheme == "RANDOM":
-                    x_1 = population[random_index[0]].genotype
-                if self.scheme == "BEST":
-                    x_1 = population[gen_scores.index(min(gen_scores))].genotype
-
-                x_2 = population[random_index[1]].genotype
-                x_3 = population[random_index[2]].genotype
-                x_t = population[j].genotype  # target individual
-
-                # subtract x3 from x2, and create a new vector (x_diff)
-                x_diff = [x_2_i - x_3_i for x_2_i, x_3_i in zip(x_2, x_3)]
-
-                # multiply x_diff by the mutation factor (F) and add to x_1
-                v_donor = [
-                    x_1_i + self.mutate * x_diff_i
-                    for x_1_i, x_diff_i in zip(x_1, x_diff)
-                ]
-                v_donor = ensure_bounds(v_donor, self.bounds)
-
-                # --- RECOMBINATION (step #3.B) ----------------+
-
-                v_trial = []
-                for k, obj in enumerate(x_t):
-                    crossover = random.random()
-                    if crossover <= self.recombination:
-                        v_trial.append(v_donor[k])
-                    else:
-                        v_trial.append(x_t[k])
+                v_trial = TrialGenerator(
+                    self.config, self.popul_calculator.cost_func.local_search
+                ).build(j, population, gen_scores)
                 trials.append(v_trial)
 
             # --- SELECTION (step #3.C) -------------+
-            start = time.time()
-            trials = [
-                make_trial(idx, t, gen_sol.idx_ligand, gen_sol.idx_receptor)
-                for idx, t in enumerate(trials)
-            ]
-            trial_inds = self.popul_calculator.run(trials)
+
+            trial_inds = trials
             self.popul_calculator.cost_func.print_information(trial_inds, True)
 
             population, gen_scores, trial_scores = GreedySelection().apply(
                 trial_inds, population
             )
-
-            end = time.time()
-            self.logger.info(f"selection stage in {end - start} seconds")
 
             # --- SCORE KEEPING --------------------------------+
             gen_avg = sum(gen_scores) / self.popsize
@@ -244,7 +195,7 @@ class DifferentialEvolutionAlgorithm:
             # self.popul_calculator.cost_func.pymol_visualization(population)
 
             name = self.job_id.replace(".log", "_evolved.pdb")
-            best_pdb.dump_pdb(name)
+            # best_pdb.dump_pdb(name)
 
             file_object.write("%f \t" % gen_avg)
             file_object.write("%f \t" % gen_best)
