@@ -92,7 +92,7 @@ def main():
     _, best_pdb = alg.main(population)
     popul_calculator.terminate()
     name = jobid.replace(".log", "_final_docked_evo.pdb")
-    best_pdb.dump_pdb(name)
+    # best_pdb.dump_pdb(name)
 
 
 if __name__ == "__main__":
