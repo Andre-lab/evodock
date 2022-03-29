@@ -12,6 +12,7 @@ from src.mutation_strategies import (
     StrategyPBest,
     StrategyBest,
     StrategyCurrent,
+    StrategyTriangular,
 )
 
 
@@ -52,7 +53,7 @@ class TrialGenerator:
         v_donor = self.mutate(j, population, gen_scores)
         v_trial = self.recombine(j, population, v_donor)
         ind = make_trial(j, v_trial, 0, 0)
-        trial, _, _ = self.local_search.process_individual(ind, True)
+        trial, _, _ = self.local_search.process_individual(ind)
         return trial
 
 
@@ -102,9 +103,41 @@ class CodeGenerator(TrialGenerator):
         ind_1 = make_trial(j, v_trial_1, 0, 0)
         ind_2 = make_trial(j, v_trial_2, 0, 0)
         ind_3 = make_trial(j, v_trial_3, 0, 0)
-        trial_1, _, score1 = self.local_search.process_individual(ind_1, True)
-        trial_2, _, score2 = self.local_search.process_individual(ind_2, True)
-        trial_3, _, score3 = self.local_search.process_individual(ind_3, True)
+        trial_1, _, score1 = self.local_search.process_individual(ind_1)
+        trial_2, _, score2 = self.local_search.process_individual(ind_2)
+        trial_3, _, score3 = self.local_search.process_individual(ind_3)
         data = [(trial_1, score1), (trial_2, score2), (trial_3, score3)]
         trial = min(data, key=itemgetter(1))[0]
+        return trial
+
+
+class TriangularGenerator(TrialGenerator):
+    def __init__(self, config, rgen, local_search):
+        self.config = config
+        self.mutation = config.mutate
+        self.recombination = config.recombination
+        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.rgen = rgen
+        self.local_search = local_search
+
+    def mutate(self, j, population, gen_scores):
+        if random.random() <= pow(1 - 100 / self.rgen, 2):
+            # if random.random() <= 0.5:
+            v_donor = StrategyRandom(self.config).create_donor(
+                j, population, gen_scores
+            )
+        else:
+            v_donor = StrategyTriangular(self.config).create_donor(
+                j, population, gen_scores
+            )
+        return v_donor
+
+    def build(self, j, population, gen_scores):
+        if j == 0:
+            # original:  0.7 + (0.1 - 0.7) * pow(1 / self.rgen, 4)
+            self.recombination = 0.1 + ((0.5 - 0.1) / self.config.maxiter) * self.rgen
+        v_donor = self.mutate(j, population, gen_scores)
+        v_trial = self.recombine(j, population, v_donor)
+        ind = make_trial(j, v_trial, 0, 0)
+        trial, before, after = self.local_search.process_individual(ind)
         return trial

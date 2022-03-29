@@ -11,7 +11,7 @@ from src.selection import GreedySelection
 from src.single_process import SingleProcessPopulCalculator
 from src.mutation_strategies import MutationStrategyBuilder
 
-from src.trial_generator import TrialGenerator, CodeGenerator
+from src.trial_generator import TrialGenerator, CodeGenerator, TriangularGenerator
 
 # --- MAIN ---------------------------------------------------------------------+
 
@@ -78,6 +78,7 @@ class DifferentialEvolutionAlgorithm:
             if docking_type == "Global":
                 for j in range(len(self.bounds)):
                     indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
+
             else:
                 if docking_type == "RefineCluspro":
                     indv = refCluspro.refine_cluspro(i)
@@ -130,6 +131,7 @@ class DifferentialEvolutionAlgorithm:
         self.popul_calculator.cost_func.print_information(population)
         # _ = input("continue > ")
         # cycle through each generation (step #2)
+        archive_restart = [0] * self.popsize
         for i in range(1, self.maxiter + 1):
             self.logger.info(" GENERATION:" + str(i))
             gen_start = time.time()
@@ -153,8 +155,8 @@ class DifferentialEvolutionAlgorithm:
                 # select 3 random vector index positions [0, self.popsize)
                 # not including current vector (j)
 
-                v_trial = TrialGenerator(
-                    self.config, self.popul_calculator.cost_func.local_search
+                v_trial = TriangularGenerator(
+                    self.config, i, self.popul_calculator.cost_func.local_search
                 ).build(j, population, gen_scores)
                 trials.append(v_trial)
 
@@ -163,9 +165,37 @@ class DifferentialEvolutionAlgorithm:
             trial_inds = trials
             self.popul_calculator.cost_func.print_information(trial_inds, True)
 
+            previous_gen_scores = gen_scores
             population, gen_scores, trial_scores = GreedySelection().apply(
                 trial_inds, population
             )
+
+            # --- RESTART ---- #
+            gen_best = min(gen_scores)
+            for j in range(0, self.popsize):
+                # if False:
+                if abs(gen_scores[j] - previous_gen_scores[j]) < 0.0001:
+                    archive_restart[j] += 1
+                else:
+                    archive_restart[j] = 0
+                if archive_restart[j] == 15:
+                    if gen_scores[j] != gen_best:
+                        archive_restart[j] = 0
+                        indv = population[j].genotype
+                        jrand = random.randrange(0, len(self.bounds))
+                        indv[jrand] = random.uniform(
+                            self.bounds[jrand][0], self.bounds[jrand][1]
+                        )
+                        ind = make_trial(j, indv, 0, 0)
+                        (
+                            ind,
+                            before,
+                            after,
+                        ) = self.popul_calculator.cost_func.local_search.process_individual(
+                            ind
+                        )
+                        population[j] = ind
+                        gen_scores[j] = after
 
             # --- SCORE KEEPING --------------------------------+
             gen_avg = sum(gen_scores) / self.popsize
