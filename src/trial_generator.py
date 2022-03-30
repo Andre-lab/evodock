@@ -119,23 +119,26 @@ class TriangularGenerator(TrialGenerator):
         self.mutation_strategy = MutationStrategyBuilder(config).build()
         self.rgen = rgen
         self.local_search = local_search
+        self.recombination = 0.8 + (0.1 - 0.8) * pow(
+            1 - self.rgen / self.config.maxiter, 4
+        )
+        # self.recombination = 0.1 + ((0.5 - 0.1) / self.config.maxiter) * self.rgen
+        # self.recombination = 1.0
 
     def mutate(self, j, population, gen_scores):
-        if random.random() <= pow(1 - 100 / self.rgen, 2):
+        if random.random() >= pow(1 - (self.rgen / 100), 2):
             # if random.random() <= 0.5:
-            v_donor = StrategyRandom(self.config).create_donor(
-                j, population, gen_scores
-            )
-        else:
             v_donor = StrategyTriangular(self.config).create_donor(
                 j, population, gen_scores
             )
+        else:
+            v_donor = StrategyRandom(self.config).create_donor(
+                j, population, gen_scores
+            )
+
         return v_donor
 
     def build(self, j, population, gen_scores):
-        if j == 0:
-            # original:  0.7 + (0.1 - 0.7) * pow(1 / self.rgen, 4)
-            self.recombination = 0.1 + ((0.5 - 0.1) / self.config.maxiter) * self.rgen
         v_donor = self.mutate(j, population, gen_scores)
         v_trial = self.recombine(j, population, v_donor)
         ind = make_trial(j, v_trial, 0, 0)

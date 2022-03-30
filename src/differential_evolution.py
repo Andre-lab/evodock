@@ -143,27 +143,27 @@ class DifferentialEvolutionAlgorithm:
 
             gen_sol = population[gen_scores.index(min(gen_scores))]
             # cycle through each individual in the population
-            trials = []
 
             rmax = 1
             rmin = 0.1
             rgen = rmax - ((i / self.maxiter) * (rmax - rmin))
 
+            trials = []
+            trial_generator = TriangularGenerator(
+                self.config, i, self.popul_calculator.cost_func.local_search
+            )
             for j in range(0, self.popsize):
-
                 # --- MUTATION (step #3.A) ---------------------+
                 # select 3 random vector index positions [0, self.popsize)
                 # not including current vector (j)
-
-                v_trial = TriangularGenerator(
-                    self.config, i, self.popul_calculator.cost_func.local_search
-                ).build(j, population, gen_scores)
+                v_trial = trial_generator.build(j, population, gen_scores)
                 trials.append(v_trial)
 
             # --- SELECTION (step #3.C) -------------+
 
             trial_inds = trials
             self.popul_calculator.cost_func.print_information(trial_inds, True)
+            # self.popul_calculator.cost_func.pymol_visualization(trial_inds)
 
             previous_gen_scores = gen_scores
             population, gen_scores, trial_scores = GreedySelection().apply(
@@ -172,8 +172,8 @@ class DifferentialEvolutionAlgorithm:
 
             # --- RESTART ---- #
             gen_best = min(gen_scores)
-            for j in range(0, self.popsize):
-                # if False:
+            # for j in range(0, self.popsize):
+            if False:
                 if abs(gen_scores[j] - previous_gen_scores[j]) < 0.0001:
                     archive_restart[j] += 1
                 else:
@@ -222,6 +222,7 @@ class DifferentialEvolutionAlgorithm:
             )
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
             self.popul_calculator.cost_func.print_information(population)
+
             # self.popul_calculator.cost_func.pymol_visualization(population)
 
             name = self.job_id.replace(".log", "_evolved.pdb")

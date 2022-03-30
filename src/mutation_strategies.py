@@ -50,7 +50,7 @@ class Strategy:
         self.bounds = [(-1, 1)] * 6
 
     def select_parents(self, j, population, gen_scores):
-        self.mutate = random.uniform(0.05, 0.7)
+        self.mutate = random.uniform(0.1, 0.7)
         candidates = list(range(0, len(population)))
         candidates.remove(j)
         random_index = random.sample(candidates, 3)
@@ -81,7 +81,7 @@ class StrategyRandom(Strategy):
 
 class StrategyBest(Strategy):
     def select_parents(self, j, population, gen_scores):
-        self.mutate = random.uniform(0.05, 0.7)
+        self.mutate = random.uniform(0.1, 0.7)
         candidates = list(range(0, len(population)))
         candidates.remove(j)
         random_index = random.sample(candidates, 3)
@@ -161,7 +161,7 @@ class StrategyTriangular(Strategy):
 
     def create_donor(self, j, population, gen_scores):
         self.update_weights(population)
-        self.mutate = random.uniform(0.05, 0.7)
+        self.mutate = random.uniform(0.1, 0.7)
         x_1, x_2, x_3 = self.select_parents(j, population, gen_scores)
         v_donor = []
         F = self.mutate
