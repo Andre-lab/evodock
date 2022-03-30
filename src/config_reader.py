@@ -4,6 +4,7 @@
 import configparser
 import logging
 import os
+import ast
 
 from src.utils import get_translation_max
 
@@ -12,107 +13,23 @@ MAIN_PATH = os.getcwd()
 
 class EvodockConfig:
     def __init__(self, ini_file):
-        logger = logging.getLogger("evodock.config")
-        logger.setLevel(logging.INFO)
+        self.p = os.getcwd()
+        self.logger = logging.getLogger("evodock.config")
+        self.logger.setLevel(logging.INFO)
 
         config = self.read_config(ini_file)
 
-        # --- DOCKING PARAMS -----------------------------------+
+        self.check_required_parameters(config)
+        self.load_required_parameters(config)
+        self.load_output_parameters(config)
 
-        self.docking_type_option = config["Docking"].get("type")
-
-        self.bb_strategy = "None"
-        self.relax_prob = -1
-        # --- Input Params -----------------------------+
-        if config.has_option("inputs", "pose_input"):
-            self.pose_input = MAIN_PATH + config["inputs"].get("pose_input")
-        else:
-            logger.info("input complex not found. Use 'pose_input' parameter")
-            exit()
-
-        if config.has_option("inputs", "native_input"):
-            self.native_input = MAIN_PATH + config["inputs"].get("native_input")
-        else:
-            logger.info("native complex not found. Use 'native_input' parameter")
-            exit()
-
-        if config.has_option("Docking", "bb_strategy"):
-            self.bb_strategy = config["Docking"].get("bb_strategy")
-        else:
-            logger.info("BB strategy not found. Use 'bb_strategy' parameter")
-            exit()
-            
-        if config.has_option("inputs", "path_ligands"):
-            self.path_ligands = MAIN_PATH + config["inputs"].get("path_ligands")
-        else:
-            logger.info(
-                "path for ligand flexible BB not found. Use 'path_ligands' parameter"
-            )
-            exit()
-
-        if config.has_option("inputs", "path_receptors"):
-            self.path_receptors = MAIN_PATH + config["inputs"].get("path_receptors")
-        else:
-            logger.info(
-                "path for receptor flexible BB not found. Use 'path_receptors' parameter"
-            )
-            exit()
-
-
-
-        if self.docking_type_option == "Unbound":
-            if self.bb_strategy == "relax":
-                if config.has_option("Docking", "relax_prob"):
-                    self.relax_prob = config["Docking"].getfloat("relax_prob")
-                else:
-                    logger.info(
-                        "relax probability not found. Use 'relax_prob' parameter"
-                    )
-                    exit()
-            else:
-                self.relax_prob = -1
-
-        if self.docking_type_option == "RefineCluspro":
-            if config.has_option("inputs", "cluspro_pdbs"):
-                self.cluspro_pdbs = config["inputs"].get("cluspro_pdbs")
-            else:
-                logger.info(
-                    "Cluspro models are not found. Use 'cluspro_pdbs' parameter"
-                )
-                exit()
-
-        # --- DE PARAMS -----------------------------------+
-
-        self.scheme = config["DE"].get("scheme")
-        self.popsize = config["DE"].getint("popsize")
-        self.mutate = config["DE"].getfloat("mutate")
-        self.recombination = config["DE"].getfloat("recombination")
-        self.maxiter = config["DE"].getint("maxiter")
-
-        # --- MEMETIC PARAMS -----------------------------------+
-        if config.has_option("DE", "local_search"):
-            self.local_search_option = config["DE"].get("local_search")
-        else:
-            logger.info("DANGER: local_search is None")
-            self.local_search_option = "None"
-
-        # --- OUTPUT FILE -----------------------------------+
-        self.jobid = config["outputs"].get("output_file")
+        # depend on docking type
+        self.load_flexible_docking_parameters(config)
+        self.load_refine_docking_parameters(config)
 
         # --- CONFIG STRUCTURE -----------------------------------+
         self.config = config
 
-    def get_constraint_weight(self):
-        if self.config.has_option("Docking", "cst_weight"):
-            self.constraint_weight = self.config["Docking"].getint(
-                "cst_weight"
-            )
-        else:
-            self.constraint_weight = 0 
-        return self.constraint_weight
-
-
-        
     def get_max_translation(self):
         # --- Position Params -----------------------------+
         if self.config.has_option("position", "trans_max_magnitude"):
@@ -127,3 +44,95 @@ class EvodockConfig:
         config = configparser.ConfigParser()
         config.read(ini_file, encoding="utf-8-sig")
         return config
+
+    def check_required_parameters(self, config):
+        # --- REQUIRED PARAMS -----------------------------------+
+        req_parameters = [
+            ("Docking", "type"),
+            ("Inputs", "pose_input"),
+            ("Inputs", "native_input"),
+            ("DE", "scheme"),
+            ("DE", "popsize"),
+            ("DE", "mutate"),
+            ("DE", "recombination"),
+            ("DE", "maxiter"),
+            ("DE", "local_search"),
+        ]
+        all_required_found = True
+        for param in req_parameters:
+            if config.has_option(param[0], param[1]):
+                self.docking_type_option = config[param[0]].get(param[1])
+            else:
+                self.logger.info(f"[{param[0]}]{param[1]} not found.")
+                all_required_found = False
+        if not all_required_found:
+            exit()
+
+    def load_required_parameters(self, config):
+        self.docking_type_option = config["Docking"].get("type")
+
+        # -- INPUT PARAMETERS ---------------------------------------+
+        self.pose_input = self.p + config["Inputs"].get("pose_input")
+        if not os.path.isfile(self.pose_input):
+            self.logger.info(f"input file not found: {self.pose_input}")
+            exit()
+
+        self.native_input = self.p + config["Inputs"].get("native_input")
+        if not os.path.isfile(self.native_input):
+            self.logger.info(f"input file not found: {self.native_input}")
+            exit()
+
+        # --- DE PARAMS ---------------------------------------------+
+        self.scheme = config["DE"].get("scheme")
+        self.popsize = config["DE"].getint("popsize")
+        self.mutate = config["DE"].getfloat("mutate")
+        self.recombination = config["DE"].getfloat("recombination")
+        self.maxiter = config["DE"].getint("maxiter")
+
+        # --- MEMETIC PARAMS -----------------------------------+
+        if config.has_option("DE", "local_search"):
+            self.local_search_option = config["DE"].get("local_search")
+        else:
+            self.logger.info("DANGER: local_search is None")
+            self.local_search_option = "None"
+
+    def load_flexible_docking_parameters(self, config):
+        if self.docking_type_option == "Flexbb":
+            if config.has_option("Flexbb", "path_ligands"):
+                self.path_ligands = self.p + config["Flexbb"].get("path_ligands")
+            else:
+                self.logger.info(
+                    "path for ligand flexible BB not found. Use 'path_ligands' parameter"
+                )
+                exit()
+
+            if config.has_option("Flexbb", "path_receptors"):
+                self.path_receptors = self.p + config["Flexbb"].get("path_receptors")
+            else:
+                self.logger.info(
+                    "path for receptor flexible BB not found. Use 'path_receptors' parameter"
+                )
+                exit()
+
+    # --- Input Params -----------------------------+
+    def load_refine_docking_parameters(self, config):
+        if self.docking_type_option == "Refine":
+            if config.has_option("Inputs", "init_pdbs"):
+                self.init_pdbs = config["Inputs"].get("init_pdbs")
+            else:
+                self.logger.info(
+                    "Models used for refinement are not found. Use 'init_pdbs' parameter"
+                )
+                exit()
+
+    def load_output_parameters(self, config):
+        # --- OUTPUT PATH -----------------------------------+
+        self.out_path = config["Outputs"].get("output_path", fallback="")
+        self.out_path = "./" + self.out_path
+        if self.out_path[-1] != "/":
+            self.out_path = self.out_path + "/"
+        os.makedirs(self.out_path, exist_ok=True)
+
+        # ---- OUTPUT PDB -----------------------------------+
+        self.out_pdb = config["Outputs"].get("output_pdb", fallback="False")
+        self.out_pdb = ast.literal_eval(self.out_pdb)
