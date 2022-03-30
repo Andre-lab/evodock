@@ -39,10 +39,10 @@ class DifferentialEvolutionAlgorithm:
         self.mutate = config.mutate
         self.recombination = config.recombination
         self.maxiter = config.maxiter
-        self.job_id = config.jobid
+        self.job_id = config.out_path + "/evolution.log"
         self.ind_size = popul_calculator.cost_func.size()
         self.bounds = [(-1, 1)] * self.ind_size
-        self.file_time_name = self.job_id.replace("evolution", "time")
+        self.file_time_name = self.config.out_path + "/time.log"
         self.max_translation = config.get_max_translation()
         self.mutation_strategy = MutationStrategyBuilder(config).build()
         if (
@@ -225,7 +225,7 @@ class DifferentialEvolutionAlgorithm:
 
             # self.popul_calculator.cost_func.pymol_visualization(population)
 
-            name = self.job_id.replace(".log", "_evolved.pdb")
+            name = self.config.out_path + "/evolved.pdb"
             # best_pdb.dump_pdb(name)
 
             file_object.write("%f \t" % gen_avg)

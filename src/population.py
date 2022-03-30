@@ -11,11 +11,11 @@ class ScorePopulation:
         self.name = "ScorePopulation"
         self.jobid = jobid
         self.scfxn = scfxn
-        self.log_best = jobid.replace("evolution", "best")
-        self.log_interface = jobid.replace("evolution", "interface")
-        self.log_flexbb = jobid.replace("evolution", "flexbb")
-        self.log_popul = jobid.replace("evolution", "popul")
-        self.log_trials = jobid.replace("evolution", "trials")
+        self.log_best = jobid + "/best_individual.log"
+        self.log_interface = jobid + "/interface.log"
+        self.log_flexbb = jobid + "/flexbb.log"
+        self.log_popul = jobid + "/popul.log"
+        self.log_trials = jobid + "/trials.log"
         self.local_search = local_search
         with open(self.log_best, "w") as file_object:
             file_object.write("#{}\n".format(jobid))

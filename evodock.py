@@ -5,9 +5,8 @@ import logging
 import os
 import sys
 
-from pyrosetta import Vector1, init
+from pyrosetta import init
 from pyrosetta.rosetta.core.scoring import CA_rmsd
-from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
@@ -27,7 +26,7 @@ def main():
     config = EvodockConfig(sys.argv[-1])
 
     pose_input = config.pose_input
-    if config.docking_type_option in ["Local", "Unbound", "RefineCluspro"]:
+    if config.docking_type_option in ["Local", "Flexbb", "Refine"]:
         init(extra_options=init_local_docking(pose_input))
     else:
         init(extra_options=init_global_docking(pose_input))
@@ -45,9 +44,7 @@ def main():
     local_search_option = config.local_search_option
 
     # --- OUTPUT --------------------------------------+
-    jobid = config.jobid
-    if "/" in jobid:
-        os.makedirs("/".join(jobid.split("/")[:-1]), exist_ok=True)
+    jobid = config.out_path
 
     # --- INIT -----------------------------------------+
     native_input = config.native_input
@@ -91,7 +88,7 @@ def main():
     population = popul_calculator.run(init_population)
     _, best_pdb = alg.main(population)
     popul_calculator.terminate()
-    name = jobid.replace(".log", "_final_docked_evo.pdb")
+    name = jobid + "/final_docked_evo.pdb"
     # best_pdb.dump_pdb(name)
 
 

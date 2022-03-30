@@ -21,7 +21,7 @@ class RelaxOperator:
         self.local_search = local_search.local_search_strategy
 
         self.jobid = self.config.jobid
-        self.log_best = self.jobid.replace("evolution", "relax_best")
+        self.log_best = self.jobid + "/relax_best.log"
         if (
             self.config.docking_type_option == "Unbound"
             and self.config.bb_strategy == "relax_best"
