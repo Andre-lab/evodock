@@ -6,11 +6,11 @@ import time
 from src.genotype_converter import RefineCluspro, generate_genotype
 from src.individual import Individual
 from src.mpi_utils import IndividualMPI
-from src.population_swap_operator import PopulationSwapOperator
+from src.population_swap_operator import FlexbbSwapOperatorBuilder
 from src.selection import GreedySelection
 from src.single_process import SingleProcessPopulCalculator
 from src.mutation_strategies import MutationStrategyBuilder
-
+from src.population import ScorePopulation
 from src.trial_generator import TrialGenerator, CodeGenerator, TriangularGenerator
 
 # --- MAIN ---------------------------------------------------------------------+
@@ -29,43 +29,34 @@ def make_trial(idx, genotype, ligand, receptor):
 
 
 class DifferentialEvolutionAlgorithm:
-    def __init__(self, popul_calculator, config):
+    def __init__(self, config, fitness_function):
         self.config = config
         self.scheme = config.scheme
         self.logger = logging.getLogger("evodock.de")
         self.logger.setLevel(logging.INFO)
-        self.popul_calculator = popul_calculator
         self.popsize = config.popsize
         self.mutate = config.mutate
         self.recombination = config.recombination
         self.maxiter = config.maxiter
         self.job_id = config.out_path + "/evolution.log"
-        self.ind_size = popul_calculator.cost_func.size()
+        self.ind_size = fitness_function.size()
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.config.out_path + "/time.log"
         self.max_translation = config.get_max_translation()
+
+        self.scfxn = fitness_function
         self.mutation_strategy = MutationStrategyBuilder(config).build()
-        if (
-            self.config.docking_type_option == "Unbound"
-            and self.config.bb_strategy == "popul_library"
-        ):
-            self.flexbb_swap_operator = PopulationSwapOperator(
-                config, self.popul_calculator.scfxn, self.popul_calculator.local_search
-            )
-        else:
-            self.flexbb_swap_operator = None
+        self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
+            config, fitness_function
+        ).build()
+
+        self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
 
     def init_population(self, popsize=None, docking_type="Global"):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
-
-        # population_calculator = SingleProcessPopulCalculator(
-        #     self.popul_calculator.cost_func, self.config
-        # )
-
         population_calculator = self.popul_calculator
-
-        if docking_type == "RefineCluspro":
+        if docking_type == "Refine":
             refCluspro = RefineCluspro(self.config, self.max_translation)
 
         if popsize is None:
@@ -80,16 +71,15 @@ class DifferentialEvolutionAlgorithm:
                     indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
 
             else:
-                if docking_type == "RefineCluspro":
+                if docking_type == "Refine":
                     indv = refCluspro.refine_cluspro(i)
                 else:
                     indv = generate_genotype(
-                        self.popul_calculator.scfxn.input_pose, self.max_translation
+                        self.scfxn.input_pose, self.max_translation
                     )
 
             # todo: read file and count *.pdb
-
-            if self.config.docking_type_option == "Unbound":
+            if self.config.docking_type_option == "Flexbb":
                 len_receptors = len(glob.glob(self.config.path_receptors)) - 1
                 len_ligands = len(glob.glob(self.config.path_ligands)) - 1
                 idx_receptor = random.randint(0, len_receptors)
@@ -105,7 +95,7 @@ class DifferentialEvolutionAlgorithm:
         population = population_calculator.run(popul, init_population)
         end = time.time()
         self.logger.info(f"population init in {end - start} seconds")
-        # self.popul_calculator.cost_func.pymol_visualization(population)
+        # self.popul_calculator.pymol_visualization(population)
         return population
 
     def init_file(self):
@@ -128,7 +118,7 @@ class DifferentialEvolutionAlgorithm:
         self.logger.info(" DE")
         # --- SOLVE --------------------------------------------+
 
-        self.popul_calculator.cost_func.print_information(population)
+        self.popul_calculator.print_information(population)
         # _ = input("continue > ")
         # cycle through each generation (step #2)
         archive_restart = [0] * self.popsize
@@ -150,7 +140,7 @@ class DifferentialEvolutionAlgorithm:
 
             trials = []
             trial_generator = TriangularGenerator(
-                self.config, i, self.popul_calculator.cost_func.local_search
+                self.config, i, self.popul_calculator.local_search
             )
             for j in range(0, self.popsize):
                 # --- MUTATION (step #3.A) ---------------------+
@@ -162,8 +152,8 @@ class DifferentialEvolutionAlgorithm:
             # --- SELECTION (step #3.C) -------------+
 
             trial_inds = trials
-            self.popul_calculator.cost_func.print_information(trial_inds, True)
-            # self.popul_calculator.cost_func.pymol_visualization(trial_inds)
+            self.popul_calculator.print_information(trial_inds, True)
+            # self.popul_calculator.pymol_visualization(trial_inds)
 
             previous_gen_scores = gen_scores
             population, gen_scores, trial_scores = GreedySelection().apply(
@@ -191,9 +181,7 @@ class DifferentialEvolutionAlgorithm:
                             ind,
                             before,
                             after,
-                        ) = self.popul_calculator.cost_func.local_search.process_individual(
-                            ind
-                        )
+                        ) = self.scfxn.local_search.process_individual(ind)
                         population[j] = ind
                         gen_scores[j] = after
 
@@ -216,17 +204,16 @@ class DifferentialEvolutionAlgorithm:
                 best_pdb,
                 best_SixD_vector,
                 best_rmsd,
-            ) = self.popul_calculator.cost_func.render_best(i, gen_sol, population)
-            best_sol_str = self.popul_calculator.cost_func.get_sol_string(
-                best_SixD_vector
-            )
+            ) = self.popul_calculator.render_best(i, gen_sol, population)
+            best_sol_str = self.popul_calculator.get_sol_string(best_SixD_vector)
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
-            self.popul_calculator.cost_func.print_information(population)
+            self.popul_calculator.print_information(population)
 
-            # self.popul_calculator.cost_func.pymol_visualization(population)
+            # self.popul_calculator.pymol_visualization(population)
 
-            name = self.config.out_path + "/evolved.pdb"
-            # best_pdb.dump_pdb(name)
+            if self.config.out_pdb:
+                name = self.config.out_path + "/evolved.pdb"
+                best_pdb.dump_pdb(name)
 
             file_object.write("%f \t" % gen_avg)
             file_object.write("%f \t" % gen_best)
@@ -237,7 +224,7 @@ class DifferentialEvolutionAlgorithm:
             file_time.write("%f \n" % (gen_end - gen_start))
             file_time.close()
 
-        return population, best_pdb
+        return best_pdb
 
     def apply_popul_flexbb(self, population):
         return self.flexbb_swap_operator.apply(population)

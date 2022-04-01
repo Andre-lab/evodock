@@ -2,6 +2,13 @@
 # coding: utf-8
 
 
+def build_rosetta_flags(config):
+    if config.docking_type_option in ["Local", "Flexbb", "Refine"]:
+        return init_local_docking(config.pose_input)
+    else:
+        return init_global_docking(config.pose_input)
+
+
 def init_global_docking(filename):
     opts = [
         "-mute all",

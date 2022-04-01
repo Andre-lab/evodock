@@ -19,16 +19,31 @@ from src.utils import IP_ADDRESS
 SWAP_PROBABILITY = 0.1
 
 
+class FlexbbSwapOperatorBuilder:
+    def __init__(self, config, scfxn):
+        self.config = config
+        self.scfxn = scfxn
+
+    def build(self):
+        if (
+            self.config.docking_type_option == "Unbound"
+            and self.config.bb_strategy == "popul_library"
+        ):
+            self.flexbb_swap_operator = PopulationSwapOperator(self.config, self.scfxn)
+        else:
+            self.flexbb_swap_operator = None
+
+
 class PopulationSwapOperator:
-    def __init__(self, config, scfxn, local_search):
+    def __init__(self, config, scfxn):
         self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn = scfxn
         self.scfxn_rosetta = self.scfxn.scfxn_rosetta
         self.config = config
-        self.local_search = local_search
+        self.local_search = scfxn.local_search
         self.jobid = self.config.jobid
 
-        self.swap_operator = FlexbbSwapOperator(config, scfxn, local_search)
+        self.swap_operator = FlexbbSwapOperator(config, scfxn, self.local_search)
         self.log_relax_success = self.jobid + "/relaxed_sucess.log"
         with open(self.log_relax_success, "w") as file_object:
             file_object.write("#{}\n".format(self.jobid))
