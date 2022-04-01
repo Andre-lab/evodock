@@ -53,9 +53,11 @@ class DifferentialEvolutionAlgorithm:
         self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
 
-    def init_population(self, popsize=None, docking_type="Global"):
+    def init_population(self):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
+        docking_type = self.config.docking_type_option
         population_calculator = self.popul_calculator
+        popsize = self.popsize
         if docking_type == "Refine":
             refCluspro = RefineCluspro(self.config, self.max_translation)
 

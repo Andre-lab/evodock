@@ -12,9 +12,10 @@ IP_ADDRESS = "10.8.0.6"
 
 
 def get_pose_from_file(pose_input):
-    native_pose = Pose()
-    pose_from_file(native_pose, pose_input)
-    return native_pose
+    pose = Pose()
+    pose_from_file(pose, pose_input)
+    pose.conformation().detect_disulfides()
+    return pose
 
 
 # compute an axis-aligned bounding box for the given pdb structure
