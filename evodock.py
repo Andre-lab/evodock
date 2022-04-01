@@ -22,33 +22,7 @@ MAIN_PATH = os.getcwd()
 logging.basicConfig(level=logging.ERROR)
 
 
-def main():
-    config = EvodockConfig(sys.argv[-1])
-
-    pose_input = config.pose_input
-
-    init(extra_options=build_rosetta_flags(config))
-
-    logger = logging.getLogger("evodock")
-    logger.setLevel(logging.INFO)
-
-    # --- INIT OPTIONS ------------------------------
-    docking_type_option = config.docking_type_option
-    jobid = config.out_path
-
-    # --- INIT PROTEIN STRUCTURES -------------------
-    native_input = config.native_input
-    input_pose = get_pose_from_file(pose_input)
-    native_pose = get_pose_from_file(native_input)
-    native_pose.conformation().detect_disulfides()
-    input_pose.conformation().detect_disulfides()
-
-    # ---- INIT SCORE FUNCTION ------------------------------
-
-    scfxn = FAFitnessFunction(input_pose, native_pose, config)
-
-    # ---- PRINT INIT INFORMATION ---------------------
-
+def print_init_information(logger, scfxn, native_pose, input_pose):
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(input_pose)]
     )
@@ -58,29 +32,52 @@ def main():
 
     native_score = scfxn.scfxn_rosetta.score(native_pose)
     input_score = scfxn.scfxn_rosetta.score(input_pose)
+    input_vs_native_rmsd = CA_rmsd(input_pose, native_pose)
 
     logger.info("==============================")
     logger.info(" input information ")
-    logger.info(" input position: " + position_str)
-    logger.info(" input pose score {:.2f}".format(input_score))
-    logger.info(" native pose score {:.2f}".format(native_score))
-    logger.info(" native position: " + native_position_str)
-    logger.info(" input vs native rmsd: " + str(CA_rmsd(input_pose, native_pose)))
+    logger.info(f" input position: {position_str}")
+    logger.info(f" input pose score {input_score:.2f}")
+    logger.info(f" native pose score {native_score:.2f}")
+    logger.info(f" native position: {native_position_str}")
+    logger.info(f" input vs native rmsd: {input_vs_native_rmsd:.2f}")
     logger.info("==============================")
+
+
+def main():
+    config = EvodockConfig(sys.argv[-1])
+
+    init(extra_options=build_rosetta_flags(config))
+
+    logger = logging.getLogger("evodock")
+    logger.setLevel(logging.INFO)
+
+    # --- INIT PROTEIN STRUCTURES -------------------
+    pose_input = config.pose_input
+    native_input = config.native_input
+    input_pose = get_pose_from_file(pose_input)
+    native_pose = get_pose_from_file(native_input)
+
+    # ---- INIT SCORE FUNCTION ------------------------------
+    scfxn = FAFitnessFunction(input_pose, native_pose, config)
+
+    # ---- PRINT INIT INFORMATION ---------------------
+    print_init_information(logger, scfxn, native_pose, input_pose)
 
     # ---- START ALGORITHM ---------------------------------
     alg = DE(config, scfxn)
-    init_population = alg.init_population(config.popsize, docking_type_option)
+    init_population = alg.init_population()
 
     # --- RUN ALGORITHM -------------------------------------
-
     logger.info("==============================")
     logger.info(" starts EvoDOCK : evolutionary docking process")
     best_pdb = alg.main(init_population)
 
     # ---- OUTPUT -------------------------------------------
+    logger.info(" end EvoDOCK")
+    logger.info("==============================")
     if config.out_pdb:
-        name = jobid + "/final_docked_evo.pdb"
+        name = config.out_path + "/final_docked_evo.pdb"
         best_pdb.dump_pdb(name)
 
 
