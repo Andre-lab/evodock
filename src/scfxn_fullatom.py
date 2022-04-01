@@ -17,6 +17,7 @@ from scipy.spatial.transform import Rotation as R
 from src.genotype_converter import GlobalGenotypeConverter, LocalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
 from src.utils import IP_ADDRESS
+from src.local_search import LocalSearchPopulation
 
 
 class FAFitnessFunction:
@@ -43,6 +44,9 @@ class FAFitnessFunction:
         self.ax1, self.ax2, self.ax3 = build_axis()
         mros_temp = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         self.mros, _ = to_rosetta(mros_temp, [0, 0, 0])
+        self.local_search = LocalSearchPopulation(
+            self, config.local_search_option, config
+        )
 
     def get_rmsd(self, pose):
         rmsd = CA_rmsd(self.native_pose, pose)

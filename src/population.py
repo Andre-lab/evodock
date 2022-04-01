@@ -1,32 +1,39 @@
 import os
 
+from src.individual import Individual
+from src.genotype_converter import generate_genotype
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
 from src.utils import IP_ADDRESS
 
+LOW_LIMIT_INIT_DIVERSITY = 2
+
 
 class ScorePopulation:
-    def __init__(self, scfxn, jobid, local_search, config):
+    def __init__(self, config, scfxn):
         self.config = config
         self.name = "ScorePopulation"
-        self.jobid = jobid
+        self.out_path = config.out_path
         self.scfxn = scfxn
-        self.log_best = jobid + "/best_individual.log"
-        self.log_interface = jobid + "/interface.log"
-        self.log_flexbb = jobid + "/flexbb.log"
-        self.log_popul = jobid + "/popul.log"
-        self.log_trials = jobid + "/trials.log"
-        self.local_search = local_search
+        self.log_best = self.out_path + "/best_individual.log"
+        self.log_interface = self.out_path + "/interface.log"
+        self.log_flexbb = self.out_path + "/flexbb.log"
+        self.log_popul = self.out_path + "/popul.log"
+        self.log_trials = self.out_path + "/trials.log"
+        self.local_search = scfxn.local_search
+        self.print_header_logfiles()
+
+    def print_header_logfiles(self):
         with open(self.log_best, "w") as file_object:
-            file_object.write("#{}\n".format(jobid))
+            file_object.write("#{}\n".format(self.out_path))
         with open(self.log_trials, "w") as file_object:
-            file_object.write("#{}\n".format(jobid))
+            file_object.write("#{}\n".format(self.out_path))
         with open(self.log_popul, "w") as file_object:
-            file_object.write("#{}\n".format(jobid))
+            file_object.write("#{}\n".format(self.out_path))
         with open(self.log_interface, "w") as file_object:
-            file_object.write("#{}\n".format(jobid))
+            file_object.write("#{}\n".format(self.out_path))
         with open(self.log_flexbb, "w") as file_object:
-            file_object.write("#{}\n".format(jobid))
+            file_object.write("#{}\n".format(self.out_path))
 
     def get_sol_string(self, sol):
         return self.scfxn.get_sol_string(sol)
@@ -96,3 +103,21 @@ class ScorePopulation:
             tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
             tmp_pose.pdb_info().name("popul_" + str(ind))
             # pymover.apply(tmp_pose)
+
+    def run(self, popul, init_population=False):
+        convert_pop = popul
+        result_pop = []
+        for ind in convert_pop:
+            if init_population:
+                (
+                    scored_ind,
+                    before,
+                    after,
+                ) = self.local_search.process_individual(ind, True)
+                if self.config.docking_type_option and LOW_LIMIT_INIT_DIVERSITY > 0:
+                    while scored_ind.rmsd < LOW_LIMIT_INIT_DIVERSITY:
+                        (scored_ind, before, after) = self.randomize_ind(scored_ind)
+            else:
+                scored_ind, _, _ = self.local_search.process_individual(ind)
+            result_pop.append(scored_ind)
+        return result_pop

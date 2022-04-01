@@ -10,8 +10,8 @@ from pyrosetta.rosetta.core.scoring import CA_rmsd
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
-from src.local_search import LocalSearchPopulation
-from src.options import init_global_docking, init_local_docking
+
+from src.options import build_rosetta_flags
 from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
 from src.single_process import SingleProcessPopulCalculator
@@ -26,35 +26,28 @@ def main():
     config = EvodockConfig(sys.argv[-1])
 
     pose_input = config.pose_input
-    if config.docking_type_option in ["Local", "Flexbb", "Refine"]:
-        init(extra_options=init_local_docking(pose_input))
-    else:
-        init(extra_options=init_global_docking(pose_input))
+
+    init(extra_options=build_rosetta_flags(config))
 
     logger = logging.getLogger("evodock")
     logger.setLevel(logging.INFO)
 
-    # --- Position Params -----------------------------+
-    trans_max_magnitude = config.get_max_translation()
-
-    # --- DOCKING PARAMS -----------------------------------+
+    # --- INIT OPTIONS ------------------------------
     docking_type_option = config.docking_type_option
-
-    # --- LS PARAMS -----------------------------------+
-    local_search_option = config.local_search_option
-
-    # --- OUTPUT --------------------------------------+
     jobid = config.out_path
 
-    # --- INIT -----------------------------------------+
+    # --- INIT PROTEIN STRUCTURES -------------------
     native_input = config.native_input
     input_pose = get_pose_from_file(pose_input)
     native_pose = get_pose_from_file(native_input)
-
     native_pose.conformation().detect_disulfides()
     input_pose.conformation().detect_disulfides()
 
+    # ---- INIT SCORE FUNCTION ------------------------------
+
     scfxn = FAFitnessFunction(input_pose, native_pose, config)
+
+    # ---- PRINT INIT INFORMATION ---------------------
 
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(input_pose)]
@@ -66,10 +59,6 @@ def main():
     native_score = scfxn.scfxn_rosetta.score(native_pose)
     input_score = scfxn.scfxn_rosetta.score(input_pose)
 
-    local_search = LocalSearchPopulation(scfxn, local_search_option, config)
-    score_popul = ScorePopulation(scfxn, jobid, local_search, config)
-    popul_calculator = SingleProcessPopulCalculator(score_popul, config)
-
     logger.info("==============================")
     logger.info(" input information ")
     logger.info(" input position: " + position_str)
@@ -79,17 +68,20 @@ def main():
     logger.info(" input vs native rmsd: " + str(CA_rmsd(input_pose, native_pose)))
     logger.info("==============================")
 
-    alg = DE(popul_calculator, config)
+    # ---- START ALGORITHM ---------------------------------
+    alg = DE(config, scfxn)
     init_population = alg.init_population(config.popsize, docking_type_option)
 
-    # --- RUN -----------------------------------------+
+    # --- RUN ALGORITHM -------------------------------------
+
     logger.info("==============================")
     logger.info(" starts EvoDOCK : evolutionary docking process")
-    population = popul_calculator.run(init_population)
-    _, best_pdb = alg.main(population)
-    popul_calculator.terminate()
-    name = jobid + "/final_docked_evo.pdb"
-    # best_pdb.dump_pdb(name)
+    best_pdb = alg.main(init_population)
+
+    # ---- OUTPUT -------------------------------------------
+    if config.out_pdb:
+        name = jobid + "/final_docked_evo.pdb"
+        best_pdb.dump_pdb(name)
 
 
 if __name__ == "__main__":
