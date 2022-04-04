@@ -57,11 +57,6 @@ class LocalSearchPopulation:
             interface,
             irms,
         )
-        # if self.config.bb_strategy == "only_relax":
-        #     if self.scfxn.score(self.scfxn.dock_pose) > data["after"]:
-        #         self.scfxn.dock_pose.assign(pose)
-        # else:
-
         self.scfxn.dock_pose.assign(self.starting_pose)
 
         return result_individual, data["before"], data["after"]

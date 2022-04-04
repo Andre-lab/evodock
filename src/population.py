@@ -15,25 +15,30 @@ class ScorePopulation:
         self.name = "ScorePopulation"
         self.out_path = config.out_path
         self.scfxn = scfxn
-        self.log_best = self.out_path + "/best_individual.log"
-        self.log_interface = self.out_path + "/interface.log"
-        self.log_flexbb = self.out_path + "/flexbb.log"
-        self.log_popul = self.out_path + "/popul.log"
-        self.log_trials = self.out_path + "/trials.log"
+        self.log_best = self.out_path + "/best_individual.csv"
+        self.log_interface = self.out_path + "/interface.csv"
+        self.log_popul = self.out_path + "/popul.csv"
+        self.log_trials = self.out_path + "/trials.csv"
         self.local_search = scfxn.local_search
         self.print_header_logfiles()
 
     def print_header_logfiles(self):
         with open(self.log_best, "w") as file_object:
             file_object.write("#{}\n".format(self.out_path))
+            file_object.write("g1,g2,g3,g4,g5,g6\n")
         with open(self.log_trials, "w") as file_object:
             file_object.write("#{}\n".format(self.out_path))
+            vals = ",".join([f"sc_{t},rmsd_{t}" for t in range(0, self.config.popsize)])
+            file_object.write(f"{vals}\n")
         with open(self.log_popul, "w") as file_object:
             file_object.write("#{}\n".format(self.out_path))
-        with open(self.log_interface, "w") as file_object:
-            file_object.write("#{}\n".format(self.out_path))
-        with open(self.log_flexbb, "w") as file_object:
-            file_object.write("#{}\n".format(self.out_path))
+            vals = ",".join(
+                [
+                    f"sc_{t},rmsd_{t},Isc_{t},Irmsd_{t}"
+                    for t in range(0, self.config.popsize)
+                ]
+            )
+            file_object.write(f"{vals}\n")
 
     def get_sol_string(self, sol):
         return self.scfxn.get_sol_string(sol)
@@ -54,32 +59,16 @@ class ScorePopulation:
         return self.scfxn.size()
 
     def print_popul_info(self, popul, destiny, trial_popul=False):
-        popul_dst = [ind.score for ind in popul]
-        popul_rmsd = [ind.rmsd for ind in popul]
-        popul_interface = [ind.i_sc for ind in popul]
-        popul_irmsd = [ind.irms for ind in popul]
+        if trial_popul is False:
+            popul_str = [
+                f"{ind.score:.2f},{ind.rmsd:.2f},{ind.i_sc:.2f},{ind.irms:.2f}"
+                for ind in popul
+            ]
+        else:
+            popul_str = [f"{ind.score:.2f},{ind.rmsd:.2f}" for ind in popul]
 
         with open(destiny, "a") as file_object:
-            popul_dst_str = ",".join(["{:.2f}".format(i) for i in popul_dst])
-            popul_rmsd_str = ",".join(["{:.2f}".format(i) for i in popul_rmsd])
-            file_object.write("{}\n".format(popul_dst_str))
-            file_object.write("{}\n".format(popul_rmsd_str))
-
-        if trial_popul is False:
-            with open(self.log_interface, "a") as file_object:
-                popul_interface_str = ",".join(
-                    ["{:.2f}".format(i) for i in popul_interface]
-                )
-                popul_irmsd_str = ",".join(["{:.2f}".format(i) for i in popul_irmsd])
-                file_object.write("{}\n".format(popul_interface_str))
-                file_object.write("{}\n".format(popul_irmsd_str))
-
-            popul_flexbb = [(ind.idx_ligand, ind.idx_receptor) for ind in popul]
-            with open(self.log_flexbb, "a") as file_object:
-                popul_flexbb_str = ",".join(
-                    ["({:.0f},{:.0f})".format(i[0], i[1]) for i in popul_flexbb]
-                )
-                file_object.write("{}\n".format(popul_flexbb_str))
+            file_object.write(f"{','.join(popul_str)}\n")
 
     def print_information(self, popul, trial_popul=False):
         if trial_popul is False:

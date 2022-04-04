@@ -72,12 +72,24 @@ class EvodockConfig:
         self.docking_type_option = config["Docking"].get("type")
 
         # -- INPUT PARAMETERS ---------------------------------------+
-        self.pose_input = self.p + config["Inputs"].get("pose_input")
+        pose_input_file_abs = self.p + config["Inputs"].get("pose_input")
+        pose_input_file_relative = "./" + config["Inputs"].get("pose_input")
+        if os.path.isfile(pose_input_file_abs):
+            self.pose_input = pose_input_file_abs
+        else:
+            self.pose_input = pose_input_file_relative
+
         if not os.path.isfile(self.pose_input):
             self.logger.info(f"input file not found: {self.pose_input}")
             exit()
 
-        self.native_input = self.p + config["Inputs"].get("native_input")
+        native_input_file_abs = self.p + config["Inputs"].get("native_input")
+        native_input_file_relative = "./" + config["Inputs"].get("native_input")
+        if os.path.isfile(native_input_file_abs):
+            self.native_input = native_input_file_abs
+        else:
+            self.native_input = native_input_file_relative
+
         if not os.path.isfile(self.native_input):
             self.logger.info(f"input file not found: {self.native_input}")
             exit()

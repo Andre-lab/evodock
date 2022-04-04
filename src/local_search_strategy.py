@@ -26,7 +26,7 @@ from pyrosetta.rosetta.protocols.simple_task_operations import RestrictToInterfa
 class LocalSearchStrategy:
     def __init__(self, config, scfxn, dock_pose):
         self.config = config
-        self.pymover = PyMOLMover(address="10.8.0.22", port=65000, max_packet_size=1400)
+        # self.pymover = PyMOLMover(address="10.8.0.22", port=65000, max_packet_size=1400)
         self.scfxn = scfxn
         self.dock_pose = dock_pose
         self.packer_option = config.local_search_option
