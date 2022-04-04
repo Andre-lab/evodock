@@ -3,7 +3,7 @@ import logging
 import random
 import time
 
-from src.genotype_converter import RefineCluspro, generate_genotype
+
 from src.individual import Individual
 from src.mpi_utils import IndividualMPI
 from src.population_swap_operator import FlexbbSwapOperatorBuilder
@@ -12,20 +12,10 @@ from src.single_process import SingleProcessPopulCalculator
 from src.mutation_strategies import MutationStrategyBuilder
 from src.population import ScorePopulation
 from src.trial_generator import TrialGenerator, CodeGenerator, TriangularGenerator
+from src.initialize_population import InitializePopulationBuilder
+from src.utils import make_trial
 
 # --- MAIN ---------------------------------------------------------------------+
-
-
-def make_trial(idx, genotype, ligand, receptor):
-    ind = IndividualMPI(idx, genotype)
-    ind.genotype = genotype
-    ind.score = 1000
-    ind.idx_ligand = ligand
-    ind.idx_receptor = receptor
-    ind.rmsd = 0
-    ind.i_sc = 0
-    ind.irms = 0
-    return ind
 
 
 class DifferentialEvolutionAlgorithm:
@@ -38,195 +28,185 @@ class DifferentialEvolutionAlgorithm:
         self.mutate = config.mutate
         self.recombination = config.recombination
         self.maxiter = config.maxiter
-        self.job_id = config.out_path + "/evolution.log"
+        self.job_id = config.out_path + "/evolution.csv"
         self.ind_size = fitness_function.size()
         self.bounds = [(-1, 1)] * self.ind_size
-        self.file_time_name = self.config.out_path + "/time.log"
+        self.file_time_name = self.config.out_path + "/time.csv"
         self.max_translation = config.get_max_translation()
-
         self.scfxn = fitness_function
         self.mutation_strategy = MutationStrategyBuilder(config).build()
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
             config, fitness_function
         ).build()
-
         self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
 
     def init_population(self):
-        # --- INITIALIZE A POPULATION (step #1) ----------------+
-        docking_type = self.config.docking_type_option
-        population_calculator = self.popul_calculator
-        popsize = self.popsize
-        if docking_type == "Refine":
-            refCluspro = RefineCluspro(self.config, self.max_translation)
-
-        if popsize is None:
-            popsize = self.popsize
-        self.logger.info(" init population")
-        population = []
-        popul = []
-        for i in range(0, popsize):
-            indv = []
-            if docking_type == "Global":
-                for j in range(len(self.bounds)):
-                    indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
-
-            else:
-                if docking_type == "Refine":
-                    indv = refCluspro.refine_cluspro(i)
-                else:
-                    indv = generate_genotype(
-                        self.scfxn.input_pose, self.max_translation
-                    )
-
-            # todo: read file and count *.pdb
-            if self.config.docking_type_option == "Flexbb":
-                len_receptors = len(glob.glob(self.config.path_receptors)) - 1
-                len_ligands = len(glob.glob(self.config.path_ligands)) - 1
-                idx_receptor = random.randint(0, len_receptors)
-                idx_ligand = random.randint(0, len_ligands)
-            else:
-                idx_ligand, idx_receptor = 1, 1
-
-            popul.append(make_trial(i, indv, idx_ligand, idx_receptor))
-            population.append(Individual(indv, idx_ligand, idx_receptor, 0, 1000))
-
-        init_population = True
-        start = time.time()
-        population = population_calculator.run(popul, init_population)
-        end = time.time()
-        self.logger.info(f"population init in {end - start} seconds")
-        # self.popul_calculator.pymol_visualization(population)
-        return population
+        return InitializePopulationBuilder().run(
+            self.config, self.logger, self.popul_calculator
+        )
 
     def init_file(self):
+        header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
         with open(self.job_id, "w") as file_object:
-            file_object.write(
-                "CONF: maxiter : {}, np : {}, f {}, cr {} \n".format(
-                    self.maxiter, self.popsize, self.mutate, self.recombination
-                )
-            )
-            file_object.write("INIT EVOLUTION\n")
+            file_object.write(header)
+            file_object.write("# INIT EVOLUTION\n")
+            file_object.write("gen,avg,best,rmsd_from_best\n")
         with open(self.file_time_name, "w") as file_time:
-            file_time.write(
-                "CONF: maxiter : {}, np : {}, f {}, cr {} \n".format(
-                    self.maxiter, self.popsize, self.mutate, self.recombination
-                )
-            )
-            file_time.write("INIT EVOLUTION\n")
+            file_time.write(header)
+            file_time.write("# INIT EVOLUTION\n")
+            file_time.write("generation_seconds\n")
 
     def main(self, population):
         self.logger.info(" DE")
-        # --- SOLVE --------------------------------------------+
-
-        self.popul_calculator.print_information(population)
-        # _ = input("continue > ")
-        # cycle through each generation (step #2)
-        archive_restart = [0] * self.popsize
-        for i in range(1, self.maxiter + 1):
-            self.logger.info(" GENERATION:" + str(i))
-            gen_start = time.time()
-            file_object = open(self.job_id, "a")
-            file_time = open(self.file_time_name, "a")
-
-            file_object.write("GENERATION: \t" + str(i) + "\t")
-            gen_scores = [ind.score for ind in population]
-
-            gen_sol = population[gen_scores.index(min(gen_scores))]
+        self.population = population
+        self.popul_calculator.print_information(self.population)
+        for generation in range(1, self.maxiter + 1):
+            self.generation = generation
+            self.logger.info(f" GENERATION: {self.generation}")
+            self.gen_start = time.time()
+            self.gen_scores = [ind.score for ind in self.population]
             # cycle through each individual in the population
 
-            rmax = 1
-            rmin = 0.1
-            rgen = rmax - ((i / self.maxiter) * (rmax - rmin))
-
-            trials = []
-            trial_generator = TriangularGenerator(
-                self.config, i, self.popul_calculator.local_search
-            )
-            for j in range(0, self.popsize):
-                # --- MUTATION (step #3.A) ---------------------+
-                # select 3 random vector index positions [0, self.popsize)
-                # not including current vector (j)
-                v_trial = trial_generator.build(j, population, gen_scores)
-                trials.append(v_trial)
+            # --- TRIAL CREATION (step #3.A) -------------+
+            trials = self.generate_trial_population()
 
             # --- SELECTION (step #3.C) -------------+
-
-            trial_inds = trials
-            self.popul_calculator.print_information(trial_inds, True)
-            # self.popul_calculator.pymol_visualization(trial_inds)
-
-            previous_gen_scores = gen_scores
-            population, gen_scores, trial_scores = GreedySelection().apply(
-                trial_inds, population
-            )
-
-            # --- RESTART ---- #
-            gen_best = min(gen_scores)
-            # for j in range(0, self.popsize):
-            if False:
-                if abs(gen_scores[j] - previous_gen_scores[j]) < 0.0001:
-                    archive_restart[j] += 1
-                else:
-                    archive_restart[j] = 0
-                if archive_restart[j] == 15:
-                    if gen_scores[j] != gen_best:
-                        archive_restart[j] = 0
-                        indv = population[j].genotype
-                        jrand = random.randrange(0, len(self.bounds))
-                        indv[jrand] = random.uniform(
-                            self.bounds[jrand][0], self.bounds[jrand][1]
-                        )
-                        ind = make_trial(j, indv, 0, 0)
-                        (
-                            ind,
-                            before,
-                            after,
-                        ) = self.scfxn.local_search.process_individual(ind)
-                        population[j] = ind
-                        gen_scores[j] = after
+            self.selection(trials)
 
             # --- SCORE KEEPING --------------------------------+
-            gen_avg = sum(gen_scores) / self.popsize
-            gen_best = min(gen_scores)
+            self.score_keeping()
 
-            trial_avg = sum(trial_scores) / self.popsize
-            trial_best = min(trial_scores)
+        return self.best_pdb
 
-            gen_sol = population[gen_scores.index(min(gen_scores))]
+    def generate_trial_population(self):
+        trials = []
+        trial_generator = TrialGenerator(
+            self.config, self.popul_calculator.local_search
+        )
+        for j in range(0, self.popsize):
+            # --- MUTATION (step #3.A) ---------------------+
+            # select 3 random vector index positions [0, self.popsize)
+            # not including current vector (j)
+            v_trial = trial_generator.build(j, self.population, self.gen_scores)
+            trials.append(v_trial)
+        return trials
 
-            self.logger.info("   > GENERATION AVERAGE: %f " % gen_avg)
-            self.logger.info("   > GENERATION BEST: %f " % gen_best)
-            self.logger.info(
-                "   > TRIAL INFO: {:.2f} {:.2f} ".format(trial_best, trial_avg)
-            )
+    def selection(self, trials):
+        trial_inds = trials
+        self.popul_calculator.print_information(trial_inds, True)
+        # self.popul_calculator.pymol_visualization(trial_inds)
 
-            (
-                best_pdb,
-                best_SixD_vector,
-                best_rmsd,
-            ) = self.popul_calculator.render_best(i, gen_sol, population)
-            best_sol_str = self.popul_calculator.get_sol_string(best_SixD_vector)
-            self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
-            self.popul_calculator.print_information(population)
+        self.previous_gen_scores = self.gen_scores
+        (
+            self.population,
+            self.gen_scores,
+            self.trial_scores,
+        ) = GreedySelection().apply(trial_inds, self.population)
 
-            # self.popul_calculator.pymol_visualization(population)
+    def score_keeping(self):
+        self.gen_avg = sum(self.gen_scores) / self.popsize
+        self.gen_best = min(self.gen_scores)
+        self.trial_avg = sum(self.trial_scores) / self.popsize
+        self.trial_best = min(self.trial_scores)
+        gen_sol = self.population[self.gen_scores.index(min(self.gen_scores))]
+        self.logger.info(f"   > GENERATION AVERAGE: {self.gen_avg:.2f}")
+        self.logger.info(f"   > GENERATION BEST: {self.gen_best:.2f}")
+        self.logger.info(f"   > TRIAL INFO: {self.trial_best:.2f} {self.trial_avg:.2f}")
 
-            if self.config.out_pdb:
-                name = self.config.out_path + "/evolved.pdb"
-                best_pdb.dump_pdb(name)
+        (
+            self.best_pdb,
+            best_SixD_vector,
+            best_rmsd,
+        ) = self.popul_calculator.render_best(self.generation, gen_sol, self.population)
+        best_sol_str = self.popul_calculator.get_sol_string(best_SixD_vector)
+        self.logger.info(f"   > BEST SOL: {best_sol_str}")
+        self.popul_calculator.print_information(self.population)
 
-            file_object.write("%f \t" % gen_avg)
-            file_object.write("%f \t" % gen_best)
-            file_object.write("%f \n" % best_rmsd)
-            file_object.close()
-            gen_end = time.time()
-            self.logger.info(f"selection stage in {gen_end - gen_start} seconds")
-            file_time.write("%f \n" % (gen_end - gen_start))
-            file_time.close()
+        # self.popul_calculator.pymol_visualization(self.population)
 
-        return best_pdb
+        if self.config.out_pdb:
+            name = self.config.out_path + "/evolved.pdb"
+            self.best_pdb.dump_pdb(name)
+
+        file_object = open(self.job_id, "a")
+        evolution_str = f"{self.generation:.0f},{self.gen_avg:.2f},{self.gen_best:.2f},{best_rmsd:.2f}"
+        file_object.write(f"{evolution_str}\n")
+        file_object.close()
+        gen_end = time.time()
+
+        file_time = open(self.file_time_name, "a")
+        self.logger.info(f"selection stage in {gen_end - self.gen_start:.2f} s.")
+        file_time.write(f"{gen_end - self.gen_start:.2f}\n")
+        file_time.close()
 
     def apply_popul_flexbb(self, population):
         return self.flexbb_swap_operator.apply(population)
+
+
+class TriangularDE(DifferentialEvolutionAlgorithm):
+    def generate_trial_population(self):
+        rmax = 1
+        rmin = 0.1
+        rgen = rmax - ((self.generation / self.maxiter) * (rmax - rmin))
+        trials = []
+        trial_generator = TriangularGenerator(
+            self.config, self.generation, self.popul_calculator.local_search
+        )
+        for j in range(0, self.popsize):
+            # --- MUTATION (step #3.A) ---------------------+
+            # select 3 random vector index positions [0, self.popsize)
+            # not including current vector (j)
+            v_trial = trial_generator.build(j, self.population, self.gen_scores)
+            trials.append(v_trial)
+        return trials
+
+    def main(self, population):
+        self.logger.info(" DE")
+        self.population = population
+        self.popul_calculator.print_information(self.population)
+        self.archive_restart = [0] * self.popsize
+        for generation in range(1, self.maxiter + 1):
+            self.generation = generation
+            self.logger.info(f" GENERATION: {self.generation}")
+            self.gen_start = time.time()
+            self.gen_scores = [ind.score for ind in self.population]
+            # cycle through each individual in the population
+
+            # --- TRIAL CREATION (step #3.A) -------------+
+            trials = self.generate_trial_population()
+
+            # --- SELECTION (step #3.C) -------------+
+            self.selection(trials)
+
+            # --- RESTART ---- #
+            self.restart_mechanism()
+
+            # --- SCORE KEEPING --------------------------------+
+            self.score_keeping()
+
+        return self.best_pdb
+
+    def restart_mechanism(self):
+        self.gen_best = min(self.gen_scores)
+        for j in range(0, self.popsize):
+            if abs(self.gen_scores[j] - self.previous_gen_scores[j]) < 0.0001:
+                self.archive_restart[j] += 1
+            else:
+                self.archive_restart[j] = 0
+            if self.archive_restart[j] == 15:
+                if self.gen_scores[j] != self.gen_best:
+                    self.archive_restart[j] = 0
+                    indv = self.population[j].genotype
+                    jrand = random.randrange(0, len(self.bounds))
+                    indv[jrand] = random.uniform(
+                        self.bounds[jrand][0], self.bounds[jrand][1]
+                    )
+                    ind = make_trial(j, indv, 0, 0)
+                    (
+                        ind,
+                        before,
+                        after,
+                    ) = self.scfxn.local_search.process_individual(ind)
+                    self.population[j] = ind
+                    self.gen_scores[j] = after

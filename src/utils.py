@@ -5,7 +5,7 @@
 import numpy as np
 from pyrosetta import Pose, pose_from_file
 from scipy.spatial.transform import Rotation as R
-
+from src.mpi_utils import IndividualMPI
 from src.pdb_structure import pdbstructure_from_file
 
 IP_ADDRESS = "10.8.0.6"
@@ -139,3 +139,15 @@ def set_new_max_translations(scfxn, popul):
         # print(scfxn.convert_genotype(ind.genotype))
 
     return popul
+
+
+def make_trial(idx, genotype, ligand=1, receptor=1):
+    ind = IndividualMPI(idx, genotype)
+    ind.genotype = genotype
+    ind.score = 1000
+    ind.idx_ligand = ligand
+    ind.idx_receptor = receptor
+    ind.rmsd = 0
+    ind.i_sc = 0
+    ind.irms = 0
+    return ind
