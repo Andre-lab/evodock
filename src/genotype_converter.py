@@ -14,7 +14,7 @@ from src.utils import convert_range, get_pose_from_file, get_position_info
 class RefineCluspro:
     def __init__(self, config, max_trans):
         input_pose = get_pose_from_file(config.pose_input)
-        lst = glob.glob(config.cluspro_pdbs)
+        lst = glob.glob(config.init_pdbs)
         filenames = vector1_std_string()
         for f in lst:
             filenames.append(f)

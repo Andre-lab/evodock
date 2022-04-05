@@ -68,7 +68,7 @@ class LocalSearchStrategy:
             self.docking.set_task_factory(mcm_docking.task_factory())
             self.docking.set_ignore_default_task(True)
         self.slide_into_contact = FaDockingSlideIntoContact(dock_pose.num_jump())
-        if self.config.docking_type_option == "Unbound":
+        if self.config.docking_type_option == "Flexbb":
             self.swap_operator = FlexbbSwapOperator(config, scfxn, None)
 
     def energy_score(self, pose):
@@ -76,22 +76,17 @@ class LocalSearchStrategy:
         return score
 
     def apply_bb_strategy(self, ind, pose):
-        bb_strategy = self.config.bb_strategy
-        if bb_strategy == "library":
-            return self.swap_operator.apply_bb_strategy(ind, pose)
-        if bb_strategy == "popul_library":
-            if random.uniform(0, 1) < 0.3:
-                idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
-                pose_chainA = self.swap_operator.list_receptor[idx_receptor]
-                pose_chainB = self.swap_operator.list_ligand[idx_ligand]
-                join_pose = self.swap_operator.make_pose_with_chains(
-                    pose, pose_chainA, pose_chainB
-                )
-                return join_pose, idx_receptor, idx_ligand
-
-        join_pose = pose
-        idx_receptor, idx_ligand = ind.idx_receptor, idx_ligand
+        idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
+        pose_chainA = self.swap_operator.list_receptor[idx_receptor]
+        pose_chainB = self.swap_operator.list_ligand[idx_ligand]
+        join_pose = self.swap_operator.make_pose_with_chains(
+            pose, pose_chainA, pose_chainB
+        )
         return join_pose, idx_receptor, idx_ligand
+
+        # join_pose = pose
+        # idx_receptor, idx_ligand = ind.idx_receptor, idx_ligand
+        # return join_pose, idx_receptor, idx_ligand
 
     def apply_bound_docking(self, ind, local_search=True):
         pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
@@ -137,7 +132,7 @@ class LocalSearchStrategy:
         return return_data
 
     def apply(self, ind, local_search=True):
-        if self.config.docking_type_option == "Unbound":
+        if self.config.docking_type_option == "Flexbb":
             return self.apply_unbound_docking(ind, local_search)
         else:
             return self.apply_bound_docking(ind, local_search)

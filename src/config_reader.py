@@ -129,8 +129,8 @@ class EvodockConfig:
     # --- Input Params -----------------------------+
     def load_refine_docking_parameters(self, config):
         if self.docking_type_option == "Refine":
-            if config.has_option("Inputs", "init_pdbs"):
-                self.init_pdbs = config["Inputs"].get("init_pdbs")
+            if config.has_option("Refine", "init_pdbs"):
+                self.init_pdbs = self.p + config["Refine"].get("init_pdbs")
             else:
                 self.logger.info(
                     "Models used for refinement are not found. Use 'init_pdbs' parameter"

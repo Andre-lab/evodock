@@ -11,9 +11,15 @@ from src.selection import GreedySelection
 from src.single_process import SingleProcessPopulCalculator
 from src.mutation_strategies import MutationStrategyBuilder
 from src.population import ScorePopulation
-from src.trial_generator import TrialGenerator, CodeGenerator, TriangularGenerator
+from src.trial_generator import (
+    TrialGenerator,
+    CodeGenerator,
+    TriangularGenerator,
+    FlexbbTrialGenerator,
+)
 from src.initialize_population import InitializePopulationBuilder
 from src.utils import make_trial
+from src.scfxn_fullatom import FAFitnessFunction
 
 # --- MAIN ---------------------------------------------------------------------+
 
@@ -38,13 +44,17 @@ class DifferentialEvolutionAlgorithm:
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
             config, fitness_function
         ).build()
+        # trial_score_config = config
+        # trial_score_config.docking_type_option = "Global"
+        # self.scfxn = FAFitnessFunction(
+        #     self.scfxn.input_pose, self.scfxn.native_pose, trial_score_config
+        # )
+
         self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
 
     def init_population(self):
-        return InitializePopulationBuilder().run(
-            self.config, self.logger, self.popul_calculator
-        )
+        return InitializePopulationBuilder().run(self)
 
     def init_file(self):
         header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
@@ -142,6 +152,49 @@ class DifferentialEvolutionAlgorithm:
 
     def apply_popul_flexbb(self, population):
         return self.flexbb_swap_operator.apply(population)
+
+
+class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
+    def generate_trial_population(self):
+        trials = []
+        trial_generator = FlexbbTrialGenerator(
+            self.config, self.popul_calculator.local_search
+        )
+        for j in range(0, self.popsize):
+            # --- MUTATION (step #3.A) ---------------------+
+            # select 3 random vector index positions [0, self.popsize)
+            # not including current vector (j)
+            v_trial = trial_generator.build(j, self.population, self.gen_scores)
+            trials.append(v_trial)
+        return trials
+
+    def main(self, population):
+        self.logger.info(" DE")
+        self.population = population
+        self.popul_calculator.print_information(self.population)
+        self.archive_restart = [0] * self.popsize
+        for generation in range(1, self.maxiter + 1):
+            self.generation = generation
+            self.logger.info(f" GENERATION: {self.generation}")
+            self.gen_start = time.time()
+            self.gen_scores = [ind.score for ind in self.population]
+            # cycle through each individual in the population
+
+            # --- TRIAL CREATION (step #3.A) -------------+
+            trials = self.generate_trial_population()
+
+            # --- SELECTION (step #3.C) -------------+
+            self.selection(trials)
+
+            # --- Apply Flexbb search ---- #
+            self.best_pdb, self.population = self.flexbb_swap_operator.apply(
+                self.population
+            )
+
+            # --- SCORE KEEPING --------------------------------+
+            self.score_keeping()
+
+        return self.best_pdb
 
 
 class TriangularDE(DifferentialEvolutionAlgorithm):

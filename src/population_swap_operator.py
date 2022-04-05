@@ -25,13 +25,12 @@ class FlexbbSwapOperatorBuilder:
         self.scfxn = scfxn
 
     def build(self):
-        if (
-            self.config.docking_type_option == "Unbound"
-            and self.config.bb_strategy == "popul_library"
-        ):
+        if self.config.docking_type_option == "Flexbb":
             self.flexbb_swap_operator = PopulationSwapOperator(self.config, self.scfxn)
         else:
             self.flexbb_swap_operator = None
+
+        return self.flexbb_swap_operator
 
 
 class PopulationSwapOperator:
@@ -41,7 +40,7 @@ class PopulationSwapOperator:
         self.scfxn_rosetta = self.scfxn.scfxn_rosetta
         self.config = config
         self.local_search = scfxn.local_search
-        self.jobid = self.config.jobid
+        self.jobid = self.config.out_path
 
         self.swap_operator = FlexbbSwapOperator(config, scfxn, self.local_search)
         self.log_relax_success = self.jobid + "/relaxed_sucess.log"
@@ -56,7 +55,7 @@ class PopulationSwapOperator:
         relaxed_sucess = 0
         new_population = []
         for ind in population:
-            if random.uniform(0, 1) < SWAP_PROBABILITY:
+            if random.uniform(0, 1) <= SWAP_PROBABILITY:
                 pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
                 join_pose, idx_r, idx_l, relaxed = self.swap_operator.apply_bb_strategy(
                     ind, pose
