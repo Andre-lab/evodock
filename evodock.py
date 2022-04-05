@@ -10,6 +10,7 @@ from pyrosetta.rosetta.core.scoring import CA_rmsd
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
+from src.differential_evolution import FlexbbDifferentialEvolution as FlexbbDE
 
 from src.options import build_rosetta_flags
 from src.population import ScorePopulation
@@ -65,7 +66,11 @@ def main():
     print_init_information(logger, scfxn, native_pose, input_pose)
 
     # ---- START ALGORITHM ---------------------------------
-    alg = DE(config, scfxn)
+    if config.docking_type_option == "Flexbb":
+        alg = FlexbbDE(config, scfxn)
+    else:
+        alg = DE(config, scfxn)
+
     init_population = alg.init_population()
 
     # --- RUN ALGORITHM -------------------------------------

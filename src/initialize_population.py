@@ -7,23 +7,23 @@ from src.utils import make_trial
 
 
 class InitializePopulationBuilder:
-    def run(self, config, logger, popul_calculator):
-        docking_type_option = config.docking_type_option
+    def run(self, DE):
+        docking_type_option = DE.config.docking_type_option
         if docking_type_option == "Global":
             return InitializePopulation(
-                config, logger, popul_calculator
+                DE.config, DE.logger, DE.popul_calculator, DE.scfxn
             ).init_population()
         elif docking_type_option == "Local":
             return InitializePopulationLocal(
-                config, logger, popul_calculator
+                DE.config, DE.logger, DE.popul_calculator, DE.scfxn
             ).init_population()
         elif docking_type_option == "Refine":
             return InitializePopulationRefine(
-                config, logger, popul_calculator
+                DE.config, DE.logger, DE.popul_calculator, DE.scfxn
             ).init_population()
         elif docking_type_option == "Flexbb":
             return InitializePopulationFlexbb(
-                config, logger, popul_calculator
+                DE.config, DE.logger, DE.popul_calculator, DE.scfxn
             ).init_population()
         else:
             print(
@@ -34,13 +34,14 @@ class InitializePopulationBuilder:
 
 class InitializePopulation:
     # Default initizalize Popualtion for Global docking
-    def __init__(self, config, logger, popul_calculator):
+    def __init__(self, config, logger, popul_calculator, scfxn):
         self.config = config
         self.logger = logger
         self.popul_calculator = popul_calculator
         self.popsize = config.popsize
         self.ind_size = 6
         self.bounds = [(-1, 1)] * self.ind_size
+        self.scfxn = scfxn
 
     def init_population(self):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
@@ -70,7 +71,7 @@ class InitializePopulationRefine(InitializePopulation):
     def init_population(self):
         population_calculator = self.popul_calculator
         popsize = self.popsize
-        refCluspro = RefineCluspro(self.config, self.max_translation)
+        refCluspro = RefineCluspro(self.config, self.config.get_max_translation())
 
         if popsize is None:
             popsize = self.popsize
@@ -124,6 +125,9 @@ class InitializePopulationFlexbb(InitializePopulation):
         len_receptors = len(glob.glob(self.config.path_receptors)) - 1
         len_ligands = len(glob.glob(self.config.path_ligands)) - 1
 
+        self.logger.info(
+            f" flexbb with {len_ligands} ligands and {len_receptors} receptors"
+        )
         for i in range(0, popsize):
             indv = []
             for j in range(len(self.bounds)):

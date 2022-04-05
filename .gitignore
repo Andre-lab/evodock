@@ -2,6 +2,9 @@
 *
 
 !.gitignore
+!requirements.txt
+!setup.py
+!environment.yml
 !*.py
 !src/
 !src/**.py

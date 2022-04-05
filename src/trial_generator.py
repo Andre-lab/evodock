@@ -57,6 +57,22 @@ class TrialGenerator:
         return trial
 
 
+class FlexbbTrialGenerator(TrialGenerator):
+    def __init__(self, config, local_search):
+        self.mutation = config.mutate
+        self.recombination = config.recombination
+        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.local_search = local_search
+
+    def build(self, j, population, gen_scores):
+        v_donor = self.mutate(j, population, gen_scores)
+        v_trial = self.recombine(j, population, v_donor)
+        idx_receptor, idx_ligand = population[j].idx_receptor, population[j].idx_ligand
+        ind = make_trial(j, v_trial, idx_ligand, idx_receptor)
+        trial, _, _ = self.local_search.process_individual(ind)
+        return trial
+
+
 class pBestGenerator(TrialGenerator):
     def __init__(self, config, rgen):
         self.mutation = config.mutate
