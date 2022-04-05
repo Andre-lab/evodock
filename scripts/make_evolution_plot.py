@@ -12,7 +12,7 @@ def plots_during_evolution(df, name):
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(25, 10))
     ax = sns.lineplot(x="gen", y="best", data=df, ax=axes[0])
     sns.lineplot(x="gen", y="avg", data=df, ax=ax)
-    sns.lineplot(x="gen", y="rmsd", data=df, ax=axes[1])
+    sns.lineplot(x="gen", y="rmsd_from_best", data=df, ax=axes[1])
     fig.tight_layout()
     # fig_name = name.replace(".log", ".png")
     fig_name = "check_evolution.png"
@@ -22,18 +22,7 @@ def plots_during_evolution(df, name):
 
 
 def create_dataframe(evolution_log_file):
-    lines = [
-        l.strip().split("\t")
-        for l in open(evolution_log_file, "r").readlines()
-        if "GENERATION" in l
-    ]
-
-    data_per_gen = [
-        {"gen": int(l[1]), "avg": float(l[2]), "best": float(l[3]), "rmsd": float(l[4])}
-        for l in lines
-    ]
-
-    return pd.DataFrame(data_per_gen)
+    return pd.read_csv(evolution_log_file)
 
 
 def main():

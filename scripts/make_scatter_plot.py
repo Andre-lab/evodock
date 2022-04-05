@@ -11,16 +11,23 @@ import seaborn as sns
 
 
 def logfile_to_dataframe(log):
-    idfile = log.replace(".log", "")
-    with open(log, "r") as f:
-        lines = [l.strip() for l in f.readlines() if len(l) > 0]
-
-    final_lines = lines[-2:]
-    scores = np.array(final_lines[0].split(","), dtype=float)
-    rmsds = np.array(final_lines[1].split(","), dtype=float)
-    individuals = [
-        {"id": idfile, "score": x[0], "rmsd": x[1]} for x in list(zip(scores, rmsds))
-    ]
+    idfile = log.replace(".csv", "")
+    data = pd.read_csv(log).iloc[-1]
+    score_columns = [c for c in data.index if c.startswith("sc_")]
+    rmsd_columns = [c for c in data.index if c.startswith("rmsd_")]
+    isc_columns = [c for c in data.index if c.startswith("Isc_")]
+    irmsd_columns = [c for c in data.index if c.startswith("Irmsd_")]
+    scores = data[score_columns].tolist()
+    rmsds = data[rmsd_columns].tolist()
+    iscs = data[isc_columns].tolist()
+    irmsds = data[irmsd_columns].tolist()
+    individuals = {
+        "id": [idfile] * len(scores),
+        "score": scores,
+        "rmsd": rmsds,
+        "Isc": iscs,
+        "Irmsd": irmsds,
+    }
 
     df = pd.DataFrame(individuals)
     # print(df)
@@ -37,7 +44,12 @@ def main():
 
     df = pd.concat(results, ignore_index=True)
     ax = sns.scatterplot(
-        x="rmsd", y="score", data=df, hue="id", alpha=0.4, markers=["s"],
+        x="rmsd",
+        y="score",
+        data=df,
+        hue="id",
+        alpha=0.4,
+        markers=["s"],
     )
     ax.set_xlim([0, max(df["rmsd"].values.tolist())])
     ax.get_legend().remove()
