@@ -43,10 +43,10 @@ class PopulationSwapOperator:
         self.jobid = self.config.out_path
 
         self.swap_operator = FlexbbSwapOperator(config, scfxn, self.local_search)
-        self.log_relax_success = self.jobid + "/relaxed_sucess.log"
+        self.log_relax_success = self.jobid + "/relaxed_sucess.csv"
         with open(self.log_relax_success, "w") as file_object:
             file_object.write("#{}\n".format(self.jobid))
-        self.log_population_swap = self.jobid + "/population_swap.log"
+        self.log_population_swap = self.jobid + "/population_swap.csv"
         with open(self.log_population_swap, "w") as file_object:
             file_object.write("#{}\n".format(self.jobid))
 

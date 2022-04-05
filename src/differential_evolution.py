@@ -59,12 +59,8 @@ class DifferentialEvolutionAlgorithm:
     def init_file(self):
         header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
         with open(self.job_id, "w") as file_object:
-            file_object.write(header)
-            file_object.write("# INIT EVOLUTION\n")
             file_object.write("gen,avg,best,rmsd_from_best\n")
         with open(self.file_time_name, "w") as file_time:
-            file_time.write(header)
-            file_time.write("# INIT EVOLUTION\n")
             file_time.write("generation_seconds\n")
 
     def main(self, population):

@@ -24,14 +24,11 @@ class ScorePopulation:
 
     def print_header_logfiles(self):
         with open(self.log_best, "w") as file_object:
-            file_object.write("#{}\n".format(self.out_path))
             file_object.write("g1,g2,g3,g4,g5,g6\n")
         with open(self.log_trials, "w") as file_object:
-            file_object.write("#{}\n".format(self.out_path))
             vals = ",".join([f"sc_{t},rmsd_{t}" for t in range(0, self.config.popsize)])
             file_object.write(f"{vals}\n")
         with open(self.log_popul, "w") as file_object:
-            file_object.write("#{}\n".format(self.out_path))
             vals = ",".join(
                 [
                     f"sc_{t},rmsd_{t},Isc_{t},Irmsd_{t}"
