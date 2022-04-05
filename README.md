@@ -1,18 +1,20 @@
 
 # Protein-Protein docking using a Memetic Algorithm: EvoDOCK
 
-:warning: under construction
-
-
 Repository corresponding to the code used at article: 
 
-[A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v1)
+[A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v3)
 
 # Dependencies
 
 * PyRosetta==4
-* numpy==1.19.4
-
+* numpy>=1.21.0
+* pandas>=1.3.4
+* scipy>=1.7.1
+* seaborn>=0.11.2
+* setuptools>=44.0.0
+* imageio>=2.10.1
+* matplotlib>=3.4.3
 
 
 # Installation
@@ -28,6 +30,9 @@ git clone https://github.com/Andre-lab/evodock.git
 cd evodock
 pip install -r requirements.txt
 ```
+
+A setup.py and environment.yml files are provided to use alternative installation using pip or conda.
+
 
 # Basic Usage
 
@@ -45,15 +50,15 @@ python ./scripts/prepacking.py <input_pdb>
 # selects docking protocl [Global, Local]
 type=Global
 
-
-[inputs]
+[Inputs]
 # complex pdb
-pose_input=./inputs/pdbs/1ppe_IE.prepack.pdb
-native_input=./inputs/pdbs/1ppe_IE.prepack.pdb
+pose_input=/inputs/input_pdb/1ACB/1ACB_c_u_0001.pdb
+native_input=/inputs/native_pdb/1ACB/1ACB_c_b.pdb
 
-[outputs]
+[Outputs]
 # output file log
-output_file=sample_dock/quick_evolution_sample.log
+output_path=sample_dock/
+output_pdb=True
 
 [DE]
 # evolution algorithm parent strategy [RANDOM, BEST] 
@@ -61,9 +66,9 @@ scheme=BEST
 # population size
 popsize=10
 # mutation rate (weight factor F) 
-mutate=0.3
+mutate=0.9
 # crossover probability (CR) 
-recombination=0.9
+recombination=0.3
 # maximum number of generations/iterations (stopping criteria)
 maxiter=10
 # hybrid local search strategy [None, only_slide, mcm_rosetta]
@@ -76,63 +81,71 @@ information about the DE parameters can be found at https://en.wikipedia.org/wik
 2. Run with the algorithm with the desired configuration
 
 ```console
-python evodock.py configs/sample_dock.ini
+python evodock.py configs/sample_dock_global.ini
 ```
-
 
 ## Configuration Details
 
-### Section [inputs]
+Files configs/sample\_dock\_global.ini, configs/sample\_dock\_flexbb.ini and configs/sample\_dock_refinement.ini contains configuration examples for Global Docking, Flexible Backbone Docking and Global Docking with and initial population.
+
+### Section [Inputs]
 
 At pose\_input, you might provide the path to a complex with two chains, which previously was preprocessed with a prepack protocol in order to fix possible collisions at the sidechain. An script at script folders is provided. 
 
-### Section [outputs]
+### Section [Outputs]
 
-At  output\_file you can indicate the output folder and log file for the output. Log file name should contain the word "evolution" to not produce errors (todo: improve the code of this). The name of the output\_file should be different for each independent run.
+At  output\_path indicates the output folder for the results in .csv format.
+output\_pdb is a boolean to dump pdbs during the evolution and the final evolved protein.
 
 
 ### Section [Docking]
-Option "type" allows to select between global docking (Global) and local docking (Local).
+Option "type" allows to select between global docking (Global), local docking (Local), flexible backbone (Flexbb) and
+using an starting population such as models from ClusPro (Refinement).
 
 ### Section [DE]
 The set of parameters for Differential Evolution ([DE])  that you must change for a production run are populsize (from 10 to 100) and maxiter (from 10 to 100), which would lead into an evolution of 100 individuals during 100 iterations/generations. Evolutionary parameters (mutation F and crossover CR), can be fine tuned for specific purposes, although this set (0.3 and 0.9) have shown a good balance between exploration and exploration at our benchmark runs, which leads into good results. Scheme corresponds to the selection strategy for the base vector at mutation operation (https://en.wikipedia.org/wiki/Differential_evolution for more details). Parameter "local\_search" can be changed to None (aka, only DE is performed), only\_slide (local search operation is equivalent to apply slide\_into\_contact) or mcm\_rosetta (which applies slide\_into\_contact + MC energy minimization and sidechain optimization, recommended option and used at our benchmarks)
 
+### Section [Flexbb] (optional for Docking type "Flexbb")
+Uses path\_ligands and path\_receptors to indicate the path of *.pdb files with different backbone ensembles.
+
+### Section [Refine] (optional for Docking type "Refine")
+Uses init\_pdbs to indicate the path of *.pdbs used as initial population, i.e. models from ClusPro.
 
 # Interpret output:
 
 It is going to produce 4 different log files:
 
--   evolution\*log is a summary of the evolutionary process, which indicates the number of generation,
+-   evolution\*csv is a summary of the evolutionary process, which indicates the number of generation,
 
 average energy of the population, lowest energy of population and the RMSD of the best individual with the lowest energy.
 
--   popul\*log is the status of each generation during the evolution. It contains two lines per generation: one corresponding to the energy value of each individual and other to the corresponding RMSD.
+-   popul\*csv is the status of each generation during the evolution. Each line correponds to the population information of one generation.
 
--   interface\*log is similar to popul, but it reports the interface energy value and the iRMSD for each corresponding individual at each generation.
+-   interface\*csv is similar to popul, but it reports the interface energy value and the iRMSD for each corresponding individual at each generation.
 
--   trials\*log is the equivalent file to popul\*log, but it reports the trials (candidates) generated during the each generation. This can be practically useful in case that you want to check if the DE+MC is creating proper candidates that can contribute to the evolution.
+-   trials\*csv is the equivalent file to popul\*csv, but it reports the trials (candidates) generated during the each generation. This can be practically useful in case that you want to check if the DE+MC is creating proper candidates that can contribute to the evolution.
 
--   time\*log is the computational time (in seconds) for each generation.
+-   time\*csv is the computational time (in seconds) for each generation.
 
--   best\*log contains, at each line, the rotation (first 3 values) and translation (3 values) of the individual with lowest energy value.
+-   best\*csv contains, at each line, the rotation (first 3 values) and translation (3 values) of the individual with lowest energy value.
 
 
 ## Getting images
 
 ### Get scatter plot
 
-python ./scripts/make\_scatter\_plot.py "<path\_to\_popul\*.log>"
+python ./scripts/make\_scatter\_plot.py "<path\_to\_popul\*.csv>"
 
-It creates the global energy value vs RMSD plot if input is popul*log or interface energy vs iRMSD plot if input corresponds to interface*log. Each point corresponds to an individual in the last generation. Several \*log files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
+It creates the global energy value vs RMSD plot if input is popul*csv or interface energy vs iRMSD plot if input corresponds to interface*csv. Each point corresponds to an individual in the last generation. Several \*csv files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
 
 ![interface Energy vs iRMSD scatter plot](https://github.com/Andre-lab/evodock/blob/main/images/scatterplot.png)
 
 
 ### Get evolution performance
 
-For each popul\*log
+For each popul\*csv
 
-python ./scripts/make\_evolution\_plot.py <path to evolution\*.log>
+python ./scripts/make\_evolution\_plot.py <path to evolution\*.csv>
 
 Creates a lineplot where y-axis corresponds to the global energy function (used as fitness function during the evolution) and x-axis corresponds to each generation.
 
@@ -143,7 +156,6 @@ Green line corresponds to the average energy value of the population, while the 
 # Differential Evolution Algorithm
 
 Differential Evolution [Price97] is a population-based search method. DE creates new candidate solutions by combining existing ones according to a simple formula of vector crossover and mutation, and then keeping whichever candidate solution has the best score or fitness on the optimization problem at hand.
-
 
 
 # Bibliography
