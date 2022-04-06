@@ -48,7 +48,7 @@ class Residue:
             return self.stripped_atmap[atname.strip()]
         else:
             print("Error in looking up atom")
-            sys.exit(1)
+            exit(1)
 
     def has_atom(self, atname):
         return (atname in self.atmap) or (atname.strip() in self.stripped_atmap)
@@ -83,7 +83,7 @@ class Chain:
             print("Could not replace residue")
             print(len(self.resmap))
         assert newresidue.resstring in self.resmap
-        for i in xrange(len(self.residues)):
+        for i in range(1, len(self.residues)):
             if self.residues[i].resstring == newresidue.resstring:
                 self.residues[i] = copyres
         self.resmap[newresidue.resstring] = copyres

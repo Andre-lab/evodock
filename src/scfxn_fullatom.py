@@ -4,19 +4,19 @@ import logging
 
 import numpy as np
 from pyrosetta import Pose, Vector1
-from pyrosetta.rosetta.core.pose import get_jump_id_from_chain
-from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory, ScoreType
+from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory
 from pyrosetta.rosetta.protocols.docking import (
     calc_interaction_energy,
     calc_Irmsd,
-    setup_foldtree,
 )
-from pyrosetta.rosetta.protocols.moves import PyMOLMover
+
+# from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from scipy.spatial.transform import Rotation as R
 
-from src.genotype_converter import GlobalGenotypeConverter, LocalGenotypeConverter
+from src.genotype_converter import GlobalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
-from src.utils import IP_ADDRESS
+
+# from src.utils import IP_ADDRESS
 from src.local_search import LocalSearchPopulation
 
 

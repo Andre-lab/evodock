@@ -13,9 +13,7 @@ from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
 from src.differential_evolution import FlexbbDifferentialEvolution as FlexbbDE
 
 from src.options import build_rosetta_flags
-from src.population import ScorePopulation
 from src.scfxn_fullatom import FAFitnessFunction
-from src.single_process import SingleProcessPopulCalculator
 from src.utils import get_pose_from_file, get_position_info
 
 MAIN_PATH = os.getcwd()

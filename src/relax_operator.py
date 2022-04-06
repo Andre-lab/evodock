@@ -6,8 +6,8 @@ from pyrosetta import Pose
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.core.pose import remove_virtual_residues
 
-from pyrosetta.rosetta.protocols.moves import PyMOLMover
-from src.utils import IP_ADDRESS
+# from pyrosetta.rosetta.protocols.moves import PyMOLMover
+# from src.utils import IP_ADDRESS
 
 
 class RelaxOperator:

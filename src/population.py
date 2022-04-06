@@ -1,10 +1,8 @@
 import os
 
-from src.individual import Individual
-from src.genotype_converter import generate_genotype
-from pyrosetta.rosetta.protocols.moves import PyMOLMover
+# from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
-from src.utils import IP_ADDRESS
+# from src.utils import IP_ADDRESS
 
 LOW_LIMIT_INIT_DIVERSITY = 2
 

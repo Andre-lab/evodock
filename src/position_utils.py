@@ -2,17 +2,12 @@
 
 from __future__ import print_function
 
-import glob
-import time
-
 import numpy as np
 import pyrosetta.rosetta as rosetta
 from pyrosetta import Pose
-from pyrosetta.rosetta.core.pose import addVirtualResAsRoot, append_pose_to_pose
-from pyrosetta.rosetta.protocols.moves import PyMOLMover
-from pyrosetta.rosetta.protocols.rigid import RigidBodySpinMover
-from pyrosetta.rosetta.protocols.toolbox.rigid_body import create_euler_rotation
-from scipy.spatial import distance
+from pyrosetta.rosetta.core.pose import append_pose_to_pose
+
+# from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
 
 def print_rotation_translation(R, t):
