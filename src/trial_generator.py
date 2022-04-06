@@ -1,7 +1,7 @@
 import random
 
 
-from src.mpi_utils import IndividualMPI
+from src.utils import make_trial
 from operator import itemgetter
 from collections import namedtuple
 
@@ -14,18 +14,6 @@ from src.mutation_strategies import (
     StrategyCurrent,
     StrategyTriangular,
 )
-
-
-def make_trial(idx, genotype, ligand, receptor):
-    ind = IndividualMPI(idx, genotype)
-    ind.genotype = genotype
-    ind.score = 1000
-    ind.idx_ligand = ligand
-    ind.idx_receptor = receptor
-    ind.rmsd = 0
-    ind.i_sc = 0
-    ind.irms = 0
-    return ind
 
 
 class TrialGenerator:

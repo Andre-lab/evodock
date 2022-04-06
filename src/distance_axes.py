@@ -6,9 +6,6 @@ Computes principal axes from a PDB file.
 Produces also a .pml script for a nice rendering with PyMOL.
 """
 
-import os.path
-import sys
-
 import numpy as np
 from pyrosetta.rosetta.core.pose import get_resnums_for_chain_id
 

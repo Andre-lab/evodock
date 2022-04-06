@@ -1,14 +1,10 @@
-import glob
 import logging
 import random
 import time
 
 
-from src.individual import Individual
-from src.mpi_utils import IndividualMPI
 from src.population_swap_operator import FlexbbSwapOperatorBuilder
 from src.selection import GreedySelection
-from src.single_process import SingleProcessPopulCalculator
 from src.mutation_strategies import MutationStrategyBuilder
 from src.population import ScorePopulation
 from src.trial_generator import (
@@ -19,9 +15,6 @@ from src.trial_generator import (
 )
 from src.initialize_population import InitializePopulationBuilder
 from src.utils import make_trial
-from src.scfxn_fullatom import FAFitnessFunction
-
-# --- MAIN ---------------------------------------------------------------------+
 
 
 class DifferentialEvolutionAlgorithm:
@@ -57,7 +50,7 @@ class DifferentialEvolutionAlgorithm:
         return InitializePopulationBuilder().run(self)
 
     def init_file(self):
-        header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
+        # header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
         with open(self.job_id, "w") as file_object:
             file_object.write("gen,avg,best,rmsd_from_best\n")
         with open(self.file_time_name, "w") as file_time:

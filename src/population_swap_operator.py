@@ -3,13 +3,11 @@
 
 
 import random
-from pyrosetta import Pose, Vector1
+from pyrosetta import Vector1
 
 from src.utils import get_position_info
 from src.individual import Individual
 from src.flexbb_swap_operator import FlexbbSwapOperator
-from pyrosetta.rosetta.protocols.relax import FastRelax
-from pyrosetta.rosetta.core.pose import remove_virtual_residues
 
 from pyrosetta.rosetta.protocols.docking import calc_interaction_energy, calc_Irmsd
 from pyrosetta.rosetta.core.scoring import CA_rmsd

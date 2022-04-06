@@ -7,7 +7,6 @@ import random
 from pyrosetta.rosetta.core.import_pose import poses_from_files
 from pyrosetta.rosetta.utility import vector1_std_string
 
-from src.distance_axes import calculate_local_coordinates
 from src.utils import convert_range, get_pose_from_file, get_position_info
 
 

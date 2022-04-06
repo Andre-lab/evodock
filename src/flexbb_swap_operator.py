@@ -3,7 +3,6 @@
 
 import glob
 import random
-from random import sample
 
 
 from pyrosetta.rosetta.protocols.relax import FastRelax

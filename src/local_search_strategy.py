@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import random
 
 from src.flexbb_swap_operator import FlexbbSwapOperator
-from pyrosetta.rosetta.protocols.moves import PyMOLMover
+
+# from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from pyrosetta import Pose
 from pyrosetta.rosetta.protocols.docking import (
     DockMCMProtocol,

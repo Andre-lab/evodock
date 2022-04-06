@@ -13,6 +13,11 @@ MAIN_PATH = os.getcwd()
 
 class EvodockConfig:
     def __init__(self, ini_file):
+        if ".ini" not in ini_file:
+            print("config .ini file not found")
+            print("commandline: evodock.py <path_to_config.ini>")
+            exit()
+
         self.p = os.getcwd()
         self.logger = logging.getLogger("evodock.config")
         self.logger.setLevel(logging.INFO)
