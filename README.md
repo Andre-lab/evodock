@@ -31,6 +31,19 @@ cd evodock
 pip install -r requirements.txt
 ```
 
+or
+
+```console
+git clone https://github.com/Andre-lab/evodock.git
+pip setup.py install 
+```
+
+or 
+
+```console
+pip install git+https://github.com/Andre-lab/evodock.git
+```
+
 A setup.py and environment.yml files are provided to use alternative installation using pip or conda.
 
 
@@ -82,6 +95,12 @@ information about the DE parameters can be found at https://en.wikipedia.org/wik
 
 ```console
 python evodock.py configs/sample_dock_global.ini
+```
+
+or 
+
+```console
+python -m evodock configs/sample_dock_global.ini
 ```
 
 ## Configuration Details
