@@ -14,7 +14,8 @@ from src.trial_generator import (
     FlexbbTrialGenerator,
 )
 from src.initialize_population import InitializePopulationBuilder
-from src.utils import make_trial
+from src.utils import make_trial, get_position_info
+from src.landscape_metrics import fitness_distance_correlation
 
 
 class DifferentialEvolutionAlgorithm:
@@ -37,6 +38,8 @@ class DifferentialEvolutionAlgorithm:
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
             config, fitness_function
         ).build()
+
+        self.optimal_solution = get_position_info(fitness_function.native_pose)
         # trial_score_config = config
         # trial_score_config.docking_type_option = "Global"
         # self.scfxn = FAFitnessFunction(
@@ -52,7 +55,7 @@ class DifferentialEvolutionAlgorithm:
     def init_file(self):
         # header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
         with open(self.job_id, "w") as file_object:
-            file_object.write("gen,avg,best,rmsd_from_best\n")
+            file_object.write("gen,avg,best,rmsd_from_best,fdc\n")
         with open(self.file_time_name, "w") as file_time:
             file_time.write("generation_seconds\n")
 
@@ -128,8 +131,10 @@ class DifferentialEvolutionAlgorithm:
             name = self.config.out_path + "/evolved.pdb"
             self.best_pdb.dump_pdb(name)
 
+        fdc = fitness_distance_correlation(self.population, self.optimal_solution)
+
         file_object = open(self.job_id, "a")
-        evolution_str = f"{self.generation:.0f},{self.gen_avg:.2f},{self.gen_best:.2f},{best_rmsd:.2f}"
+        evolution_str = f"{self.generation:.0f},{self.gen_avg:.2f},{self.gen_best:.2f},{best_rmsd:.2f},{fdc:.2f}"
         file_object.write(f"{evolution_str}\n")
         file_object.close()
         gen_end = time.time()
