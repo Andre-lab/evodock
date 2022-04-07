@@ -9,6 +9,8 @@ from pyrosetta.rosetta.utility import vector1_std_string
 
 from src.utils import convert_range, get_pose_from_file, get_position_info
 
+from pyrosetta.rosetta.protocols.toolbox import CA_superimpose
+
 
 class RefineCluspro:
     def __init__(self, config, max_trans):
@@ -18,6 +20,7 @@ class RefineCluspro:
         for f in lst:
             filenames.append(f)
         self.list_models = poses_from_files(filenames)
+        self.list_models = [CA_superimpose(input_pose, p) for p in self.list_models]
         self.positions = [get_position_info(p) for p in self.list_models]
         max_boundaries = [max([abs(x[i]) for x in self.positions]) for i in range(6)]
         max_boundaries = list(map(lambda i: (i, i * -1), max_boundaries))
