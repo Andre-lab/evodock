@@ -108,7 +108,7 @@ def main():
     )
 
     data = []
-    for i in range(10):
+    for i in range(1):
         energy, rmsd_diff, _ = run_repacking(filename, opts, pymover)
         data.append(rmsd_diff)
 

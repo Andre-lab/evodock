@@ -98,7 +98,10 @@ class ScorePopulation:
                     before,
                     after,
                 ) = self.local_search.process_individual(ind, True)
-                if self.config.docking_type_option and LOW_LIMIT_INIT_DIVERSITY > 0:
+                if (
+                    self.config.docking_type_option == "Refine"
+                    and LOW_LIMIT_INIT_DIVERSITY > 0
+                ):
                     while scored_ind.rmsd < LOW_LIMIT_INIT_DIVERSITY:
                         (scored_ind, before, after) = self.randomize_ind(scored_ind)
             else:

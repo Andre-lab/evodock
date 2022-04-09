@@ -14,7 +14,7 @@ from src.differential_evolution import FlexbbDifferentialEvolution as FlexbbDE
 
 from src.options import build_rosetta_flags
 from src.scfxn_fullatom import FAFitnessFunction
-from src.utils import get_pose_from_file, get_position_info
+from src.utils import get_pose_from_file, get_position_info, get_starting_poses
 
 MAIN_PATH = os.getcwd()
 
@@ -54,8 +54,10 @@ def main():
     # --- INIT PROTEIN STRUCTURES -------------------
     pose_input = config.pose_input
     native_input = config.native_input
-    input_pose = get_pose_from_file(pose_input)
-    native_pose = get_pose_from_file(native_input)
+    # input_pose = get_pose_from_file(pose_input)
+    # native_pose = get_pose_from_file(native_input)
+
+    input_pose, native_pose = get_starting_poses(pose_input, native_input)
 
     # ---- INIT SCORE FUNCTION ------------------------------
     scfxn = FAFitnessFunction(input_pose, native_pose, config)
@@ -69,12 +71,12 @@ def main():
     else:
         alg = DE(config, scfxn)
 
-    init_population = alg.init_population()
+    alg.init_population()
 
     # --- RUN ALGORITHM -------------------------------------
     logger.info("==============================")
     logger.info(" starts EvoDOCK : evolutionary docking process")
-    best_pdb = alg.main(init_population)
+    best_pdb = alg.main()
 
     # ---- OUTPUT -------------------------------------------
     logger.info(" end EvoDOCK")

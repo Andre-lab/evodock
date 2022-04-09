@@ -25,8 +25,8 @@ from pyrosetta.rosetta.protocols.simple_task_operations import RestrictToInterfa
 
 class LocalSearchStrategy:
     def __init__(self, config, scfxn, dock_pose):
-        self.config = config
         # self.pymover = PyMOLMover(address="10.8.0.22", port=65000, max_packet_size=1400)
+        self.config = config
         self.scfxn = scfxn
         self.dock_pose = dock_pose
         self.packer_option = config.local_search_option
@@ -55,6 +55,7 @@ class LocalSearchStrategy:
             self.docking = mcm_docking
             self.docking.set_task_factory(local_tf)
             self.docking.set_ignore_default_task(True)
+
         if self.packer_option == "mcm_rosetta":
             mcm_docking = DockMCMProtocol()
             mcm_docking.set_native_pose(scfxn.dock_pose)

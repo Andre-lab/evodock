@@ -24,21 +24,24 @@ class FAFitnessFunction:
     def __init__(self, input_pose, native_pose, config):
         self.logger = logging.getLogger("evodock.scfxn")
         self.trans_max_magnitude = config.get_max_translation()
-        self.native_pose = Pose()
-        self.native_pose.assign(native_pose)
-        self.input_pose = Pose()
-        self.input_pose.assign(input_pose)
+        self.native_pose = native_pose
+        # self.native_pose = Pose()
+        # self.native_pose.assign(native_pose)
+        # self.input_pose = Pose()
+        # self.input_pose.assign(input_pose)
+
         self.logger.setLevel(logging.INFO)
         # self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        self.converter = GlobalGenotypeConverter(
-            self.input_pose, self.trans_max_magnitude
-        )
         # self.pymover.apply(self.input_pose)
 
-        self.dock_pose.assign(self.input_pose)
+        self.dock_pose.assign(input_pose)
         self.dock_pose.pdb_info().name("INIT_STATE")
+
+        self.converter = GlobalGenotypeConverter(
+            self.dock_pose, self.trans_max_magnitude
+        )
         # self.pymover.apply(self.dock_pose)
         self.jump_num = 1
         self.ax1, self.ax2, self.ax3 = build_axis()
@@ -51,16 +54,6 @@ class FAFitnessFunction:
     def get_rmsd(self, pose):
         rmsd = CA_rmsd(self.native_pose, pose)
         return rmsd
-
-    def score(self, genotype):
-        pose = self.apply_genotype_to_pose(genotype)
-        try:
-            dst = self.scfxn_rosetta.score(pose)
-        except ValueError:
-            dst = 10000
-        if np.isnan(dst):
-            dst = 10000
-        return dst
 
     def size(self):
         return 6

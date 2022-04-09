@@ -20,9 +20,9 @@ class LocalSearchPopulation:
         self.best_pose = Pose()
         self.best_pose.assign(scfxn.dock_pose)
         self.best_score = 100000000
-        self.best_pose = Pose()
-        self.best_pose.assign(scfxn.dock_pose)
-        self.best_score = 1000
+        # self.best_pose = Pose()
+        # self.best_pose.assign(scfxn.dock_pose)
+        # self.best_score = 1000
 
     def energy_score(self, pose):
         score = self.scfxn.scfxn_rosetta(pose)
@@ -57,6 +57,9 @@ class LocalSearchPopulation:
             interface,
             irms,
         )
-        self.scfxn.dock_pose.assign(self.starting_pose)
+        if self.config.docking_type_option == "Unbound":
+            self.scfxn.dock_pose.assign(self.starting_pose)
+        else:
+            self.scfxn.dock_pose.assign(self.best_pose)
 
         return result_individual, data["before"], data["after"]
