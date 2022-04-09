@@ -3,12 +3,35 @@
 
 
 import numpy as np
-from pyrosetta import Pose, pose_from_file
+from pyrosetta import Pose, pose_from_file, Vector1
 from scipy.spatial.transform import Rotation as R
 from src.individual import Individual
 from src.pdb_structure import pdbstructure_from_file
+from pyrosetta.rosetta.core.kinematics import FoldTree
+from pyrosetta.rosetta.core.pose import chain_end_res
+from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
 IP_ADDRESS = "10.8.0.6"
+
+
+def get_starting_poses(pose_input, native_input):
+    native = Pose()
+    pose_from_file(native, native_input)
+    native.conformation().detect_disulfides()
+
+    pose = Pose()
+    pose_from_file(pose, pose_input)
+    pose.conformation().detect_disulfides()
+
+    mres = chain_end_res(pose, 1)
+    ft = FoldTree()
+    ft.add_edge(1, mres, -1)
+    ft.add_edge(1, mres + 1, 1)
+    ft.add_edge(mres + 1, pose.total_residue(), -1)
+
+    pose.fold_tree(ft)
+
+    return pose, native
 
 
 def get_pose_from_file(pose_input):

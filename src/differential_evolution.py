@@ -2,6 +2,7 @@ import logging
 import random
 import time
 
+import numpy as np
 
 from src.population_swap_operator import FlexbbSwapOperatorBuilder
 from src.selection import GreedySelection
@@ -50,7 +51,7 @@ class DifferentialEvolutionAlgorithm:
         self.init_file()
 
     def init_population(self):
-        return InitializePopulationBuilder().run(self)
+        self.population = InitializePopulationBuilder().run(self)
 
     def init_file(self):
         # header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
@@ -59,9 +60,8 @@ class DifferentialEvolutionAlgorithm:
         with open(self.file_time_name, "w") as file_time:
             file_time.write("generation_seconds\n")
 
-    def main(self, population):
+    def main(self):
         self.logger.info(" DE")
-        self.population = population
         self.popul_calculator.print_information(self.population)
         for generation in range(1, self.maxiter + 1):
             self.generation = generation
@@ -121,7 +121,17 @@ class DifferentialEvolutionAlgorithm:
             best_SixD_vector,
             best_rmsd,
         ) = self.popul_calculator.render_best(self.generation, gen_sol, self.population)
+
         best_sol_str = self.popul_calculator.get_sol_string(best_SixD_vector)
+        improved = np.array(
+            [y - x for x, y in zip(self.previous_gen_scores, self.gen_scores) if y < x]
+        )
+
+        avg_improved = np.average(improved) if len(improved) > 0 else 0
+        self.logger.info(
+            f" improved {len(improved)} individuals with average {avg_improved:.2f}"
+        )
+
         self.logger.info(f"   > BEST SOL: {best_sol_str}")
         self.popul_calculator.print_information(self.population)
 
@@ -131,7 +141,9 @@ class DifferentialEvolutionAlgorithm:
             name = self.config.out_path + "/evolved.pdb"
             self.best_pdb.dump_pdb(name)
 
-        fdc = fitness_distance_correlation(self.population, self.optimal_solution)
+        fdc = fitness_distance_correlation(
+            self.population, self.optimal_solution, self.scfxn
+        )
 
         file_object = open(self.job_id, "a")
         evolution_str = f"{self.generation:.0f},{self.gen_avg:.2f},{self.gen_best:.2f},{best_rmsd:.2f},{fdc:.2f}"
@@ -162,9 +174,8 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
             trials.append(v_trial)
         return trials
 
-    def main(self, population):
+    def main(self):
         self.logger.info(" DE")
-        self.population = population
         self.popul_calculator.print_information(self.population)
         self.archive_restart = [0] * self.popsize
         for generation in range(1, self.maxiter + 1):
@@ -208,9 +219,8 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
             trials.append(v_trial)
         return trials
 
-    def main(self, population):
+    def main(self):
         self.logger.info(" DE")
-        self.population = population
         self.popul_calculator.print_information(self.population)
         self.archive_restart = [0] * self.popsize
         for generation in range(1, self.maxiter + 1):
