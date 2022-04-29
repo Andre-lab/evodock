@@ -24,10 +24,13 @@ logging.basicConfig(level=logging.ERROR)
 def init_options_fa(filename):
     opts = [
         "-mute all",
+        "-unmute protocols.simple_moves_symmetry.SymDockingInitialPerturbation",
+        "-out:level 1000",
         "-docking:dock_mcm_first_cycles 1",
         "-docking:dock_mcm_second_cycles 1",
         "-include_current True",
         "-initialize_rigid_body_dofs 1",
+        "-out:file:output_pose_energies_table false", # FIXME bypasses this error: Energies::residue_total_energies( int const seqpos ): variable seqpos is out of range!
         "-ex1",
         "-ex2aro",
         "-use_input_sc",
@@ -67,7 +70,7 @@ def main():
     )
     native_score = scfxn.scfxn_rosetta.score(native_pose)
 
-    score_popul = ScorePopulation(scfxn, jobid, local_search_option)
+    score_popul = ScorePopulation(scfxn, jobid, local_search_option, config)
     popul_calculator = PopulCalculator(score_popul, syminfo)
 
     if is_symmetric(native_pose):
@@ -82,7 +85,7 @@ def main():
 
     logger.info("==============================")
     alg = DE(popul_calculator, config)
-    init_population = alg.init_population()
+    init_population = alg.init_population()# TODO : DETELE THIS 'initialization=config.initialization)' ??
 
     # --- RUN -----------------------------------------+
     logger.info("==============================")
