@@ -151,5 +151,5 @@ class EvodockConfig:
         os.makedirs(self.out_path, exist_ok=True)
 
         # ---- OUTPUT PDB -----------------------------------+
-        self.out_pdb = config["Outputs"].get("output_pdb", fallback="False")
+        self.out_pdb = config["Outputs"].get("output_pdb", fallback="True")
         self.out_pdb = ast.literal_eval(self.out_pdb)
