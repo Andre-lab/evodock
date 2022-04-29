@@ -20,16 +20,75 @@ from pyrosetta.rosetta.utility import vector1_unsigned_long
 from pyrosetta.rosetta.protocols.symmetry import SymDockingSlideIntoContact
 from pyrosetta import SwitchResidueTypeSetMover
 from src.utils import get_translation, get_rotation_euler
+from pyrosetta.rosetta.core.conformation.symmetry import SlideCriteriaType
+from pyrosetta.rosetta.protocols.symmetry import SequentialSymmetrySlider
 
-# TODO: implement in the c++ code.
-class SymDockingSlideIntoContactWrapper:
-    """The original SymDockingSlideIntoContact gives a 'Fatal Error in VDW_Energy' ERROR, which DockingSlideIntoContact"
-    does not. This is because it is implemented wrong in the c++ code. in DockingSlideIntoContact the scorefxn is
-    overwritten to interchain_cen which might be the problem.
+#
+# while ( pose.energies().total_energies()[ scoring::interchain_vdw ] > 0.1 ) {
+# 		mover.apply( pose );
+# 		( *scorefxn_ )( pose );
+# 		if ( ++num_slide_moves > 1000 ) {
+# 			std::cerr << "To many slide moves. Subunits never touching..." << std::endl;
+# 			utility_exit();
+# 		}
+# 		TR.Debug << "score away " << pose.energies().total_energies()[ scoring::interchain_vdw ]  << std::endl;
+# 	}
 
-    This mover attempts to overwrite the SymDockingSlideIntoContact mover so that before calling its internal apply,
-    it creates pose in centroid mode that then gets supplied to the SymDockingSlideIntoContact mover. This dofs are
-    then extracted from the centroid pose and supplied to the"""
+# // first try moving away from each other
+# 	while ( pose.energies().total_energies()[ scoring::interchain_vdw ] > 0.1 ) {
+# 		mover.apply( pose );
+# 		( *scorefxn_ )( pose );
+# 		if ( ++num_slide_moves > 1000 ) {
+# 			std::cerr << "To many slide moves. Subunits never touching..." << std::endl;
+# 			utility_exit();
+# 		}
+# 		TR.Debug << "score away " << pose.energies().total_energies()[ scoring::interchain_vdw ]  << std::endl;
+# 	}
+# 	// then try moving towards each other
+# 	TR.Debug << "Moving together" << std::endl;
+# 	mover.trans_axis().negate();
+# 	while ( pose.energies().total_energies()[ scoring::interchain_vdw ] < 0.1 ) {
+# 		mover.apply( pose );
+# 		( *scorefxn_ )( pose );
+# 		if ( ++num_slide_moves > 1000 ) {
+# 			std::cerr << "To many slide moves. Subunits never touching..." << std::endl;
+# 			utility_exit();
+# 		}
+# 		TR.Debug << "score together " << pose.energies().total_energies()[ scoring::interchain_vdw ]  << std::endl;
+# 	}
+# 	// move away again until just touching
+# 	mover.trans_axis().negate();
+# 	mover.apply( pose );
+
+
+# negate reverses the trans_axis
+
+# Docking initial pertubation as Daniel is calling it is calling FaDockingSlideIntoContact under the hood!
+
+# I think there's a way to make the lowresolution scorefunction work on a high resolution structure
+
+# from dockingiinitialpertubation
+# scorefxn_ = ScoreFunctionFactory::create_score_function(CENTROID_WTS, DOCK_LOW_PATCH);
+# scorefxn_ = ScoreFunctionFactory::create_score_function("interchain_cen");
+# scoretype_for_contact_ = core::scoring::interchain_vdw;
+
+
+class SequentialSymmetrySliderWrapper:
+    """Does the the as SequentialSymmetrySlider but it needs to be constructed on every single pose to actually do
+    sliding. If you just use the same SequentialSymmetrySlider on different poses it will only slide on the first
+    pose."""
+
+    def __init__(self):
+        self.FA_REP_SCORE = SlideCriteriaType(2)
+
+    def apply(self, pose):
+        SequentialSymmetrySlider(pose, self.FA_REP_SCORE).apply(pose)
+
+class SymDockingSlideIntoContactWrapper2:
+    """Does the same as SymDockingSlideIntoContactWrapper but changes the underlying mover. The
+    SymDockingSlideIntoContact fails if too many internal moves (1000) have been applied. We dont want out protocol
+    to fail like this or we are going to have a bad time. Therefore apply of SymDockingSlideIntoContact is kept the same
+    but the aspect that is calling utility_exit() is removed."""
 
     def __init__(self, pose):
         """Initializes the mover."""
@@ -44,6 +103,74 @@ class SymDockingSlideIntoContactWrapper:
         """See class description. Dockslides the pose."""
         centroid_pose = pose.clone()
         self.switch_to_centroid.apply(centroid_pose)
+        # todo: this can give an error if to many slide attemps have been attempted!
+        self.symdockingslideintocontact.apply(centroid_pose)
+        # apply the new position of centroid_pose to pose
+        self.apply_conformation_from_pose(centroid_pose, pose)
+
+    def apply_conformation_from_pose(self, pose_from, pose_to):
+        """Applies the movable dofs from pose_from to pose_to"""
+        dofs = pose_from.conformation().Symmetry_Info().get_dofs()
+        for jump_id, symdof in dofs.items():
+            pose_to.set_jump(jump_id, pose_from.jump(jump_id))
+
+class SymDockingSlideIntoContactWrapper:
+    """The original SymDockingSlideIntoContact gives a 'Fatal Error in VDW_Energy' ERROR, which DockingSlideIntoContact"
+    does not. This is because it is implemented wrong in the c++ code. in DockingSlideIntoContact the scorefxn is
+    overwritten to interchain_cen which might be the problem.
+
+    This mover attempts to overwrite the SymDockingSlideIntoContact mover so that before calling its internal apply,
+    it creates pose in centroid mode that then gets supplied to the SymDockingSlideIntoContact mover. This dofs are
+    then extracted from the centroid pose and supplied to the original pose."""
+
+    def __init__(self, pose):
+        """Initializes the mover."""
+        # this constructor needs to be called or rosetta will segfault. Reason is that the score function
+        # internally defined in the mover is not initialized properly.
+        dofs = pose.conformation().Symmetry_Info().get_dofs()
+        self.symdockingslideintocontact = SymDockingSlideIntoContact(dofs)
+        # self.
+        self.switch_to_centroid = SwitchResidueTypeSetMover("centroid")
+
+    def apply(self, pose):
+        """See class description. Dockslides the pose."""
+        centroid_pose = pose.clone()
+        self.switch_to_centroid.apply(centroid_pose)
+        # todo: this can give an error if to many slide attemps have been attempted!
+        self.symdockingslideintocontact.apply(centroid_pose)
+        # apply the new position of centroid_pose to pose
+        self.apply_conformation_from_pose(centroid_pose, pose)
+
+    def apply_conformation_from_pose(self, pose_from, pose_to):
+        """Applies the movable dofs from pose_from to pose_to"""
+        dofs = pose_from.conformation().Symmetry_Info().get_dofs()
+        for jump_id, symdof in dofs.items():
+            pose_to.set_jump(jump_id, pose_from.jump(jump_id))
+
+# TODO: implement in the c++ code.
+class SymDockingSlideIntoContactWrapper:
+    """The original SymDockingSlideIntoContact gives a 'Fatal Error in VDW_Energy' ERROR, which DockingSlideIntoContact"
+    does not. This is because it is implemented wrong in the c++ code. in DockingSlideIntoContact the scorefxn is
+    overwritten to interchain_cen which might be the problem.
+
+    This mover attempts to overwrite the SymDockingSlideIntoContact mover so that before calling its internal apply,
+    it creates pose in centroid mode that then gets supplied to the SymDockingSlideIntoContact mover. This dofs are
+    then extracted from the centroid pose and supplied to the original pose."""
+
+    def __init__(self, pose):
+        """Initializes the mover."""
+        # this constructor needs to be called or rosetta will segfault. Reason is that the score function
+        # internally defined in the mover is not initialized properly.
+        dofs = pose.conformation().Symmetry_Info().get_dofs()
+        self.symdockingslideintocontact = SymDockingSlideIntoContact(dofs)
+        # self.
+        self.switch_to_centroid = SwitchResidueTypeSetMover("centroid")
+
+    def apply(self, pose):
+        """See class description. Dockslides the pose."""
+        centroid_pose = pose.clone()
+        self.switch_to_centroid.apply(centroid_pose)
+        # todo: this can give an error if to many slide attemps have been attempted!
         self.symdockingslideintocontact.apply(centroid_pose)
         # apply the new position of centroid_pose to pose
         self.apply_conformation_from_pose(centroid_pose, pose)
@@ -78,8 +205,9 @@ class SymDockMCMProtocol:
         :param num_of_first_cycle: Number of iterations for the first cycle
         :param num_of_second_cycle: Number of iterations for the second cycle
         """
-        self.num_of_first_cycle = num_of_first_cycle
-        self.num_of_second_cycle = num_of_second_cycle
+        # FIXME: change these to have the actual values instead of 1 (this is for fast debugging)
+        self.num_of_first_cycle = 1 # num_of_first_cycle
+        self.num_of_second_cycle = 1 # num_of_second_cycle
         self.scorefxn = ScoreFunctionFactory.create_score_function("ref2015")
         self.mc = MonteCarlo(self.scorefxn, 0.8)
         self.taskkfactory = self.create_taskfactory(pose)
