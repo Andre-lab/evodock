@@ -34,6 +34,9 @@ class EvodockConfig:
         self.mutate = config["DE"].getfloat("mutate")
         self.recombination = config["DE"].getfloat("recombination")
         self.maxiter = config["DE"].getint("maxiter")
+        # TODO: DELETE??
+        # self.initialization = config["DE"].get("initialization")
+        # assert self.initialization in ("gauss", "uniform", None), "initialization can only be of 'gauss' and 'uniform'"
 
         # --- MEMETIC PARAMS -----------------------------------+
         if config.has_option("DE", "local_search"):
@@ -57,6 +60,10 @@ class EvodockConfig:
             self.pymol_history = config.getboolean("pymol", "history")
         else:
             self.pymol_history = False
+        if config.has_option("pymol", "show_local_search"):
+            self.show_local_search = config.getboolean("pymol", "show_local_search")
+        else:
+            self.show_local_search = False
 
         # -- LOCAL SEARCH OPTIONS -------------------------------+
         if config.has_option("DE", "slide"):

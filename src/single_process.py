@@ -37,7 +37,7 @@ class SingleProcessPopulCalculator:
         recv_data = np.zeros(
             shape=(self.size, ind_per_process, ind_size), dtype=np.float64
         )
-        convert_pop = [np_to_ind(x) for x in data[0]]
+        convert_pop = [np_to_ind(x, genotype_size=self.scfxn.size()) for x in data[0]]
         mpi_pop = []
         for idx, ind in convert_pop:
             if ind.score == 1000:
@@ -64,7 +64,7 @@ class SingleProcessPopulCalculator:
                             )
                         else:
                             indg = []
-                            for j in range(6):
+                            for j in range(self.scfxn.size()):
                                 indg.append(random.uniform(-1, 1))
                             ind.genotype = indg
                             ind.score = 1000
@@ -80,7 +80,7 @@ class SingleProcessPopulCalculator:
         result_pop = popul
         for proc in recv_data:
             for arr in proc:
-                idx, ind = np_to_ind(arr)
+                idx, ind = np_to_ind(arr, genotype_size=self.scfxn.size())
                 result_pop[idx] = ind
 
         return result_pop

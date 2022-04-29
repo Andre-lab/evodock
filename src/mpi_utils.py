@@ -43,9 +43,10 @@ class IndividualMPI:
         return Individual(self.genotype, self.score, self.rmsd, self.i_sc, self.irms)
 
 
-def np_to_ind(a):
+def np_to_ind(a, genotype_size):
+    gs = genotype_size
     a = list(a)
-    ind = Individual(a[0:6], a[6], a[7], a[8], a[9])
+    ind = Individual(a[0:gs], a[gs], a[gs+1], a[gs+2], a[gs+3])
     idx = int(round(a[-1]))
     return (idx, ind)
 

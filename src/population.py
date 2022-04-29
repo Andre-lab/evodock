@@ -7,14 +7,17 @@ from src.utils import IP_ADDRESS
 
 
 class ScorePopulation:
-    def __init__(self, scfxn, jobid, local_search_opt="None"):
+    def __init__(self, scfxn, jobid, local_search_opt="None", config=None):
         self.name = "ScorePopulation"
         self.scfxn = scfxn
         self.log_best = jobid.replace("evolution", "best")
         self.log_interface = jobid.replace("evolution", "interface")
         self.log_popul = jobid.replace("evolution", "popul")
         self.log_trials = jobid.replace("evolution", "trials")
-        self.local_search = LocalSearchPopulation(scfxn, local_search_opt)
+        # set options for localsearch
+        self.local_search = LocalSearchPopulation(scfxn, local_search_opt, slide=config.slide,
+                show_local_search=config.show_local_search, pymol_history=config.pymol_history)
+
         with open(self.log_best, "w") as file_object:
             file_object.write("#{}\n".format(jobid))
         with open(self.log_trials, "w") as file_object:
@@ -76,7 +79,7 @@ class ScorePopulation:
             tmp_pose.pdb_info().name("popul_" + str(ind))
             tmp_pose.dump_pdb(destiny + "popul_" + str(ind) + ".pdb")
 
-    def pymol_visualization(self, popul, history=False):
+    def pymol_popul_visualization(self, popul, history=False):
         pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         if history:
             pymover.keep_history(True)

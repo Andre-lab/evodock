@@ -54,9 +54,8 @@ class DifferentialEvolutionAlgorithm:
         self.init_file()
         self.pymol_on = config.pymol_on
         self.pymol_history = config.pymol_history
-        self.popul_calculator.cost_func.local_search.slide = config.slide
 
-    def init_population(self, popsize=None):
+    def init_population(self, popsize=None, initialization="uniform"):
         # --- INITIALIZE A POPULATION (step #1) ----------------+
         if popsize is None:
             popsize = self.popsize
@@ -67,6 +66,23 @@ class DifferentialEvolutionAlgorithm:
             indv = []
             for j in range(len(self.bounds)):
                 indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
+                # TODO: DELETE?
+                # if initialization == "uniform":
+                #     indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
+                # elif initialization == "gauss":
+                #     # attempt at getting a gaussian value within a range mu=0, std=1. If after max_attempts this is
+                #     # not possible, just pick a uniform one within the range.
+                #     max_attempts = 1000
+                #     attempts = 0
+                #     gauss = self.bounds[j][1] + 2
+                #     while attempts != max_attempts and (gauss < self.bounds[j][0] or gauss > self.bounds[j][1]):
+                #         gauss = random.gauss(0, 1) # self.bounds[j][0], self.bounds[j][1]))
+                #         attempts += 1
+                #     if attempts < max_attempts:
+                #         indv.append(gauss)
+                #     else:
+                #         indv.append(random.uniform(self.bounds[j][0], self.bounds[j][1]))
+
             popul.append(indv)
             population.append(Individual(indv, 0, 1000))
 
@@ -182,7 +198,7 @@ class DifferentialEvolutionAlgorithm:
             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
             self.popul_calculator.cost_func.print_information(population)
             if self.pymol_on:
-                self.popul_calculator.cost_func.pymol_visualization(population, self.pymol_history)
+                self.popul_calculator.cost_func.pymol_popul_visualization(population, self.pymol_history)
 
             file_object.write("%f \t" % gen_avg)
             file_object.write("%f \t" % gen_best)

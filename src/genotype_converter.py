@@ -17,7 +17,13 @@ class GlobalGenotypeConverter:
             self.max_trans = [mtrans for t in range(3)]
             self.min_trans = [mtrans * -1 for t in range(3)]
             self.bounds = self.define_bounds()
+        self.size = len(self.bounds)
 
+    # Handles both local search and global search cases!!
+    # For local docking: Use -initialize_rigid_body_dof and set the bounds to whatever you want to search
+    # For global docking: Set the bounds very high with and with -initialize_rigid_body_dof, with it give the starting
+    #   position to be that including the bounds you give it.
+    # if you dont parse -initialize_rigid_body_dof the native_val will be 0, otherwise the value set in the symdef file.
     def define_symmetric_bounds(self, native_pose, syminfo):
         """Define symmetrical bounds."""
         bounds = []
@@ -26,11 +32,18 @@ class GlobalGenotypeConverter:
             rot = get_rotation_euler(flexible_jump)
             trans = get_translation(flexible_jump)
             for dof, bound in zip(dofs, parsed_bounds):
-                if dof < 4:
+                # rotation is from maximum from -180 to +180
+                # trans is from 0->inf and shouldnt go into the negatives (can mess up the symmetry)
+                if dof < 4: # translational dof
                     native_val = trans[dof - 1]
-                else:
+                    min_value = max(0, native_val - float(bound)) # make sure the lowest value is 0
+                    max_value = native_val + float(bound)
+                    bounds.append((min_value, max_value))
+                else: # rotational dof
                     native_val = rot[dof - 4]
-                bounds.append((- float(bound) + native_val, + float(bound) + native_val))
+                    min_value = max(-180, native_val - float(bound)) # makes sure the lowest value is -180
+                    max_value = min(180,  native_val + float(bound)) # makes sure the highest value is 180
+                    bounds.append((min_value,max_value))
         return bounds
 
     def define_bounds(self):

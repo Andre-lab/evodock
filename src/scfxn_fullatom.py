@@ -4,7 +4,7 @@ import logging
 
 import numpy as np
 from pyrosetta import Pose, Vector1
-from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory
+from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory, CA_rmsd_symmetric
 from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
                                                  calc_Irmsd)
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
@@ -39,7 +39,10 @@ class FAFitnessFunction:
         self.syminfo = syminfo
 
     def get_rmsd(self, pose):
-        rmsd = CA_rmsd(self.native_pose, pose)
+        if is_symmetric(pose):
+            rmsd = CA_rmsd_symmetric(self.native_pose, pose)
+        else:
+            rmsd = CA_rmsd(self.native_pose, pose)
         return rmsd
 
     def score(self, genotype):
@@ -53,7 +56,7 @@ class FAFitnessFunction:
         return dst
 
     def size(self):
-        return 6
+        return self.converter.size
 
     def convert_positions_to_genotype(self, positions):
         return self.converter.convert_positions_to_genotype(positions)
