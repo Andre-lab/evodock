@@ -5,7 +5,6 @@
 import copy
 
 import numpy as np
-from vector3d.vector import Vector as vector3d
 
 
 def is_integer(s):
@@ -49,7 +48,7 @@ class Residue:
             return self.stripped_atmap[atname.strip()]
         else:
             print("Error in looking up atom")
-            sys.exit(1)
+            exit(1)
 
     def has_atom(self, atname):
         return (atname in self.atmap) or (atname.strip() in self.stripped_atmap)
@@ -84,7 +83,7 @@ class Chain:
             print("Could not replace residue")
             print(len(self.resmap))
         assert newresidue.resstring in self.resmap
-        for i in xrange(len(self.residues)):
+        for i in range(1, len(self.residues)):
             if self.residues[i].resstring == newresidue.resstring:
                 self.residues[i] = copyres
         self.resmap[newresidue.resstring] = copyres
@@ -342,8 +341,8 @@ def sequence_identity_rate_for_two_pdbstructures(pdb1, pdb2):
 
 # compute an axis-aligned bounding box for the given pdb structure
 def xyz_limits_for_pdb(pdb):
-    lower_xyz = vector3d()
-    upper_xyz = vector3d()
+    lower_xyz = (0, 0, 0)
+    upper_xyz = (0, 0, 0)
     first = True
     count = 0
     for chain in pdb.chains:
