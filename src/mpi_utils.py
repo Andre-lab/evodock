@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from src.differential_evolution import Individual
+from src.individual import Individual
 
 # from mpi4py import MPI
 

@@ -2,19 +2,11 @@
 
 from __future__ import print_function
 
-import glob
-import time
-
 import numpy as np
 import pyrosetta.rosetta as rosetta
 from pyrosetta import Pose
-from pyrosetta.rosetta.core.pose import (addVirtualResAsRoot,
-                                         append_pose_to_pose)
-from pyrosetta.rosetta.protocols.moves import PyMOLMover
-from pyrosetta.rosetta.protocols.rigid import RigidBodySpinMover
-from pyrosetta.rosetta.protocols.toolbox.rigid_body import \
-    create_euler_rotation
-from scipy.spatial import distance
+from pyrosetta.rosetta.core.pose import append_pose_to_pose
+
 
 
 def print_rotation_translation(R, t):
@@ -52,7 +44,9 @@ def build_rotation_and_translation():
     mros = rosetta.numeric.xyzMatrix_double_t(0)
     vec = rosetta.numeric.xyzVector_double_t(0)
     vec.assign(
-        0.9523832594972914, -0.1968083849638013, -0.2328789098163566,
+        0.9523832594972914,
+        -0.1968083849638013,
+        -0.2328789098163566,
     )
     mros.row(0, vec)
     vec.assign(-0.03736108525272122, -0.8333504234478073, 0.5514809344375380)
@@ -116,7 +110,7 @@ def print_rotation(pose1, pose2, i):
 
 
 def show_pose(pose1, pose2):
-    pymover = PyMOLMover()
+    # pymover = PyMOLMover()
     join_pose = Pose()
     join_pose.assign(pose1)
     append_pose_to_pose(join_pose, pose2, True)
@@ -126,7 +120,7 @@ def show_pose(pose1, pose2):
     print(join_pose.jump(jump_num).get_rotation())  # rotation matrix
     print("translation")
     print(join_pose.jump(jump_num).get_translation())  # translation vector
-    pymover.apply(join_pose)
+    # pymover.apply(join_pose)
 
 
 def get_ax1(i):

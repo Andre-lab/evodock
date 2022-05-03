@@ -1,59 +1,61 @@
 #!usr/bin/env python
-
 import logging
-
 import numpy as np
 from pyrosetta import Pose, Vector1
 from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory, CA_rmsd_symmetric
 from pyrosetta.rosetta.protocols.docking import (calc_interaction_energy,
                                                  calc_Irmsd)
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
+from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory
+from pyrosetta.rosetta.protocols.docking import (
+    calc_interaction_energy,
+    calc_Irmsd,
+)
+# from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from scipy.spatial.transform import Rotation as R
-
 from src.genotype_converter import GlobalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
 from src.utils import IP_ADDRESS
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from src.utils import get_rotation_euler, get_translation
+from src.local_search import LocalSearchPopulation
+from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 
 class FAFitnessFunction:
-    def __init__(self, native_pose, trans_max_magnitude, syminfo: dict = None):
+    def __init__(self, input_pose, native_pose, config):
         self.logger = logging.getLogger("evodock.scfxn")
+        self.trans_max_magnitude = config.get_max_translation()
         self.native_pose = native_pose
-        self.input_pose = Pose()
-        self.input_pose.assign(self.native_pose)
+        # self.native_pose = Pose()
+        # self.native_pose.assign(native_pose)
+        # self.input_pose = Pose()
+        # self.input_pose.assign(input_pose)
+
         self.logger.setLevel(logging.INFO)
-        self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
+        # self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
         self.dock_pose = Pose()
-        self.converter = GlobalGenotypeConverter(self.input_pose, trans_max_magnitude, syminfo)
-        # self.pymover.apply(self.input_pose) # why do we have this here when we are calling it again below?
-        self.trans_max_magnitude = trans_max_magnitude
-        self.dock_pose.assign(self.input_pose)
+        self.dock_pose.assign(input_pose)
+        if config.syminfo:
+            SetupForSymmetryMover(config.syminfo.get("input_symdef")).apply(self.dock_pose)
         self.dock_pose.pdb_info().name("INIT_STATE")
-        self.pymover.apply(self.dock_pose)
+
+        self.converter = GlobalGenotypeConverter(
+            self.dock_pose, self.trans_max_magnitude, config.syminfo
+        )
+        # self.pymover.apply(self.dock_pose)
         self.jump_num = 1
         self.ax1, self.ax2, self.ax3 = build_axis()
         mros_temp = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         self.mros, _ = to_rosetta(mros_temp, [0, 0, 0])
-        self.syminfo = syminfo
+        self.syminfo = config.syminfo
+        self.local_search = LocalSearchPopulation(
+            self, config.local_search_option, config
+        )
 
     def get_rmsd(self, pose):
-        if is_symmetric(pose):
-            rmsd = CA_rmsd_symmetric(self.native_pose, pose)
-        else:
-            rmsd = CA_rmsd(self.native_pose, pose)
+        rmsd = CA_rmsd(self.native_pose, pose)
         return rmsd
-
-    def score(self, genotype):
-        pose = self.apply_genotype_to_pose(genotype)
-        try:
-            dst = self.scfxn_rosetta.score(pose)
-        except ValueError:
-            dst = 10000
-        if np.isnan(dst):
-            dst = 10000
-        return dst
 
     def size(self):
         return self.converter.size
@@ -66,6 +68,19 @@ class FAFitnessFunction:
 
     def get_sol_string(self, sol):
         return " , ".join(["{:.2f}".format(e) for e in sol])
+
+    def get_solution_from_positions(self, DoFs_vector):
+        ind_pose = Pose()
+        ind_pose.assign(self.dock_pose)
+        euler = np.asarray(DoFs_vector[0:3])
+        r = R.from_euler("xyz", euler, degrees=True).as_matrix()
+        flexible_jump = ind_pose.jump(ind_pose.num_jump())
+        rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
+        flexible_jump.set_rotation(rosetta_rotation)
+        flexible_jump.set_translation(rosetta_translation)
+        ind_pose.set_jump(ind_pose.num_jump(), flexible_jump)
+        # now is time to score the joined pose (ind_pose)
+        return ind_pose
 
     def apply_genotype_to_pose(self, genotype):
         DoFs_vector = self.convert_genotype_to_positions(genotype)
@@ -88,14 +103,14 @@ class FAFitnessFunction:
                 flexible_jump.set_translation(rosetta_translation)
                 ind_pose.set_jump(jump, flexible_jump)
         else:
+            # TODO: dont want to add self.jump_num instead of ind_pose.num_jump() ?
             euler = np.asarray(DoFs_vector[0:3])
             r = R.from_euler("xyz", euler, degrees=True).as_matrix()
-            flexible_jump = ind_pose.jump(self.jump_num)
+            flexible_jump = ind_pose.jump(ind_pose.num_jump())
             rosetta_rotation, rosetta_translation = to_rosetta(r, DoFs_vector[3:])
             flexible_jump.set_rotation(rosetta_rotation)
             flexible_jump.set_translation(rosetta_translation)
-            ind_pose.set_jump(self.jump_num, flexible_jump)
-        # now is time to score the join_pose
+            ind_pose.set_jump(ind_pose.num_jump(), flexible_jump)
         return ind_pose
 
     def render_individual(self, pdb_id, individual, is_best=None, interface=False):
@@ -107,7 +122,7 @@ class FAFitnessFunction:
             dst = 10000
         prot_name = "popul" if is_best is None else is_best
         pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        self.pymover.apply(pose)
+        # self.pymover.apply(pose)
         rmsd = self.get_rmsd(pose)
         return dst, rmsd, interface, irms
 
@@ -120,6 +135,6 @@ class FAFitnessFunction:
             dst = 10000
         prot_name = "popul" if is_best is None else is_best
         pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        self.pymover.apply(pose)
+        # self.pymover.apply(pose)
         rmsd = self.get_rmsd(pose)
         return dst, rmsd, interface, irms

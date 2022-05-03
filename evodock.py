@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
 import logging
 import os
 import sys
@@ -10,89 +9,87 @@ from pyrosetta import init
 
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
-from src.population import ScorePopulation
+from src.differential_evolution import FlexbbDifferentialEvolution as FlexbbDE
+
+from src.options import build_rosetta_flags
 from src.scfxn_fullatom import FAFitnessFunction
 from src.single_process import SingleProcessPopulCalculator as PopulCalculator
 from src.utils import get_pose_from_file, get_position_info, get_symmetric_genotype_str
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from src.utils import get_pose_from_file, get_position_info, get_starting_poses
+from pyrosetta.rosetta.core.scoring import CA_rmsd, CA_rmsd_symmetric
 
 MAIN_PATH = os.getcwd()
 
 logging.basicConfig(level=logging.ERROR)
 
 
-def init_options_fa(filename):
-    opts = [
-        "-mute all",
-        "-unmute protocols.simple_moves_symmetry.SymDockingInitialPerturbation",
-        "-out:level 1000",
-        "-docking:dock_mcm_first_cycles 1",
-        "-docking:dock_mcm_second_cycles 1",
-        "-include_current True",
-        "-initialize_rigid_body_dofs 1",
-        "-out:file:output_pose_energies_table false", # FIXME bypasses this error: Energies::residue_total_energies( int const seqpos ): variable seqpos is out of range!
-        "-ex1",
-        "-ex2aro",
-        "-use_input_sc",
-        "-unboundrot {}".format(filename),
-    ]
-    return " ".join(opts)
+def print_init_information(logger, scfxn, native_pose, input_pose, syminfo: dict = None):
+    position_str = ", ".join(
+        ["{:.2f}".format(e) for e in get_position_info(input_pose)]
+    )
+    native_position_str = ", ".join(
+        ["{:.2f}".format(e) for e in get_position_info(native_pose)]
+    )
+
+    native_score = scfxn.scfxn_rosetta.score(native_pose)
+    input_score = scfxn.scfxn_rosetta.score(input_pose)
+    input_vs_native_rmsd = CA_rmsd(input_pose, native_pose)
+
+    logger.info("==============================")
+    logger.info(" input information ")
+    if syminfo:
+        logger.info(f" Symmetry has been detected (with genotype: {get_symmetric_genotype_str(native_pose)})")
+    logger.info(f" Input position: {position_str}")
+    logger.info(f" Input pose score {input_score:.2f}")
+    logger.info(f" Native pose score {native_score:.2f}")
+    logger.info(f" Native position: {native_position_str}")
+    logger.info(f" Input vs native rmsd: {input_vs_native_rmsd:.2f}")
+    logger.info("==============================")
+# >>>>>>> main
 
 
 def main():
     config = EvodockConfig(sys.argv[-1])
 
-    pose_input = config.pose_input
-
-    init(extra_options=init_options_fa(pose_input))
+    init(extra_options=build_rosetta_flags(config))
 
     logger = logging.getLogger("evodock")
     logger.setLevel(logging.INFO)
 
-    # --- Position Params -----------------------------+
-    trans_max_magnitude = config.get_max_translation()
+    # --- INIT PROTEIN STRUCTURES -------------------
+    pose_input = config.pose_input
+    native_input = config.native_input
+    # input_pose = get_pose_from_file(pose_input)
+    # native_pose = get_pose_from_file(native_input)
 
-    # --- LS PARAMS -----------------------------------+
-    local_search_option = config.local_search_option
+    input_pose, native_pose = get_starting_poses(pose_input, native_input, config)
 
-    # --- OUTPUT --------------------------------------+
-    jobid = config.jobid
+    # ---- INIT SCORE FUNCTION ------------------------------
+    scfxn = FAFitnessFunction(input_pose, native_pose, config)
 
-    # --- Symmetry information ------------------------+
-    syminfo = config.syminfo
+    # ---- PRINT INIT INFORMATION ---------------------
+    print_init_information(logger, scfxn, native_pose, input_pose, config.syminfo)
 
-    # --- INIT ----------------------------------------+
-    native_pose = get_pose_from_file(pose_input, syminfo)
-    scfxn = FAFitnessFunction(native_pose, trans_max_magnitude, syminfo)
+    # ---- START ALGORITHM ---------------------------------
+    if config.docking_type_option == "Flexbb":
+        alg = FlexbbDE(config, scfxn)
+    else:
+        alg = DE(config, scfxn)
 
-    position_str = ", ".join(
-        ["{:.2f}".format(e) for e in get_position_info(native_pose)]
-    )
-    native_score = scfxn.scfxn_rosetta.score(native_pose)
+    alg.init_population()
 
-    score_popul = ScorePopulation(scfxn, jobid, local_search_option, config)
-    popul_calculator = PopulCalculator(score_popul, syminfo)
-
-    if is_symmetric(native_pose):
-        logger.info("==============================")
-        logger.info(" Running EvoDOCK with symmetry")
-        logger.info(f" The genotype is: {get_symmetric_genotype_str(native_pose)}")
-
-    logger.info("==============================")
-    logger.info(" native information ")
-    logger.info(" native position: " + position_str)
-    logger.info(" native pose score {:.2f}".format(native_score))
-
-    logger.info("==============================")
-    alg = DE(popul_calculator, config)
-    init_population = alg.init_population()# TODO : DETELE THIS 'initialization=config.initialization)' ??
-
-    # --- RUN -----------------------------------------+
+    # --- RUN ALGORITHM -------------------------------------
     logger.info("==============================")
     logger.info(" starts EvoDOCK : evolutionary docking process")
-    population = popul_calculator.run(init_population)
-    alg.main(population)
-    popul_calculator.terminate()
+    best_pdb = alg.main()
+
+    # ---- OUTPUT -------------------------------------------
+    logger.info(" end EvoDOCK")
+    logger.info("==============================")
+    if config.out_pdb:
+        name = config.out_path + "/final_docked_evo.pdb"
+        best_pdb.dump_pdb(name)
 
 if __name__ == "__main__":
     main()

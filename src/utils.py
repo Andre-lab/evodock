@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import numpy as np
-from pyrosetta import Pose, pose_from_file
-from scipy.spatial.transform import Rotation as R
 
+import numpy as np
+from pyrosetta import Pose, pose_from_file, Vector1
+from scipy.spatial.transform import Rotation as R
+from src.individual import Individual
 from src.pdb_structure import pdbstructure_from_file
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, jump_num_sym_dof
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from pyrosetta.rosetta.core.kinematics import FoldTree
+from pyrosetta.rosetta.core.pose import chain_end_res
+from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
-IP_ADDRESS = "10.8.0.14"
+IP_ADDRESS = "10.8.0.6"
 
 # symmetric maps from dof name to dof int
 strtodofint = {"x": 1, "y": 2, "z": 3, "angle_x": 4, "angle_y": 5, "angle_z": 6}
@@ -32,13 +36,37 @@ def get_symmetric_genotype_str(pose: Pose) -> str:
                 symmetric_genotype.append(f"{jump_str}:{inttodofstr[dof]}")
     return " ".join(symmetric_genotype)
 
-def get_pose_from_file(pose_input, syminfo: dict = None):
-    native_pose = Pose()
-    pose_from_file(native_pose, pose_input)
-    if syminfo:
-        SetupForSymmetryMover(syminfo.get("file")).apply(native_pose)
-        map_jump_and_dofs_to_int(native_pose, syminfo)
-    return native_pose
+def get_starting_poses(pose_input, native_input, config):
+    native = Pose()
+    pose_from_file(native, native_input)
+    pose = Pose()
+    pose_from_file(pose, pose_input)
+    native.conformation().detect_disulfides()
+    pose.conformation().detect_disulfides()
+    if config.syminfo:
+        SetupForSymmetryMover(config.syminfo.get("input_symdef")).apply(pose)
+        SetupForSymmetryMover(config.syminfo.get("native_symdef")).apply(native)
+        map_jump_and_dofs_to_int(pose, config.syminfo)
+    else:
+        mres = chain_end_res(pose, 1)
+        ft = FoldTree()
+        ft.add_edge(1, mres, -1)
+        ft.add_edge(1, mres + 1, 1)
+        ft.add_edge(mres + 1, pose.total_residue(), -1)
+        pose.fold_tree(ft)
+    if config.pmm:
+        pose.pdb_info().name("input_pose")
+        native.pdb_info().name("native_pose")
+        config.pmm.apply(pose)
+        config.pmm.apply(native)
+    return pose, native
+
+def get_pose_from_file(pose_input):
+    pose = Pose()
+    pose_from_file(pose, pose_input)
+    pose.conformation().detect_disulfides()
+    return pose
+# >>>>>>> main
 
 # compute an axis-aligned bounding box for the given pdb structure
 def xyz_limits_for_pdb(pdb):
@@ -177,3 +205,17 @@ def set_new_max_translations(scfxn, popul):
         # print(scfxn.convert_genotype(ind.genotype))
 
     return popul
+
+
+def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1):
+    ind = Individual(idx, genotype)
+    ind.idx = idx
+    ind.genotype = genotype
+    ind.score = 1000
+    ind.idx_subunit = subunit
+    ind.idx_ligand = ligand
+    ind.idx_receptor = receptor
+    ind.rmsd = 0
+    ind.i_sc = 0
+    ind.irms = 0
+    return ind

@@ -2,9 +2,13 @@
 *
 
 !.gitignore
+!requirements.txt
+!setup.py
+!environment.yml
 !*.py
 !src/
 !src/**.py
+flycheck*py
 
 !configs/
 !configs/**.ini
@@ -14,3 +18,11 @@
 !inputs/**
 !inputs/pdbs/
 !inputs/pdbs/**.pdb
+
+!scripts/
+!scripts/prepacking.py
+
+!images/
+!images/*png
+
+configs/sample_config_mass.ini
