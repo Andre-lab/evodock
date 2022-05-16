@@ -206,8 +206,8 @@ class SymDockMCMProtocol:
         :param num_of_second_cycle: Number of iterations for the second cycle
         """
         # FIXME: change these to have the actual values instead of 1 (this is for fast debugging)
-        self.num_of_first_cycle = 1 # num_of_first_cycle
-        self.num_of_second_cycle = 1 # num_of_second_cycle
+        self.num_of_first_cycle = num_of_first_cycle
+        self.num_of_second_cycle = num_of_second_cycle
         self.scorefxn = ScoreFunctionFactory.create_score_function("ref2015")
         self.mc = MonteCarlo(self.scorefxn, 0.8)
         self.taskkfactory = self.create_taskfactory(pose)
