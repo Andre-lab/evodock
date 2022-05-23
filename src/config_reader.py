@@ -163,6 +163,7 @@ class EvodockConfig:
 
     def load_flexible_docking_parameters(self, config):
         if self.docking_type_option == "Flexbb":
+            self.swap_prob = config["Flexbb"].getfloat("swap_prob")
             if self.syminfo:
                 self.path_subunits = self.p + config["Flexbb"].get("subunits")
             else:

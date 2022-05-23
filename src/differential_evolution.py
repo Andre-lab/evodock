@@ -200,7 +200,7 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
             )
 
             # --- SCORE KEEPING --------------------------------+
-            self.score_keeping()
+            self.score_keeping(generation)
 
         return self.best_pdb
 
@@ -265,7 +265,7 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
 #         return population
 # =======
             # --- SCORE KEEPING --------------------------------+
-            self.score_keeping()
+            self.score_keeping(generation)
 
         return self.best_pdb
 

@@ -23,56 +23,6 @@ from src.utils import get_translation, get_rotation_euler
 from pyrosetta.rosetta.core.conformation.symmetry import SlideCriteriaType
 from pyrosetta.rosetta.protocols.symmetry import SequentialSymmetrySlider
 
-#
-# while ( pose.energies().total_energies()[ scoring::interchain_vdw ] > 0.1 ) {
-# 		mover.apply( pose );
-# 		( *scorefxn_ )( pose );
-# 		if ( ++num_slide_moves > 1000 ) {
-# 			std::cerr << "To many slide moves. Subunits never touching..." << std::endl;
-# 			utility_exit();
-# 		}
-# 		TR.Debug << "score away " << pose.energies().total_energies()[ scoring::interchain_vdw ]  << std::endl;
-# 	}
-
-# // first try moving away from each other
-# 	while ( pose.energies().total_energies()[ scoring::interchain_vdw ] > 0.1 ) {
-# 		mover.apply( pose );
-# 		( *scorefxn_ )( pose );
-# 		if ( ++num_slide_moves > 1000 ) {
-# 			std::cerr << "To many slide moves. Subunits never touching..." << std::endl;
-# 			utility_exit();
-# 		}
-# 		TR.Debug << "score away " << pose.energies().total_energies()[ scoring::interchain_vdw ]  << std::endl;
-# 	}
-# 	// then try moving towards each other
-# 	TR.Debug << "Moving together" << std::endl;
-# 	mover.trans_axis().negate();
-# 	while ( pose.energies().total_energies()[ scoring::interchain_vdw ] < 0.1 ) {
-# 		mover.apply( pose );
-# 		( *scorefxn_ )( pose );
-# 		if ( ++num_slide_moves > 1000 ) {
-# 			std::cerr << "To many slide moves. Subunits never touching..." << std::endl;
-# 			utility_exit();
-# 		}
-# 		TR.Debug << "score together " << pose.energies().total_energies()[ scoring::interchain_vdw ]  << std::endl;
-# 	}
-# 	// move away again until just touching
-# 	mover.trans_axis().negate();
-# 	mover.apply( pose );
-
-
-# negate reverses the trans_axis
-
-# Docking initial pertubation as Daniel is calling it is calling FaDockingSlideIntoContact under the hood!
-
-# I think there's a way to make the lowresolution scorefunction work on a high resolution structure
-
-# from dockingiinitialpertubation
-# scorefxn_ = ScoreFunctionFactory::create_score_function(CENTROID_WTS, DOCK_LOW_PATCH);
-# scorefxn_ = ScoreFunctionFactory::create_score_function("interchain_cen");
-# scoretype_for_contact_ = core::scoring::interchain_vdw;
-
-
 class SequentialSymmetrySliderWrapper:
     """Does the the as SequentialSymmetrySlider but it needs to be constructed on every single pose to actually do
     sliding. If you just use the same SequentialSymmetrySlider on different poses it will only slide on the first
@@ -147,7 +97,6 @@ class SymDockingSlideIntoContactWrapper:
         for jump_id, symdof in dofs.items():
             pose_to.set_jump(jump_id, pose_from.jump(jump_id))
 
-# TODO: implement in the c++ code.
 class SymDockingSlideIntoContactWrapper:
     """The original SymDockingSlideIntoContact gives a 'Fatal Error in VDW_Energy' ERROR, which DockingSlideIntoContact"
     does not. This is because it is implemented wrong in the c++ code. in DockingSlideIntoContact the scorefxn is
@@ -181,7 +130,6 @@ class SymDockingSlideIntoContactWrapper:
         for jump_id, symdof in dofs.items():
             pose_to.set_jump(jump_id, pose_from.jump(jump_id))
 
-# TODO: implement in the c++ code.
 class SymDockMCMProtocol:
     """To my knowledge there's no equivalent symmetrical version of DockMCMProtocol in Rosetta. This class is an
     attempt at reproducing the DockMCMProtocol in a symmetrical form and as it is used in EvoDOCK. The following
@@ -205,7 +153,6 @@ class SymDockMCMProtocol:
         :param num_of_first_cycle: Number of iterations for the first cycle
         :param num_of_second_cycle: Number of iterations for the second cycle
         """
-        # FIXME: change these to have the actual values instead of 1 (this is for fast debugging)
         self.num_of_first_cycle = num_of_first_cycle
         self.num_of_second_cycle = num_of_second_cycle
         self.scorefxn = ScoreFunctionFactory.create_score_function("ref2015")

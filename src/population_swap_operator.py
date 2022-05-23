@@ -14,7 +14,7 @@ from pyrosetta.rosetta.core.scoring import CA_rmsd
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from src.utils import IP_ADDRESS
 
-SWAP_PROBABILITY = 1.0 # changed from 0.1
+# SWAP_PROBABILITY = 1.0 # changed from 0.1
 
 
 class FlexbbSwapOperatorBuilder:
@@ -27,7 +27,6 @@ class FlexbbSwapOperatorBuilder:
             self.flexbb_swap_operator = PopulationSwapOperator(self.config, self.scfxn)
         else:
             self.flexbb_swap_operator = None
-
         return self.flexbb_swap_operator
 
 
@@ -39,6 +38,7 @@ class PopulationSwapOperator:
         self.config = config
         self.local_search = scfxn.local_search
         self.jobid = self.config.out_path
+        self.swap_prob = config.swap_prob
 
         self.swap_operator = FlexbbSwapOperator(config, scfxn, self.local_search)
         self.log_relax_success = self.jobid + "/relaxed_sucess.csv"
@@ -53,7 +53,7 @@ class PopulationSwapOperator:
         relaxed_sucess = 0
         new_population = []
         for ind in population:
-            if random.uniform(0, 1) <= SWAP_PROBABILITY:
+            if random.uniform(0, 1) <= self.swap_prob:
                 pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
                 join_pose, idx_r, idx_l, idx_s, relaxed = self.swap_operator.apply_bb_strategy(
                     ind, pose
@@ -77,13 +77,14 @@ class PopulationSwapOperator:
                         Vector1([1]),
                     )
                     result_individual = Individual(
-                        genotype,
-                        after,
-                        idx_l,
-                        idx_r,
-                        rmsd,
-                        interface,
-                        irms,
+                        genotype=genotype,
+                        score=after,
+                        idx_ligand=idx_l,
+                        idx_receptor=idx_r,
+                        idx_subunit=idx_s,
+                        rmsd=rmsd,
+                        i_sc=interface,
+                        irms=irms,
                     )
                     new_population.append(result_individual)
                     ratio_swap_success += 1
