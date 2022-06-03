@@ -14,8 +14,6 @@ from pyrosetta.rosetta.core.kinematics import FoldTree
 from pyrosetta.rosetta.core.pose import chain_end_res
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
-IP_ADDRESS = "10.8.0.6"
-
 # symmetric maps from dof name to dof int
 strtodofint = {"x": 1, "y": 2, "z": 3, "angle_x": 4, "angle_y": 5, "angle_z": 6}
 inttodofstr =  {v: k for k, v in strtodofint.items()}
@@ -208,14 +206,4 @@ def set_new_max_translations(scfxn, popul):
 
 
 def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1):
-    ind = Individual(idx, genotype)
-    ind.idx = idx
-    ind.genotype = genotype
-    ind.score = 1000
-    ind.idx_subunit = subunit
-    ind.idx_ligand = ligand
-    ind.idx_receptor = receptor
-    ind.rmsd = 0
-    ind.i_sc = 0
-    ind.irms = 0
-    return ind
+    return Individual(idx, genotype, score=1000, idx_ligand=ligand, idx_receptor=receptor, idx_subunit=subunit, rmsd=0, i_sc=0, irms=0)

@@ -35,7 +35,7 @@ class DifferentialEvolutionAlgorithm:
         self.file_time_name = self.config.out_path + "/time.csv"
         self.max_translation = config.get_max_translation()
         self.scfxn = fitness_function
-        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.mutation_strategy = MutationStrategyBuilder(config).build(self.scfxn.size())
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
             config, fitness_function
         ).build()

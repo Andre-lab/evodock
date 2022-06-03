@@ -105,7 +105,7 @@ class ScorePopulation:
                     scored_ind,
                     before,
                     after,
-                ) = self.local_search.process_individual(ind, True)
+                ) = self.local_search.process_individual(ind)
                 if (
                     self.config.docking_type_option == "Refine"
                     and LOW_LIMIT_INIT_DIVERSITY > 0

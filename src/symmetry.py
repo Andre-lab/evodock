@@ -141,12 +141,12 @@ class SymDockMCMProtocol:
        It seems like the  mover also doesnt work for symmetry. It defines only a single jump.
 
     The protocol seems to do the following:
-    5+45 outer protocol of:
+    <num_of_first_cycle>+<num_of_second_cycle> outer protocol of:
         1. 8 x inner protocol of:
             1. Apply RigidBodyPerturbMover and RotamerTrialsMover and if E < 15.0 apply a MinMover, and accept by MCM.
             2. Same as 1 but also apply a PackRotamersMover and accept by MCM.
     """
-    def __init__(self, pose, num_of_first_cycle: int = 5, num_of_second_cycle: int = 45):
+    def __init__(self, pose, num_of_first_cycle: int = 4, num_of_second_cycle: int = 45):
         """Initializes the mover.
 
         :param pose: Pose to dock.

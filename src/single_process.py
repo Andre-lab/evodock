@@ -30,6 +30,7 @@ class SingleProcessPopulCalculator:
         return chunks
 
     def run(self, popul, init_population=False):
+        raise NotImplementedError
         list_popul = popul
         ind_per_process = int(len(list_popul) / self.size)
         data = self.__make_chunks(list_popul, ind_per_process)

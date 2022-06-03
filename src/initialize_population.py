@@ -66,7 +66,6 @@ class InitializePopulation:
         population = population_calculator.run(popul, init_population)
         end = time.time()
         self.logger.info(f" population init in {end - start:.2f} seconds")
-        # self.popul_calculator.pymol_visualization(population)
         return population
 
 
@@ -89,7 +88,6 @@ class InitializePopulationRefine(InitializePopulation):
         population = population_calculator.run(popul, init_population)
         end = time.time()
         self.logger.info(f" population init in {end - start:.2f} seconds")
-        # self.popul_calculator.pymol_visualization(population)
         return population
 
 # TODO for symmetry
@@ -112,7 +110,6 @@ class InitializePopulationLocal(InitializePopulation):
         population = population_calculator.run(popul, init_population)
         end = time.time()
         self.logger.info(f" population init in {end - start:.2f} seconds")
-        # self.popul_calculator.pymol_visualization(population)
         return population
 
 
@@ -144,11 +141,9 @@ class InitializePopulationFlexbb(InitializePopulation):
                 idx_receptor = random.randint(0, len_receptors)
                 idx_ligand = random.randint(0, len_ligands)
                 popul.append(make_trial(i, indv, ligand=idx_ligand, receptor=idx_receptor))
-
         init_population = True
         start = time.time()
         population = population_calculator.run(popul, init_population)
         end = time.time()
         self.logger.info(f" population init in {end - start:.2f} seconds")
-        # self.popul_calculator.pymol_visualization(population)
         return population

@@ -15,22 +15,24 @@ from pyrosetta.rosetta.protocols.docking import (
 from scipy.spatial.transform import Rotation as R
 from src.genotype_converter import GlobalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
-from src.utils import IP_ADDRESS
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from src.utils import get_rotation_euler, get_translation
 from src.local_search import LocalSearchPopulation
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
+from pyrosetta.rosetta.std import istringstream
+from pyrosetta.rosetta.core.conformation.symmetry import SymmData
+from src.individual import Individual
 
 class FAFitnessFunction:
     def __init__(self, input_pose, native_pose, config):
         self.logger = logging.getLogger("evodock.scfxn")
         self.trans_max_magnitude = config.get_max_translation()
         self.native_pose = native_pose
+        self.original_reference_scores = []
         # self.native_pose = Pose()
         # self.native_pose.assign(native_pose)
         # self.input_pose = Pose()
         # self.input_pose.assign(input_pose)
-
         self.logger.setLevel(logging.INFO)
         # self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
@@ -49,9 +51,35 @@ class FAFitnessFunction:
         mros_temp = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         self.mros, _ = to_rosetta(mros_temp, [0, 0, 0])
         self.syminfo = config.syminfo
+        self.normalize_score = config.normalize_score
         self.local_search = LocalSearchPopulation(
             self, config.local_search_option, config
         )
+
+    def normalize_scores(self):
+        if self.normalize_score:
+            assert self.original_reference_scores, "self.reference_scores is not filled with values yet!"
+            if self.syminfo:
+                s = SymmData()
+                s.read_symmetry_data_from_file(self.syminfo["input_symdef"])
+                multiplier = s.get_score_multiply_subunit()[s.get_score_subunit()]
+                self.original_reference_scores = [multiplier * i for i in self.original_reference_scores]
+                min_val = min(self.original_reference_scores)
+                self.reference_scores_subunit = [min_val - i for i in self.original_reference_scores]
+            else:
+                raise NotImplementedError
+
+    def score(self, pose, ind: Individual):
+        """Scores the pose and if normalize_scores is set it will normalize scores accordingly."""
+        score = self.scfxn_rosetta.score(pose)
+        if self.normalize_score:
+            if self.syminfo:
+                # IT IS VERY IMPORTANT WE '+' BECAUSE THE REFERENCE VALUES ARE SUPPOSED TO SUBTRACT
+                return score + self.reference_scores_subunit[ind.idx_subunit]
+            else:
+                raise NotImplementedError
+        else:
+            return score
 
     def get_rmsd(self, pose):
         rmsd = CA_rmsd(self.native_pose, pose)

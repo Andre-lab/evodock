@@ -4,6 +4,7 @@ import random
 class Individual:
     def __init__(
         self,
+        idx,
         genotype,
         score,
         idx_ligand=1,
@@ -31,6 +32,7 @@ class Individual:
             if idx_subunit > 100:
                 print("error at receptor idx")
 
+        self.idx = idx
         self.idx_receptor = idx_receptor
         self.idx_ligand = idx_ligand
         self.idx_subunit = idx_subunit
