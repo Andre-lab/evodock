@@ -12,7 +12,6 @@ from src.flexbb_swap_operator import FlexbbSwapOperator
 from pyrosetta.rosetta.protocols.docking import calc_interaction_energy, calc_Irmsd
 from pyrosetta.rosetta.core.scoring import CA_rmsd
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
-from src.utils import IP_ADDRESS
 
 # SWAP_PROBABILITY = 1.0 # changed from 0.1
 
@@ -32,15 +31,13 @@ class FlexbbSwapOperatorBuilder:
 
 class PopulationSwapOperator:
     def __init__(self, config, scfxn):
-        self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn = scfxn
         self.scfxn_rosetta = self.scfxn.scfxn_rosetta
         self.config = config
         self.local_search = scfxn.local_search
         self.jobid = self.config.out_path
         self.swap_prob = config.swap_prob
-
-        self.swap_operator = FlexbbSwapOperator(config, scfxn, self.local_search)
+        self.swap_operator = scfxn.local_search.local_search_strategy.swap_operator
         self.log_relax_success = self.jobid + "/relaxed_sucess.csv"
         with open(self.log_relax_success, "w") as file_object:
             file_object.write("#{}\n".format(self.jobid))
@@ -77,6 +74,7 @@ class PopulationSwapOperator:
                         Vector1([1]),
                     )
                     result_individual = Individual(
+                        idx=ind.idx,
                         genotype=genotype,
                         score=after,
                         idx_ligand=idx_l,

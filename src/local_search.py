@@ -55,6 +55,7 @@ class LocalSearchPopulation:
         # replace trial with this new positions
         genotype = self.scfxn.convert_positions_to_genotype(positions)
         result_individual = Individual(
+        idx=ind.idx,
         genotype= genotype,
         score = data["after"],
         idx_ligand= data["idx_ligand"],

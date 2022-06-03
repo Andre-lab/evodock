@@ -29,25 +29,25 @@ class MutationStrategyBuilder:
         self.mutate = config.mutate
         self.recombination = config.recombination
 
-    def build(self):
+    def build(self, size):
         if self.scheme == "BEST":
-            return StrategyBest(self.config)
+            return StrategyBest(self.config, size)
         elif self.scheme == "RANDOM":
-            return StrategyRandom(self.config)
+            return StrategyRandom(self.config, size)
         elif self.scheme == "CURRENT":
-            return StrategyCurrent(self.config)
+            return StrategyCurrent(self.config, size)
         elif self.scheme == "pBEST":
-            return StrategyPBest(self.config)
+            return StrategyPBest(self.config, size)
         else:
-            return StrategyBest(self.config)
+            return StrategyBest(self.config, size)
 
 
 class Strategy:
-    def __init__(self, config):
+    def __init__(self, config, size):
         self.config = config
         self.mutate = config.mutate
         self.recombination = config.recombination
-        self.bounds = [(-1, 1)] * 6
+        self.bounds = [(-1, 1)] * size
 
     def select_parents(self, j, population, gen_scores):
         candidates = list(range(0, len(population)))
@@ -79,6 +79,7 @@ class StrategyRandom(Strategy):
 
 
 class StrategyBest(Strategy):
+
     def select_parents(self, j, population, gen_scores):
         candidates = list(range(0, len(population)))
         candidates.remove(j)

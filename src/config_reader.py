@@ -7,7 +7,8 @@ import ast
 from src.utils import get_translation_max
 from itertools import islice
 from pyrosetta import PyMOLMover
-from src.utils import IP_ADDRESS
+from src.individual import Individual
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 
 MAIN_PATH = os.getcwd()
 
@@ -31,6 +32,9 @@ class EvodockConfig:
         # depends on symmetry
         self.load_symmetry_parameters(config)
 
+        # general docking parameters
+        self.load_docking_parameters(config)
+
         # depend on docking type
         self.load_flexible_docking_parameters(config)
         self.load_refine_docking_parameters(config)
@@ -40,6 +44,25 @@ class EvodockConfig:
 
         # --- CONFIG STRUCTURE -----------------------------------+
         self.config = config
+
+    def visualize_pose(self, pose, idx, extra=None):
+        """Visualizes the pose in PyMOL."""
+        if self.pmm:
+            name = str(idx)
+            name = name + f"_{extra}" if extra else name
+            pose.pdb_info().name(name)
+            self.pmm.apply(pose)
+
+    def load_docking_parameters(self, config):
+        """Load docking parameters"""
+        # TODO: num_first_cycle and num_first_cycle is specified when init is called for the non-symmetrical case and Daniel has set that to 1/1.
+        #  1/1 in the symmetrical case does not work very well.
+        if config.has_option("Symmetry", "input_symdef_file"):
+            self.num_first_cycle = config.getint("DE", "num_first_cycle", fallback=4)
+            self.num_second_cycle = config.getint("DE", "num_second_cycle", fallback=45)
+        else:
+            self.num_first_cycle = config.getint("DE", "num_first_cycle", fallback=1)
+            self.num_second_cycle = config.getint("DE", "num_second_cycle", fallback=1)
 
     def load_symmetry_parameters(self, config):
         """Extracts the symmetrical information from the config file."""
@@ -66,11 +89,13 @@ class EvodockConfig:
 
     def load_pymol_parameters(self, config):
         if config.has_option("Pymol", "on") and config.getboolean("Pymol", "on"):
-            self.pmm = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
+            self.ipaddress = config.get("Pymol", "ipaddress", fallback="0.0.0.0")
+            self.pmm = PyMOLMover(address=self.ipaddress, port=65000, max_packet_size=1400)
             if config.has_option("Pymol", "history"):
                 self.pmm.keep_history(config.getboolean("Pymol", "history"))
         else:
             self.pmm = None
+            self.ipaddress = None
         if config.has_option("Pymol", "show_local_search"):
             self.show_local_search = config.getboolean("Pymol", "show_local_search")
         else:
@@ -163,7 +188,9 @@ class EvodockConfig:
 
     def load_flexible_docking_parameters(self, config):
         if self.docking_type_option == "Flexbb":
-            self.swap_prob = config["Flexbb"].getfloat("swap_prob")
+            self.swap_prob = config["Flexbb"].getfloat("swap_prob", fallback=0.3)
+            self.low_memory_mode = config["Flexbb"].getboolean("low_memory_mode", fallback=False)
+            self.normalize_score = config["Flexbb"].getboolean("normalize_score", fallback=False)
             if self.syminfo:
                 self.path_subunits = self.p + config["Flexbb"].get("subunits")
             else:
@@ -182,8 +209,10 @@ class EvodockConfig:
                         "path for receptor flexible BB not found. Use 'path_receptors' parameter"
                     )
                     exit()
+        else:
+            self.normalize_score = False
 
-    # --- Input Params -----------------------------+
+            # --- Input Params -----------------------------+
     def load_refine_docking_parameters(self, config):
         if self.docking_type_option == "Refine":
             if config.has_option("Refine", "init_pdbs"):

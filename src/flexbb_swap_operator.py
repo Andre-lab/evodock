@@ -12,33 +12,52 @@ from pyrosetta.rosetta.core.pose import (
     chain_end_res,
     remove_virtual_residues,
 )
-from pyrosetta.rosetta.core.import_pose import poses_from_files
+from pyrosetta.rosetta.core.import_pose import poses_from_files, pose_from_file
 from pyrosetta.rosetta.utility import vector1_std_string
 from pyrosetta import Pose
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
-
-
+from src.position_utils import to_rosetta
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from src.utils import get_rotation_euler, get_translation
+from scipy.spatial.transform import Rotation as R
+from pathlib import Path
+from pyrosetta.rosetta.protocols.moves import NullMover
 
 class FlexbbSwapOperator:
-    def __init__(self, config, scfxn, local_search):
+    def __init__(self, config, scfxn, local_search_strategy):
         self.bb_strategy = "library"
         self.scfxn = scfxn
         self.native_fold_tree = scfxn.dock_pose.fold_tree()
         self.config = config
-
-        self.local_search = local_search
+        if self.config.syminfo:
+            self.symmetrymover = SetupForSymmetryMover(self.config.syminfo["input_symdef"])
+        else:
+            self.symmetrymover = None
+        self.local_search_strategy = local_search_strategy
         if config.syminfo:
             lst_subunits = glob.glob(config.path_subunits)
             filenames_subunits = vector1_std_string()
             for f in lst_subunits:
                 filenames_subunits.append(f)
-            symmover = SetupForSymmetryMover(config.syminfo.get("input_symdef"))
             self.list_subunits = []
-            for p in poses_from_files(filenames_subunits):
-                symmover.apply(p)
-                self.list_subunits.append(p)
-            self.relaxed_backbones_subunits = [p.clone() for p in self.list_subunits]
+            if self.config.low_memory_mode:
+                for path in filenames_subunits:
+                    pose = pose_from_file(path)
+                    if self.config.normalize_score:
+                        scfxn.original_reference_scores.append(scfxn.scfxn_rosetta.score(pose))
+                    self.list_subunits.append(path)
+            else:
+                for pose in poses_from_files(filenames_subunits):
+                    self.list_subunits.append(pose) # symmetrize later
+                # fixme: check if this is needed. Daniel says that he has problem with the datacache not changning when calculating ZD,
+                #  if these are already in the pdb when read.
+                self.list_subunits = [Pose(p) for p in self.list_subunits]
+                if self.config.normalize_score:
+                    for pose in self.list_subunits:
+                        scfxn.original_reference_scores.append(scfxn.scfxn_rosetta.score(pose))
+            # the relaxed backbones are newer used?
+            # self.relaxed_backbones_subunits = [p.clone() for p in self.list_subunits]
         else:
             lst_ligand = glob.glob(config.path_ligands)
             lst_receptor = glob.glob(config.path_receptors)
@@ -50,29 +69,32 @@ class FlexbbSwapOperator:
                 filenames_receptor.append(f)
             self.list_ligand = poses_from_files(filenames_ligand)
             self.list_receptor = poses_from_files(filenames_receptor)
+            # fixme: check if this is needed. Daniel says that he has problem with the datacache not changning when calculating ZD
+            #  if these are already in the pdb when read.
             self.list_ligand = [Pose(p) for p in self.list_ligand]
             self.list_receptor = [Pose(p) for p in self.list_receptor]
             # print("list ligand {}".format(len(self.list_ligand)))
             # print("list receptor {}".format(len(self.list_receptor)))
-            self.relaxed_backbones_ligand = [Pose(p) for p in self.list_ligand]
-            self.relaxed_backbones_receptor = [Pose(p) for p in self.list_receptor]
-        self.relax = FastRelax(1)
-        self.relax.set_scorefxn(self.scfxn.scfxn_rosetta)
+            # self.relaxed_backbones_ligand = [Pose(p) for p in self.list_ligand]
+            # self.relaxed_backbones_receptor = [Pose(p) for p in self.list_receptor]
+        self.scfxn.normalize_scores()
 
-    def add_relaxed_backbones_to_list(self, ind, current_score, reference_pose):
-        if is_symmetric(reference_pose):
-            idx_subunit = ind.idx_subunit
-            self.list_subunits[idx_subunit] = reference_pose
+    def set_symmetric_jump_dof(self, pose, jump_id, dof: int, value):
+        """Set the jump with dof to a value"""
+        flexible_jump = pose.jump(jump_id)
+        rot = get_rotation_euler(flexible_jump)
+        trans = get_translation(flexible_jump)
+        if dof < 4:
+            trans[dof - 1] = value
         else:
-            pose_receptor = Pose(reference_pose, 1, chain_end_res(reference_pose, 1))
-            pose_ligand = Pose(
-                reference_pose,
-                chain_end_res(reference_pose, 1) + 1,
-                reference_pose.total_residue(),
-            )
-            idx_receptor, idx_ligand = ind.idx_receptor, ind.idx_ligand
-            self.list_receptor[idx_receptor] = pose_receptor
-            self.list_ligand[idx_ligand] = pose_ligand
+            rot[dof - 4] = value
+        # convert to Rosetta and set in jump
+        rot = R.from_euler("xyz", rot, degrees=True).as_matrix()
+        rot, trans = to_rosetta(rot, trans)
+        flexible_jump.set_translation(trans)
+        flexible_jump.set_rotation(rot)
+        pose.set_jump(jump_id, flexible_jump)
+        return pose
 
     def define_ensemble(self, ind, reference_pose, randomize_bb=True):
         improve_relax = False
@@ -90,28 +112,19 @@ class FlexbbSwapOperator:
 
         if is_symmetric(reference_pose):
             join_pose = self.list_subunits[idx_subunit]
+            if self.config.low_memory_mode:
+                join_pose = pose_from_file(join_pose)
+            else:
+                # cloning is to make sure we don't symmetrize the stored pose in self.list_subunits
+                join_pose = join_pose.clone()
+            if not is_symmetric(join_pose):
+                self.symmetrymover.apply(join_pose)
             for jump in self.config.syminfo.get("jumps_int"):
                 join_pose.set_jump(jump, reference_pose.jump(jump))
         else:
             pose_chainA = self.list_receptor[idx_receptor]
             pose_chainB = self.list_ligand[idx_ligand]
             join_pose = self.make_pose_with_chains(reference_pose, pose_chainA, pose_chainB)
-
-        if random.uniform(0, 1) < 0.5:
-            self.local_search.local_search_strategy.slide_into_contact.apply(join_pose)
-            self.local_search.local_search_strategy.docking.apply(join_pose)
-            before = self.scfxn.scfxn_rosetta(join_pose)
-            # join_pose.dump_scored_pdb("before.pdb", self.scfxn.scfxn_rosetta)
-            self.relax.apply(join_pose)
-            if not is_symmetric(reference_pose):
-                remove_virtual_residues(join_pose)
-                join_pose.fold_tree(self.native_fold_tree)
-            after = self.scfxn.scfxn_rosetta(join_pose)
-            # join_pose.dump_scored_pdb("after.pdb", self.scfxn.scfxn_rosetta)
-            print("before {} after {}".format(before, after))
-            if after < before:
-                self.add_relaxed_backbones_to_list(ind, after, join_pose)
-                improve_relax = True
 
         return join_pose, idx_receptor, idx_ligand, idx_subunit, improve_relax
 

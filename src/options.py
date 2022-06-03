@@ -25,12 +25,14 @@ def init_global_docking(filename, syminfo: dict = None):
         "-ex1",
         "-ex2aro",
         "-use_input_sc",
+        "-extrachi_cutoff 1",
         "-unboundrot {}".format(filename),
     ]
     return " ".join(opts) + add_syminfo_to_init(syminfo)
 
 
 def init_local_docking(filename, syminfo: dict = None):
+    raise NotImplementedError("Shouldnt use this. Need to be refactored!!")
     opts = [
         "-mute all",
         # "-out:level 9999",
@@ -47,6 +49,7 @@ def init_local_docking(filename, syminfo: dict = None):
         "-include_current True",
         "-ex1",
         "-ex2aro",
+        "-extrachi_cutoff 1",
         "-use_input_sc",
         "-unboundrot {}".format(filename),
     ]

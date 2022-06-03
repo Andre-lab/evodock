@@ -29,58 +29,8 @@ from pyrosetta.rosetta.protocols.symmetry import SymmetrySlider
 from pyrosetta.rosetta.protocols.symmetry import SequentialSymmetrySlider
 from pyrosetta.rosetta.protocols.moves import NullMover
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
-from src.utils import IP_ADDRESS
-
-
-# # <<<<<<< HEAD
-#     # Options:
-#     # None: only score and return the poses
-#     # only_slide: just slide_into_contact
-#     # mcm_rosetta: mcm protocol mover (high res) from rosetta (2 cycles)
-#     def __init__(self, scfxn, packer_option="default_combination", slide=True, show_local_search=False,
-#         pymol_history=False):
-#         self.packer_option = packer_option
-#         self.scfxn = scfxn
-#         self.local_logger = logging.getLogger("evodock.local")
-#         self.local_logger.setLevel(logging.INFO)
-#         self.slide = slide
-#         self.show_local_search = show_local_search
-#         self.pymol_history = pymol_history
-#
-#         if is_symmetric(scfxn.dock_pose):
-#             self.slide_into_contact = SequentialSymmetrySlider(scfxn.dock_pose, SlideCriteriaType(1))
-#
-#             # This will only slide on the first pose!!
-#             # FA_REP_SCORE = SlideCriteriaType(2)
-#             # self.slide_into_contact = SequentialSymmetrySlider(scfxn.dock_pose, FA_REP_SCORE)
-#
-#             # todo: use the highresolution alternative below or delete it
-#             # dofs = scfxn.dock_pose.conformation().Symmetry_Info().get_dofs()
-#             # self.slide_into_contact = FaSymDockingSlideTogether(dofs)
-#         else:
-#             self.slide_into_contact = DockingSlideIntoContact(1)
-#         if packer_option == "mcm_rosetta":
-#             if is_symmetric(scfxn.dock_pose):
-#                 self.docking = SymDockMCMProtocol(scfxn.dock_pose)
-#             else:
-#                 mcm_docking = DockMCMProtocol()
-#                 mcm_docking.set_native_pose(scfxn.dock_pose)
-#                 mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
-#                 mcm_docking.set_rt_min(False)
-#                 mcm_docking.set_sc_min(False)
-#                 mock_pose = Pose()
-#                 mock_pose.assign(scfxn.dock_pose)
-#                 mcm_docking.apply(mock_pose)
-#                 self.docking = mcm_docking
-#                 # DEBUG Is this a hack to skip the create_and_attach_task_factory on each apply to save time??
-#                 # A reason for potentially deleting this is that it is quite confusing. The taskfactory is already set when
-#                 # calling apply above (see protocols.docking.DockMCMProtocol.cc:179). It is the default one in this case.
-#                 # Then the taskfacory is set again using the default one, in a way that is intented for a new tasks using
-#                 # task_factory(). Although this seems to actually surpass the creation of  the task_factory on each apply
-#                 # so it could be considered smart.
-#                 self.docking.set_task_factory(mcm_docking.task_factory())
-#                 self.docking.set_ignore_default_task(True)
-# # =======
+from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
+from pyrosetta import pose_from_file
 
 class LocalSearchStrategy:
     def __init__(self, config, scfxn, dock_pose):
@@ -90,6 +40,10 @@ class LocalSearchStrategy:
         self.dock_pose = dock_pose
         self.packer_option = config.local_search_option
         self.native_fold_tree = scfxn.dock_pose.fold_tree()
+        if self.config.syminfo:
+            self.symmetrymover = SetupForSymmetryMover(self.config.syminfo["input_symdef"])
+        else:
+            self.symmetrymover = None
         # todo for symmetry!
         if self.packer_option == "sidechains":
             local_tf = TaskFactory()
@@ -118,9 +72,11 @@ class LocalSearchStrategy:
 
         if self.packer_option == "mcm_rosetta":
             if is_symmetric(scfxn.dock_pose):
-                self.docking = SymDockMCMProtocol(scfxn.dock_pose)
+                self.docking = SymDockMCMProtocol(scfxn.dock_pose, self.config.num_first_cycle, self.config.num_second_cycle)
             else:
                 mcm_docking = DockMCMProtocol()
+                mcm_docking.set_first_cycle(self.config.num_first_cycle)
+                mcm_docking.set_second_cycle(self.config.num_second_cycle)
                 mcm_docking.set_native_pose(scfxn.dock_pose)
                 mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
                 mcm_docking.set_rt_min(False)
@@ -146,17 +102,20 @@ class LocalSearchStrategy:
         else:
             self.slide_into_contact = NullMover()
         if self.config.docking_type_option == "Flexbb":
-            self.swap_operator = FlexbbSwapOperator(config, scfxn, None)
-
-    def energy_score(self, pose):
-        score = self.scfxn.scfxn_rosetta(pose)
-        return score
+            self.swap_operator = FlexbbSwapOperator(config, scfxn, self)
 
     def apply_bb_strategy(self, ind, pose):
         idx_receptor, idx_ligand, idx_subunit = ind.idx_receptor, ind.idx_ligand, ind.idx_subunit
         if self.config.syminfo:
             join_pose = self.swap_operator.list_subunits[ind.idx_subunit]
+            if self.config.low_memory_mode:
+                join_pose = pose_from_file(join_pose)
+            else:
+                # cloning is to make sure we don't symmetrize the stored pose in self.list_subunits
+                join_pose.clone()
             for jump in self.config.syminfo.get("jumps_int"):
+                if not is_symmetric(join_pose):
+                    self.symmetrymover.apply(join_pose)
                 join_pose.set_jump(jump, pose.jump(jump))
         else:
             pose_chainA = self.swap_operator.list_receptor[idx_receptor]
@@ -172,14 +131,14 @@ class LocalSearchStrategy:
 
     def apply_bound_docking(self, ind, local_search=True):
         pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
-        before = self.energy_score(pose)
+        before = self.scfxn.score(pose, ind)
         if local_search and self.packer_option != "None":
             if self.config.show_local_search:
                 pose.pdb_info().name(f"IND{ind.idx}")
                 self.config.pmm.apply(pose)
             self.slide_into_contact.apply(pose)
             self.docking.apply(pose)
-            after = self.energy_score(pose)
+            after = self.scfxn.score(pose, ind)
             if self.config.show_local_search:
                 pose.pdb_info().name(f"IND{ind.idx}")
                 self.config.pmm.apply(pose)
@@ -198,17 +157,18 @@ class LocalSearchStrategy:
 
     def apply_unbound_docking(self, ind, local_search=True):
         pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
+        self.config.visualize_pose(pose, ind.idx)
         # pose.pdb_info().name("apply_gen_" + str(ind.idx))
         # self.pymover.apply(pose)
         join_pose, idx_receptor, idx_ligand, idx_subunit = self.apply_bb_strategy(ind, pose)
         # join_pose.pdb_info().name("apply_bb_" + str(ind.idx))
         # print("apply_bb_" + str(ind.idx) + " : " + str(self.energy_score(join_pose)))
         # self.pymover.apply(join_pose)
-        before = self.energy_score(join_pose)
+        before = self.scfxn.score(pose, ind)
         if local_search and self.packer_option != "None":
             self.slide_into_contact.apply(join_pose)
             self.docking.apply(join_pose)
-            after = self.energy_score(join_pose)
+            after = self.scfxn.score(pose, ind)
         else:
             after = before
         return_data = {

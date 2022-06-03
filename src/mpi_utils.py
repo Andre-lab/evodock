@@ -40,10 +40,12 @@ class IndividualMPI:
         return a
 
     def convert_to_ind(self):
+        raise NotImplementedError
         return Individual(self.genotype, self.score, self.rmsd, self.i_sc, self.irms)
 
 
 def np_to_ind(a, genotype_size):
+    raise NotImplementedError
     gs = genotype_size
     a = list(a)
     ind = Individual(a[0:gs], a[gs], a[gs+1], a[gs+2], a[gs+3])
