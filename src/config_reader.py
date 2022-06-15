@@ -28,6 +28,7 @@ class EvodockConfig:
         self.check_required_parameters(config)
         self.load_required_parameters(config)
         self.load_output_parameters(config)
+        self.load_seed(config)
 
         # depends on symmetry
         self.load_symmetry_parameters(config)
@@ -44,6 +45,13 @@ class EvodockConfig:
 
         # --- CONFIG STRUCTURE -----------------------------------+
         self.config = config
+
+    def load_seed(self, config):
+        """Loads the seed if set in the config file."""
+        if config.has_option("Seed", "seed"):
+            self.seed = config.getint("Seed", "seed")
+        else:
+            self.seed = None
 
     def visualize_pose(self, pose, idx, extra=None):
         """Visualizes the pose in PyMOL."""
