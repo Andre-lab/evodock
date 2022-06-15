@@ -23,14 +23,14 @@ from pyrosetta.rosetta.core.pack.task.operation import (
 from pyrosetta.rosetta.protocols.simple_task_operations import RestrictToInterface
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from pyrosetta.rosetta.protocols.symmetry import FaSymDockingSlideTogether
-from src.symmetry import SymDockMCMProtocol, SymDockingSlideIntoContactWrapper, SequentialSymmetrySliderWrapper
 from pyrosetta.rosetta.core.conformation.symmetry import SlideCriteriaType
-from pyrosetta.rosetta.protocols.symmetry import SymmetrySlider
 from pyrosetta.rosetta.protocols.symmetry import SequentialSymmetrySlider
 from pyrosetta.rosetta.protocols.moves import NullMover
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pyrosetta import pose_from_file
+from shapedesign.src.movers.cubicsymmetryslider import CubicSymmetrySlider
+from src.symmetry import SymDockMCMProtocol
 
 class LocalSearchStrategy:
     def __init__(self, config, scfxn, dock_pose):
@@ -72,7 +72,7 @@ class LocalSearchStrategy:
 
         if self.packer_option == "mcm_rosetta":
             if is_symmetric(scfxn.dock_pose):
-                self.docking = SymDockMCMProtocol(scfxn.dock_pose, self.config.num_first_cycle, self.config.num_second_cycle)
+                self.docking = SymDockMCMProtocol(self.config.num_first_cycle, self.config.num_second_cycle)
             else:
                 mcm_docking = DockMCMProtocol()
                 mcm_docking.set_first_cycle(self.config.num_first_cycle)
@@ -90,13 +90,7 @@ class LocalSearchStrategy:
         # slide option
         if self.config.slide:
             if is_symmetric(scfxn.dock_pose):
-                self.slide_into_contact = SequentialSymmetrySlider(scfxn.dock_pose, SlideCriteriaType(1))
-                # This will only slide on the first pose!!
-                # FA_REP_SCORE = SlideCriteriaType(2)
-                # self.slide_into_contact = SequentialSymmetrySlider(scfxn.dock_pose, FA_REP_SCORE)
-                # todo: use the highresolution alternative below or delete it
-                # dofs = scfxn.dock_pose.conformation().Symmetry_Info().get_dofs()
-                # self.slide_into_contact = FaSymDockingSlideTogether(dofs)
+                self.slide_into_contact = CubicSymmetrySlider(dock_pose)
             else:
                 self.slide_into_contact = FaDockingSlideIntoContact(dock_pose.num_jump())
         else:

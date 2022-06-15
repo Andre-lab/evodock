@@ -1,15 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Symmetry classes: SymDockMCMProtocol and SymDockingSlideIntoContact
+Symmetry classes: SymDockMCMProtocol and SymDockMCMCycle
+
+To my knowledge there's no equivalent symmetrical version of DockMCMProtocol in Rosetta. The 2 classes describe here is an
+attempt at reproducing the same behavior of DockMCMProtocol in a symmetrical form and as it is used in EvoDOCK from the Rosetta C++ code.
+The following problems using the DockMCMProtocol for symmetry are:
+
+1. The use of the RigidBodyPerturbMover.
+   - It does not consider symmetry and so will mess it up if used.
+2. The use of DockingNoRepack.
+   - It seems like the  mover also doesnt work for symmetry. It defines only a single jump.
+
+TODO: If one want to implement sc or bb minimzation during the protocol the protocol has to be implemented. Some of the code is already there
+TODO: if one want to constrain the RigidBodyDofAdaptive in the future - one have to call reset() and put initialization in the constructor
+
 @Author: Mads Jeppesen
 @Date: 6/30/21
 """
 
 from pyrosetta.rosetta.protocols.moves import MonteCarlo, TrialMover, SequenceMover, JumpOutMover, CycleMover
-from pyrosetta.rosetta.protocols.rigid import RigidBodyDofSeqPerturbMover
 from pyrosetta.rosetta.protocols.minimization_packing import RotamerTrialsMover, MinMover, PackRotamersMover
-# from pyrosetta.rosetta.protocols.docking import SidechainMinmover, DockMinMover
 from pyrosetta.rosetta.core.scoring import ScoreFunctionFactory
 from pyrosetta.rosetta.protocols.task_operations import RestrictToInterfaceVectorOperation
 from pyrosetta.rosetta.core.pack.task.operation import RestrictToRepacking, InitializeFromCommandline, IncludeCurrent,\
@@ -17,180 +28,135 @@ from pyrosetta.rosetta.core.pack.task.operation import RestrictToRepacking, Init
 from pyrosetta.rosetta.core.pack.rotamer_set import UnboundRotamersOperation
 from pyrosetta.rosetta.core.pack.task import TaskFactory
 from pyrosetta.rosetta.utility import vector1_unsigned_long
-from pyrosetta.rosetta.protocols.symmetry import SymDockingSlideIntoContact
-from pyrosetta import SwitchResidueTypeSetMover
-from src.utils import get_translation, get_rotation_euler
-from pyrosetta.rosetta.core.conformation.symmetry import SlideCriteriaType
-from pyrosetta.rosetta.protocols.symmetry import SequentialSymmetrySlider
+from pyrosetta.rosetta.protocols.rigid import RigidBodyDofAdaptiveMover
+from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, is_symmetric, jump_num_sym_dof
+from pyrosetta.rosetta.core.kinematics import MoveMap
 
-class SequentialSymmetrySliderWrapper:
-    """Does the the as SequentialSymmetrySlider but it needs to be constructed on every single pose to actually do
-    sliding. If you just use the same SequentialSymmetrySlider on different poses it will only slide on the first
-    pose."""
+default_dofs = {"JUMPHFfold1": {
+                    "z": {"param1": 0.1},
+                    "z_angle": {"param1": 1} # For the future{"limit_movement": True},
+                },
+                "JUMPHFfold111": {
+                    "x": {"param1": 0.1}
+                },
+                "JUMPHFfold1111": {
+                    "x_angle": {"param1": 3},
+                    "y_angle": {"param1": 3},
+                    "z_angle": {"param1": 3}}}
 
-    def __init__(self):
-        self.FA_REP_SCORE = SlideCriteriaType(2)
+class SymDockMCMCycle:
+    """The symmetric version of DockMCMCycler class in C++ with extra functionality. The extra functionality comes from the posibility
+    of specifying a dofspecification that fine tunes seperate symmetric dofs. See the comments in setup_protocol for a
+    description of the algorithm."""
 
-    def apply(self, pose):
-        SequentialSymmetrySlider(pose, self.FA_REP_SCORE).apply(pose)
+    def __init__(self, pose, repack_period = 8, dofspecification: dict = default_dofs):
+        """Initialization"""
+        self.set_default(pose, repack_period, dofspecification)
+        self.dock_mcm_cycle = None
 
-class SymDockingSlideIntoContactWrapper2:
-    """Does the same as SymDockingSlideIntoContactWrapper but changes the underlying mover. The
-    SymDockingSlideIntoContact fails if too many internal moves (1000) have been applied. We dont want out protocol
-    to fail like this or we are going to have a bad time. Therefore apply of SymDockingSlideIntoContact is kept the same
-    but the aspect that is calling utility_exit() is removed."""
-
-    def __init__(self, pose):
-        """Initializes the mover."""
-        # this constructor needs to be called or rosetta will segfault. Reason is that the score function
-        # internally defined in the mover is not initialized properly.
-        dofs = pose.conformation().Symmetry_Info().get_dofs()
-        self.symdockingslideintocontact = SymDockingSlideIntoContact(dofs)
-        # self.
-        self.switch_to_centroid = SwitchResidueTypeSetMover("centroid")
+    def reset_cycle_index(self):
+        """Resets the internal cycle mover to step 0 (next_move_ == 0 in C++)"""
+        self.dock_mcm_cycle.reset_cycle_index()
 
     def apply(self, pose):
-        """See class description. Dockslides the pose."""
-        centroid_pose = pose.clone()
-        self.switch_to_centroid.apply(centroid_pose)
-        # todo: this can give an error if to many slide attemps have been attempted!
-        self.symdockingslideintocontact.apply(centroid_pose)
-        # apply the new position of centroid_pose to pose
-        self.apply_conformation_from_pose(centroid_pose, pose)
+        """Applies docking. See the comments in setup_protocol for a description of the algorithm"""
+        # initialize the protocol if it hasn't been set
+        if not self.dock_mcm_cycle:
+            self.init_mc(pose)
+        # Apply the protocol
+        self.dock_mcm_cycle.apply(pose)
 
-    def apply_conformation_from_pose(self, pose_from, pose_to):
-        """Applies the movable dofs from pose_from to pose_to"""
-        dofs = pose_from.conformation().Symmetry_Info().get_dofs()
-        for jump_id, symdof in dofs.items():
-            pose_to.set_jump(jump_id, pose_from.jump(jump_id))
-
-class SymDockingSlideIntoContactWrapper:
-    """The original SymDockingSlideIntoContact gives a 'Fatal Error in VDW_Energy' ERROR, which DockingSlideIntoContact"
-    does not. This is because it is implemented wrong in the c++ code. in DockingSlideIntoContact the scorefxn is
-    overwritten to interchain_cen which might be the problem.
-
-    This mover attempts to overwrite the SymDockingSlideIntoContact mover so that before calling its internal apply,
-    it creates pose in centroid mode that then gets supplied to the SymDockingSlideIntoContact mover. This dofs are
-    then extracted from the centroid pose and supplied to the original pose."""
-
-    def __init__(self, pose):
-        """Initializes the mover."""
-        # this constructor needs to be called or rosetta will segfault. Reason is that the score function
-        # internally defined in the mover is not initialized properly.
-        dofs = pose.conformation().Symmetry_Info().get_dofs()
-        self.symdockingslideintocontact = SymDockingSlideIntoContact(dofs)
-        # self.
-        self.switch_to_centroid = SwitchResidueTypeSetMover("centroid")
-
-    def apply(self, pose):
-        """See class description. Dockslides the pose."""
-        centroid_pose = pose.clone()
-        self.switch_to_centroid.apply(centroid_pose)
-        # todo: this can give an error if to many slide attemps have been attempted!
-        self.symdockingslideintocontact.apply(centroid_pose)
-        # apply the new position of centroid_pose to pose
-        self.apply_conformation_from_pose(centroid_pose, pose)
-
-    def apply_conformation_from_pose(self, pose_from, pose_to):
-        """Applies the movable dofs from pose_from to pose_to"""
-        dofs = pose_from.conformation().Symmetry_Info().get_dofs()
-        for jump_id, symdof in dofs.items():
-            pose_to.set_jump(jump_id, pose_from.jump(jump_id))
-
-class SymDockingSlideIntoContactWrapper:
-    """The original SymDockingSlideIntoContact gives a 'Fatal Error in VDW_Energy' ERROR, which DockingSlideIntoContact"
-    does not. This is because it is implemented wrong in the c++ code. in DockingSlideIntoContact the scorefxn is
-    overwritten to interchain_cen which might be the problem.
-
-    This mover attempts to overwrite the SymDockingSlideIntoContact mover so that before calling its internal apply,
-    it creates pose in centroid mode that then gets supplied to the SymDockingSlideIntoContact mover. This dofs are
-    then extracted from the centroid pose and supplied to the original pose."""
-
-    def __init__(self, pose):
-        """Initializes the mover."""
-        # this constructor needs to be called or rosetta will segfault. Reason is that the score function
-        # internally defined in the mover is not initialized properly.
-        dofs = pose.conformation().Symmetry_Info().get_dofs()
-        self.symdockingslideintocontact = SymDockingSlideIntoContact(dofs)
-        # self.
-        self.switch_to_centroid = SwitchResidueTypeSetMover("centroid")
-
-    def apply(self, pose):
-        """See class description. Dockslides the pose."""
-        centroid_pose = pose.clone()
-        self.switch_to_centroid.apply(centroid_pose)
-        # todo: this can give an error if to many slide attemps have been attempted!
-        self.symdockingslideintocontact.apply(centroid_pose)
-        # apply the new position of centroid_pose to pose
-        self.apply_conformation_from_pose(centroid_pose, pose)
-
-    def apply_conformation_from_pose(self, pose_from, pose_to):
-        """Applies the movable dofs from pose_from to pose_to"""
-        dofs = pose_from.conformation().Symmetry_Info().get_dofs()
-        for jump_id, symdof in dofs.items():
-            pose_to.set_jump(jump_id, pose_from.jump(jump_id))
-
-class SymDockMCMProtocol:
-    """To my knowledge there's no equivalent symmetrical version of DockMCMProtocol in Rosetta. This class is an
-    attempt at reproducing the DockMCMProtocol in a symmetrical form and as it is used in EvoDOCK. The following
-    problems are:
-
-    1. The use of the RigidBodyPerturbMover.
-       It does not consider symmetry and so will mess it up if used.
-    2. The use of DockingNoRepack.
-       It seems like the  mover also doesnt work for symmetry. It defines only a single jump.
-
-    The protocol seems to do the following:
-    <num_of_first_cycle>+<num_of_second_cycle> outer protocol of:
-        1. 8 x inner protocol of:
-            1. Apply RigidBodyPerturbMover and RotamerTrialsMover and if E < 15.0 apply a MinMover, and accept by MCM.
-            2. Same as 1 but also apply a PackRotamersMover and accept by MCM.
-    """
-    def __init__(self, pose, num_of_first_cycle: int = 4, num_of_second_cycle: int = 45):
-        """Initializes the mover.
-
-        :param pose: Pose to dock.
-        :param num_of_first_cycle: Number of iterations for the first cycle
-        :param num_of_second_cycle: Number of iterations for the second cycle
-        """
-        self.num_of_first_cycle = num_of_first_cycle
-        self.num_of_second_cycle = num_of_second_cycle
-        self.scorefxn = ScoreFunctionFactory.create_score_function("ref2015")
-        self.mc = MonteCarlo(self.scorefxn, 0.8)
-        self.taskkfactory = self.create_taskfactory(pose)
-        self.dock_mcm_cycle = self.setup_protocol(pose)
-        self.dockminmover = self.create_dockminmover()
-
-    def apply(self, pose):
-        """Applies the mover."""
+    def init_mc(self, pose):
+        """Initializes the MonteCarlo object and sets up the dock_mcm_cycle objet to be used in the 'apply' function."""
+        # in the c++ code it is written that this is to ensure that consistency if
+        # the mover is shared across multiple other movers
         if self.mc.last_accepted_pose().empty():
             self.mc.reset(pose)
-        # initial minimization
-        self.dockminmover.apply(pose)
-        # docking
-        for _ in range(self.num_of_first_cycle):
-            self.dock_mcm_cycle.apply(pose)
-        # used to be a filter here in the c++ code but is now commented out.
-        self.dock_mcm_cycle.reset_cycle_index() # sets next_move_ to 0
-        for _ in range(self.num_of_second_cycle):
-            self.dock_mcm_cycle.apply(pose)
-        # minization
-        self.dockminmover.mover().tolerance(0.01) #
-        self.dockminmover.apply(pose)
-        # recover the lowest energy pose
-        self.mc.recover_low(pose)
+        self.setup_protocol(pose)
 
-    def create_dockminmover(self):
-        """Creates a TrialMover that attemps to mimick DockMinMover."""
-        min_mover = MinMover()  # movemap is initialzied
-        min_mover.score_function(self.scorefxn)
-        return TrialMover(min_mover, self.mc)
+    def set_default(self, pose, repack_period, dof_specification, bb_min_res:list=None, sc_min_res:list=False):
+        """Sets up the the default parameteres used when creating the dock_mcm_cycle object in the 'setup_protocol' function."""
+        self.dofspecification = dof_specification
+        self.sc_min = False
+        self.rt_min = False
+        self.scorefxn = ScoreFunctionFactory.create_score_function("ref2015")
+        self.movemap = MoveMap()
+        self.movemap.set_chi(False)
+        self.movemap.set_bb(False)
+        for jump_name, jumpdof_params in self.dofspecification.items():
+            jumpid = sym_dof_jump_num(pose, jump_name)
+            self.movemap.set_jump(jumpid, True)
+        # TODO: check if these are defaulted to all residues?
+        if bb_min_res or sc_min_res:
+            raise NotImplementedError()
+        self.min_tolerance = 0.01
+        self.min_type = "lbfgs_armijo_nonmonotone"
+        self.nb_list = True
+
+        # DockMCM mover only initializes an empty taskfatory so one have to set it manually here
+        self.tf = self.create_taskfactory(pose)
+        self.mc = MonteCarlo(self.scorefxn, 0.8)
+        self.repack_period = repack_period
+
+    def setup_protocol(self, pose):
+        """Sets up the dock_mcm_cycle object."""
+        # Contruction of rb_mover_min_trial (The first move in the sequence)
+        # 1: (1a. rb dock move -> 1b. rotamer trial) -> 2: if E < 15.0 apply minimization.
+        # Accept the entire move 1+2 with the MC criterion
+        self.rb_mover = self.construct_rigidbodymover(pose)
+        rottrial = RotamerTrialsMover(self.scorefxn, self.tf)
+        rb_pack_min = SequenceMover()
+        rb_pack_min.add_mover(self.rb_mover)
+        rb_pack_min.add_mover(rottrial)
+        minimization_threshold = 15.0
+        min_mover = MinMover(self.movemap, self.scorefxn, self.min_type, self.min_tolerance, self.nb_list)
+        rb_mover_min = JumpOutMover(rb_pack_min, min_mover, self.scorefxn, minimization_threshold)
+        rb_mover_min_trial = TrialMover(rb_mover_min, self.mc)
+
+        # Contruction of repack_step (The Second move in the sequence)
+        # 1: Exactly the same as rb_mover_min_trial (1: (1a. rb dock move -> 1b. rotamer trial) -> 2: if E < 15.0 apply minimization.)
+        # 2: Packrotamers
+        # Accept the entire move 1+2 with the MC criterion
+        repack_step = SequenceMover()
+        repack_step.add_mover(rb_mover_min_trial)
+        packer = PackRotamersMover(self.scorefxn)
+        packer.task_factory(self.tf)
+        pack_interface_and_move_loops_trial = TrialMover(packer, self.mc)
+        repack_step.add_mover(pack_interface_and_move_loops_trial)
+        if self.rt_min or self.sc_min:
+            raise NotImplementedError()
+
+        # Putting the 2 moves (rb_mover_min_trial and repack_step) into a CycleMover that is repeat self.repack_period times
+        dock_mcm_cycle = CycleMover()
+        for i in range(self.repack_period):
+            dock_mcm_cycle.add_mover(rb_mover_min_trial)
+            dock_mcm_cycle.add_mover(repack_step)
+
+        self.dock_mcm_cycle = dock_mcm_cycle
+
+    def construct_rigidbodymover(self, pose):
+        """Construct an alternative to the RigidBodyPerturbMover."""
+        rb_mover = RigidBodyDofAdaptiveMover("all")
+        for jump_name, jumpdof_params in self.dofspecification.items():
+            for dof_name, dof_params in jumpdof_params.items():
+                rb_mover.add_jump(pose, jump_name, dof_name, *self.get_extra_options(dof_params))
+        return rb_mover
+
+    def get_extra_options(self, dof_params):
+        """HACK: You cannot parse individual keyword parameters to these c++ objects, so you
+        have specify them all and then change them before parsing them as below"""
+        if dof_params: # check for not empty
+            default = {"step_type": "gauss", "param1": 0.5, "param2": 0.0, "min_pertubation": 0.01,
+                               "limit_movement": False, "max": 0, "min": 0}
+            default.update(dof_params)
+            return default.values()
+        else:
+            return []
 
     def create_taskfactory(self, pose, cb_dist_cutoff: int = 10.0, nearby_atom_cutoff: int = 5.5,
                            vector_angle_cutoff: int = 75.0, vector_dist_cutoff: int = 9.0,
                            include_all_water: bool = False) -> TaskFactory:
         """Creates a taskfactory. Attempting to imitate protocols.docking.DockTaskFactory
-
 
         :param pose: Pose to create taskfactory from.
         :param cb_dist_cutoff: Option for RestrictToInterfaceVector.
@@ -201,7 +167,6 @@ class SymDockMCMProtocol:
         :return: TaskFactory
         """
         taskfactory = TaskFactory()
-        # -- create RestrictToInterface -- #
         # I am using the Restricttointerfacevector vs RestrictToInterface, but both I believe would work.
         pose.num_chains()
         task1 = RestrictToInterfaceVectorOperation()
@@ -227,32 +192,73 @@ class SymDockMCMProtocol:
         unboundrot = UnboundRotamersOperation()
         unboundrot.initialize_from_command_line()
         taskfactory.push_back(AppendRotamerSet(unboundrot))
-        # return it
         return taskfactory
 
-    def setup_protocol(self, pose, repack_period = 8, minimization_threshold: int = 15.0, rot_mag: int = 1.0,
-                       trans_mag: int = 3.0) -> SequenceMover:
-        """Sets up the protocol."""
-        # todo assert pose is symmetric
-        # -- Construct the meat of the dock_mcm_cycle -- #
-        # construct first part
-        rb_pack_min = SequenceMover()
-        dofs = pose.conformation().Symmetry_Info().get_dofs()
-        rb_pack_min.add_mover(RigidBodyDofSeqPerturbMover(dofs, rot_mag, trans_mag))
-        rb_pack_min.add_mover(RotamerTrialsMover(self.scorefxn, self.taskkfactory))
-        min_mover = MinMover() # movemap is initialzied
-        min_mover.score_function(self.scorefxn) # i believe it is ref2015 by default
-        rb_mover_min = JumpOutMover(rb_pack_min, min_mover, self.scorefxn, minimization_threshold)
-        rb_mover_min_trial = TrialMover(rb_mover_min, self.mc)
-        # construct second part
-        repack_step = SequenceMover()
-        repack_step.add_mover(rb_mover_min_trial)
-        packer = PackRotamersMover(self.scorefxn)
-        packer.task_factory(self.taskkfactory)
-        repack_step.add_mover(TrialMover(packer, self.mc))
-        # -- add the first and second part to the dock_mcm_cycle a repack_period amound of time -- #
-        dock_mcm_cycle = CycleMover()
-        for i in range(repack_period):
-            dock_mcm_cycle.add_mover(rb_mover_min_trial)
-            dock_mcm_cycle.add_mover(repack_step)
-        return dock_mcm_cycle
+class SymDockMCMProtocol:
+    """The symmetric version of DockMCMCycler class in C++ with extra functionality.
+
+    The Algorithm is as follows:
+    1. Fixed bb packing (PackRotamersMover) - accept by MC.
+    2.
+    """
+
+    # The protocol seems to do the following:
+    # <num_of_first_cycle>+<num_of_second_cycle> outer protocol of:
+    #     1. 8 x inner protocol of:
+    #         1. Apply RigidBodyPerturbMover and RotamerTrialsMover and if E < 15.0 apply a MinMover, and accept by MCM.
+    #         2. Same as 1 but also apply a PackRotamersMover and accept by MCM.
+
+    def __init__(self, num_of_first_cycle: int = 4, num_of_second_cycle: int = 45):
+        """Initializes the mover.
+
+        :param pose: Pose to dock.
+        :param num_of_first_cycle: Number of iterations for the first cycle
+        :param num_of_second_cycle: Number of iterations for the second cycle
+        """
+        self.num_of_first_cycle = num_of_first_cycle
+        self.num_of_second_cycle = num_of_second_cycle
+        self.scorefxn = ScoreFunctionFactory.create_score_function("ref2015")
+        # these are form DockingHighRes - they are currently not used in the protocol
+        self.sc_min = False
+        self.rt_min = False
+
+    def apply(self, pose):
+        """Applies the mover."""
+        assert is_symmetric(pose), "Pose is not symmetric!"
+
+        # 1. Packing of pose, accept with MC
+        dock_mcm = SymDockMCMCycle(pose)
+        # we need to call at least reset in order to initialize the pose in the MC object.
+        # Since we just initialized the dock_mcm objet here it wil allways be empty. This is how
+        # it is in the code but it seems a bit redundant because setup_protocol will then be called twice which is unnecessary
+        if dock_mcm.mc.last_accepted_pose().empty():
+            dock_mcm.init_mc(pose)
+        initial_pack = PackRotamersMover()
+        initial_pack.score_function(self.scorefxn)
+        initial_pack.task_factory(dock_mcm.tf)
+        initial_pack_trial = TrialMover(initial_pack, dock_mcm.mc)
+        initial_repack_sequence = SequenceMover()
+        initial_repack_sequence.add_mover(initial_pack_trial)
+        if self.rt_min or self.sc_min:
+            raise NotImplementedError()
+        initial_repack_sequence.apply(pose)
+
+        # 2. Minimization, accept with MC
+        # Called DockMinMover in C++, but this just seems to be a minmover in a trialmover with the exact same minmover settings as dock_mcm
+        minmover = MinMover(dock_mcm.movemap, dock_mcm.scorefxn, dock_mcm.min_type, dock_mcm.min_tolerance, dock_mcm.nb_list)
+        minimize_trial = TrialMover(minmover, dock_mcm.mc)
+        minimize_trial.apply(pose)
+
+        # 3. docking cycle with packing and potential minimization 8 times (repack_times), accept each move with MC
+        for cycle1 in range(self.num_of_first_cycle):
+            dock_mcm.apply(pose)
+        # used to be a filter here in the C++ code but is now commented out.
+        dock_mcm.reset_cycle_index() # sets next_move_ to 0
+        for cycle2 in range(self.num_of_second_cycle):
+            dock_mcm.apply(pose)
+
+        # 4. Minimization, accept with MC
+        minimize_trial.apply(pose)
+
+        # retrieve the lowest E pose found
+        dock_mcm.mc.recover_low(pose)

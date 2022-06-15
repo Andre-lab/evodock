@@ -46,8 +46,6 @@ def print_init_information(logger, scfxn, native_pose, input_pose, syminfo: dict
     logger.info(f" Native position: {native_position_str}")
     logger.info(f" Input vs native rmsd: {input_vs_native_rmsd:.2f}")
     logger.info("==============================")
-# >>>>>>> main
-
 
 def main():
     config = EvodockConfig(sys.argv[-1])
