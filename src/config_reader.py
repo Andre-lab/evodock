@@ -63,14 +63,15 @@ class EvodockConfig:
 
     def load_docking_parameters(self, config):
         """Load docking parameters"""
-        # TODO: num_first_cycle and num_first_cycle is specified when init is called for the non-symmetrical case and Daniel has set that to 1/1.
-        #  1/1 in the symmetrical case does not work very well.
         if config.has_option("Symmetry", "input_symdef_file"):
-            self.num_first_cycle = config.getint("DE", "num_first_cycle", fallback=4)
-            self.num_second_cycle = config.getint("DE", "num_second_cycle", fallback=45)
+            self.num_first_cycle = config.getint("DE", "num_first_cycle", fallback=1)
+            self.num_second_cycle = config.getint("DE", "num_second_cycle", fallback=1)
         else:
             self.num_first_cycle = config.getint("DE", "num_first_cycle", fallback=1)
             self.num_second_cycle = config.getint("DE", "num_second_cycle", fallback=1)
+        # bb_min
+        self.bb_min = config.getint("DE", "bb_min", fallback=False)
+        self.sc_min = config.getint("DE", "sc_min", fallback=False)
 
     def load_symmetry_parameters(self, config):
         """Extracts the symmetrical information from the config file."""
