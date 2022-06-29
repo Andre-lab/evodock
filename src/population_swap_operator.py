@@ -12,6 +12,7 @@ from src.flexbb_swap_operator import FlexbbSwapOperator
 from pyrosetta.rosetta.protocols.docking import calc_interaction_energy, calc_Irmsd
 from pyrosetta.rosetta.core.scoring import CA_rmsd
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 
 # SWAP_PROBABILITY = 1.0 # changed from 0.1
 
@@ -44,6 +45,16 @@ class PopulationSwapOperator:
         self.log_population_swap = self.jobid + "/population_swap.csv"
         with open(self.log_population_swap, "w") as file_object:
             file_object.write("#{}\n".format(self.jobid))
+
+    def insert_bb_name(self, pose, ind):
+        """Retrieve the name of current pose/index in the subunitlist.
+        Usefull for keeping track of which current bb are being used by the individual."""
+        if self.config.low_memory_mode:
+            if is_symmetric(pose):
+                ind.subunit_name = self.swap_operator.list_subunits[ind.idx_subunit]
+                return
+        raise NotImplementedError("NOT IMPLEMENTED!")
+
 
     def apply(self, population):
         ratio_swap_success = 0
@@ -84,6 +95,7 @@ class PopulationSwapOperator:
                         i_sc=interface,
                         irms=irms,
                     )
+                    self.insert_bb_name(pose, result_individual)
                     new_population.append(result_individual)
                     ratio_swap_success += 1
                     if relaxed:

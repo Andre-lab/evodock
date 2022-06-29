@@ -13,6 +13,9 @@ class Individual:
         rmsd=1000,
         i_sc=1000,
         irms=1000,
+        ligand_name="",
+        receptor_name="",
+        subunit_name="",
     ):
         if idx_ligand == -1:
             idx_ligand = random.randit(1, 99)
@@ -41,3 +44,6 @@ class Individual:
         self.rmsd = rmsd
         self.i_sc = i_sc
         self.irms = irms
+        self.receptor_name = receptor_name
+        self.ligand_name = ligand_name
+        self.subunit_name = subunit_name
