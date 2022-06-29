@@ -13,6 +13,7 @@ from pyrosetta.rosetta.protocols.docking import (
 )
 # from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from scipy.spatial.transform import Rotation as R
+from pyrosetta.rosetta.core.pose.symmetry import extract_asymmetric_unit
 from src.genotype_converter import GlobalGenotypeConverter
 from src.position_utils import build_axis, to_rosetta
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
@@ -29,6 +30,7 @@ class FAFitnessFunction:
         self.trans_max_magnitude = config.get_max_translation()
         self.native_pose = native_pose
         self.original_reference_scores = []
+        self.config = config
         # self.native_pose = Pose()
         # self.native_pose.assign(native_pose)
         # self.input_pose = Pose()
@@ -56,26 +58,17 @@ class FAFitnessFunction:
             self, config.local_search_option, config
         )
 
-    def normalize_scores(self):
-        if self.normalize_score:
-            assert self.original_reference_scores, "self.reference_scores is not filled with values yet!"
-            if self.syminfo:
-                s = SymmData()
-                s.read_symmetry_data_from_file(self.syminfo["input_symdef"])
-                multiplier = s.get_score_multiply_subunit()[s.get_score_subunit()]
-                self.original_reference_scores = [multiplier * i for i in self.original_reference_scores]
-                min_val = min(self.original_reference_scores)
-                self.reference_scores_subunit = [min_val - i for i in self.original_reference_scores]
-            else:
-                raise NotImplementedError
-
     def score(self, pose, ind: Individual):
         """Scores the pose and if normalize_scores is set it will normalize scores accordingly."""
         score = self.scfxn_rosetta.score(pose)
         if self.normalize_score:
             if self.syminfo:
-                # IT IS VERY IMPORTANT WE '+' BECAUSE THE REFERENCE VALUES ARE SUPPOSED TO SUBTRACT
-                return score + self.reference_scores_subunit[ind.idx_subunit]
+                # extract the asymetric pose, score that and then subtract it from the original score
+                as_pose = Pose()
+                extract_asymmetric_unit(pose, as_pose, False)
+                subunit_multiplier = pose.conformation().Symmetry_Info().score_multiply(1, 1)
+                asymmetric_score = self.scfxn_rosetta.score(as_pose) * subunit_multiplier
+                return score - asymmetric_score
             else:
                 raise NotImplementedError
         else:

@@ -18,6 +18,7 @@ class ScorePopulation:
         self.log_interface = self.out_path + "/interface.csv"
         self.log_popul = self.out_path + "/popul.csv"
         self.log_trials = self.out_path + "/trials.csv"
+        self.log_ensembles = self.out_path + "/ensemble.csv"
         self.local_search = scfxn.local_search
         self.print_header_logfiles()
 
@@ -35,6 +36,9 @@ class ScorePopulation:
                 ]
             )
             file_object.write(f"{vals}\n")
+        if self.config.docking_type_option == "Flexbb":
+            with open(self.log_ensembles, "w") as file_object:
+                file_object.write(",".join([str(i) for i in range(0, self.config.popsize)]) + "\n")
 
     def get_sol_string(self, sol):
         return self.scfxn.get_sol_string(sol)
@@ -66,6 +70,12 @@ class ScorePopulation:
         with open(destiny, "a") as file_object:
             file_object.write(f"{','.join(popul_str)}\n")
 
+    def print_ensembles(self, population):
+        # todo: check if sorting is unnecessary?
+        if self.config.docking_type_option == "Flexbb":
+            with open(self.log_ensembles, "a") as f:
+                f.write(','.join([ind.subunit_name for ind in population]) + "\n")
+
     def print_information(self, popul, trial_popul=False):
         if trial_popul is False:
             destiny = self.log_popul
@@ -80,21 +90,6 @@ class ScorePopulation:
             tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
             tmp_pose.pdb_info().name("popul_" + str(ind))
             tmp_pose.dump_pdb(destiny + "popul_" + str(ind) + ".pdb")
-
-# # <<<<<<< HEAD
-#     def pymol_popul_visualization(self, popul, history=False):
-#         pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
-#         if history:
-#             pymover.keep_history(True)
-# # =======
-#     def pymol_visualization(self, popul):
-#         # pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
-# # >>>>>>> main
-#         for ind, p in enumerate(popul):
-#             gen = p.genotype
-#             tmp_pose = self.scfxn.apply_genotype_to_pose(gen)
-#             tmp_pose.pdb_info().name("popul_" + str(ind))
-#             # pymover.apply(tmp_pose)
 
     def run(self, popul, init_population=False):
         convert_pop = popul

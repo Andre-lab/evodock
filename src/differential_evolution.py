@@ -52,6 +52,10 @@ class DifferentialEvolutionAlgorithm:
 
     def init_population(self):
         self.population = InitializePopulationBuilder().run(self)
+        # add the current names to each individual
+        for ind in self.population:
+            if self.config.syminfo:
+                ind.subunit_name = self.flexbb_swap_operator.swap_operator.list_subunits[ind.idx_subunit]
 
     def init_file(self):
         # header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
@@ -135,6 +139,9 @@ class DifferentialEvolutionAlgorithm:
         self.logger.info(f"   > BEST SOL: {best_sol_str}")
         self.popul_calculator.print_information(self.population)
 
+        # print ensemble names
+        self.popul_calculator.print_ensembles(self.population)
+
         # self.popul_calculator.pymol_visualization(self.population)
 
         if self.config.out_pdb:
@@ -180,6 +187,7 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
     def main(self):
         self.logger.info(" DE")
         self.popul_calculator.print_information(self.population)
+        self.popul_calculator.print_ensembles(self.population)
         self.archive_restart = [0] * self.popsize
         for generation in range(1, self.maxiter + 1):
             self.generation = generation

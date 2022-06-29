@@ -44,8 +44,6 @@ class FlexbbSwapOperator:
             if self.config.low_memory_mode:
                 for path in filenames_subunits:
                     pose = pose_from_file(path)
-                    if self.config.normalize_score:
-                        scfxn.original_reference_scores.append(scfxn.scfxn_rosetta.score(pose))
                     self.list_subunits.append(path)
             else:
                 for pose in poses_from_files(filenames_subunits):
@@ -53,9 +51,6 @@ class FlexbbSwapOperator:
                 # fixme: check if this is needed. Daniel says that he has problem with the datacache not changning when calculating ZD,
                 #  if these are already in the pdb when read.
                 self.list_subunits = [Pose(p) for p in self.list_subunits]
-                if self.config.normalize_score:
-                    for pose in self.list_subunits:
-                        scfxn.original_reference_scores.append(scfxn.scfxn_rosetta.score(pose))
             # the relaxed backbones are newer used?
             # self.relaxed_backbones_subunits = [p.clone() for p in self.list_subunits]
         else:
@@ -77,7 +72,6 @@ class FlexbbSwapOperator:
             # print("list receptor {}".format(len(self.list_receptor)))
             # self.relaxed_backbones_ligand = [Pose(p) for p in self.list_ligand]
             # self.relaxed_backbones_receptor = [Pose(p) for p in self.list_receptor]
-        self.scfxn.normalize_scores()
 
     def set_symmetric_jump_dof(self, pose, jump_id, dof: int, value):
         """Set the jump with dof to a value"""
