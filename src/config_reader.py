@@ -94,6 +94,10 @@ class EvodockConfig:
                 syminfo["initialize_rigid_body_dofs"] = config.getboolean("Symmetry", "initialize_rigid_body_dofs")
             else:
                 raise NotImplementedError
+            if config.has_option("Symmetry", "normalize_trans"):
+                syminfo["normalize_trans"] = config.get("Symmetry", "normalize_trans")
+            else:
+                raise NotImplementedError
         self.syminfo = syminfo if syminfo else None # Return None if empty
 
     def load_pymol_parameters(self, config):
