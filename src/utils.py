@@ -23,6 +23,19 @@ def map_jump_and_dofs_to_int(pose: Pose, syminfo: dict) -> None:
     syminfo["jumps_int"] = [sym_dof_jump_num(pose, jump_str) for jump_str in syminfo.get("jumps_str")]
     syminfo["dofs_int"] = [[strtodofint.get(dof_str) for dof_str in dofs_str] for dofs_str in syminfo.get("dofs_str")]
 
+def map_normalize_trans_to_jumpdofs(pose: Pose, syminfo: dict) -> None:
+    normalize_trans = syminfo.get("normalize_trans")
+    if normalize_trans:
+        trans = normalize_trans[:].split(",")
+        syminfo["normalize_trans_map"] = []
+        # first find the translational dofs
+        for jump_int, dof_str, dof_int in zip(syminfo.get("jumps_int"), syminfo.get("dofs_str"), syminfo.get("dofs_int")):
+            # jumpid, dofid, transmag
+            for dof_s, dof_i in zip(dof_str, dof_int):
+                if not "angle" in dof_s:
+                    transmag = int(trans.pop(0))
+                    syminfo["normalize_trans_map"].append((jump_int, dof_i, transmag))
+
 def get_symmetric_genotype_str(pose: Pose) -> str:
     """Gets which symdofs are present in the genotype and in the order as they are in the genotype."""
     symdofs = pose.conformation().Symmetry_Info().get_dofs()
@@ -45,6 +58,7 @@ def get_starting_poses(pose_input, native_input, config):
         SetupForSymmetryMover(config.syminfo.get("input_symdef")).apply(pose)
         SetupForSymmetryMover(config.syminfo.get("native_symdef")).apply(native)
         map_jump_and_dofs_to_int(pose, config.syminfo)
+        map_normalize_trans_to_jumpdofs(pose, config.syminfo)
     else:
         mres = chain_end_res(pose, 1)
         ft = FoldTree()

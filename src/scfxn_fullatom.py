@@ -23,6 +23,8 @@ from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pyrosetta.rosetta.std import istringstream
 from pyrosetta.rosetta.core.conformation.symmetry import SymmData
 from src.individual import Individual
+from pyrosetta.rosetta.numeric import xyzVector_double_t
+
 
 class FAFitnessFunction:
     def __init__(self, input_pose, native_pose, config):
@@ -58,21 +60,31 @@ class FAFitnessFunction:
             self, config.local_search_option, config
         )
 
+    def apply_trans(self, pose, direction:int):
+        if self.syminfo:
+            for jumpid, dofid, transmag in self.syminfo.get("normalize_trans_map"):
+                flexible_jump = pose.jump(jumpid)
+                trans = get_translation(flexible_jump)
+                trans[dofid - 1] += transmag * direction
+                flexible_jump.set_translation(xyzVector_double_t(*trans))
+                pose.set_jump(jumpid, flexible_jump)
+        else:
+            raise NotImplementedError
+
     def score(self, pose, ind: Individual):
         """Scores the pose and if normalize_scores is set it will normalize scores accordingly."""
-        score = self.scfxn_rosetta.score(pose)
         if self.normalize_score:
             if self.syminfo:
                 # extract the asymetric pose, score that and then subtract it from the original score
-                as_pose = Pose()
-                extract_asymmetric_unit(pose, as_pose, False)
-                subunit_multiplier = pose.conformation().Symmetry_Info().score_multiply(1, 1)
-                asymmetric_score = self.scfxn_rosetta.score(as_pose) * subunit_multiplier
-                return score - asymmetric_score
+                self.apply_trans(pose, 1)
+                monomeric_score = self.scfxn_rosetta.score(pose)
+                self.apply_trans(pose, -1)
+                multimeric_score = self.scfxn_rosetta.score(pose)
+                return multimeric_score - monomeric_score
             else:
                 raise NotImplementedError
         else:
-            return score
+            return self.scfxn_rosetta.score(pose)
 
     def get_rmsd(self, pose):
         rmsd = CA_rmsd(self.native_pose, pose)
