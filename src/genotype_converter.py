@@ -31,10 +31,10 @@ class RefineCluspro:
         return self.converter.convert_positions_to_genotype(self.positions[idx])
 
 
-def generate_genotype(pose_input, max_trans):
+def generate_genotype(pose_input, trans_max_magnitude):
+    max_rot = [8, 8, 8]
+    max_trans = [3, 3, 3]
     def set_bounds(pose_input):
-        max_rot = [8, 8, 8]
-        max_trans = [3, 3, 3]
         bounds = []
         init_pos = get_position_info(pose_input)
         init_rot = init_pos[:3]
@@ -45,7 +45,7 @@ def generate_genotype(pose_input, max_trans):
             bounds.append((init_trans[i] - max_trans[i], init_trans[i] + max_trans[i]))
         return bounds
 
-    converter = GlobalGenotypeConverter(pose_input, max_trans)
+    converter = GlobalGenotypeConverter(pose_input, trans_max_magnitude)
     local_bounds = set_bounds(pose_input)
     new_values = []
     for i in range(6):

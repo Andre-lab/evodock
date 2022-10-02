@@ -100,8 +100,7 @@ class InitializePopulationLocal(InitializePopulation):
         # default values
         popul = []
         for i in range(0, popsize):
-            indv = generate_genotype(self.scfxn.input_pose, self.max_translation)
-
+            indv = generate_genotype(self.scfxn.dock_pose, self.scfxn.trans_max_magnitude)
             popul.append(make_trial(i, indv))
 
         init_population = True
