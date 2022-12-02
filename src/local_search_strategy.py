@@ -29,8 +29,8 @@ from pyrosetta.rosetta.protocols.moves import NullMover
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pyrosetta import pose_from_file
-from shapedesign.src.movers.cubicsymmetryslider import CubicSymmetrySlider
-from src.symmetry import SymDockMCMProtocol
+from cubicsym.actors.cubicsymmetryslider import CubicSymmetrySlider
+from src.symmetry import SymDockMCMProtocol, DockNRelaxProtocol, SymShapeDock
 
 class LocalSearchStrategy:
     def __init__(self, config, scfxn, dock_pose):
@@ -41,39 +41,44 @@ class LocalSearchStrategy:
         self.packer_option = config.local_search_option
         self.native_fold_tree = scfxn.dock_pose.fold_tree()
         if self.config.syminfo:
-            self.symmetrymover = SetupForSymmetryMover(self.config.syminfo["input_symdef"])
+            self.symmetrymover = SetupForSymmetryMover(self.config.syminfo.input_symdef)
         else:
             self.symmetrymover = None
-        # todo for symmetry!
-        if self.packer_option == "sidechains":
-            local_tf = TaskFactory()
-            local_tf.push_back(InitializeFromCommandline())
-            local_tf.push_back(IncludeCurrent())
-            local_tf.push_back(RestrictToRepacking())
-            local_tf.push_back(NoRepackDisulfides())
-            extrarot = operation.ExtraRotamersGeneric()
-            extrarot.ex1(True)
-            extrarot.ex2aro(True)
-            local_tf.push_back(extrarot)
-            restrict = RestrictToInterface()
-            restrict.set_movable_jumps(Vector1([1]))
-            local_tf.push_back(restrict)
-            mcm_docking = DockMCMProtocol()
-            mcm_docking.set_native_pose(scfxn.dock_pose)
-            mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
-            mcm_docking.set_rt_min(False)
-            mcm_docking.set_sc_min(False)
-            mock_pose = Pose()
-            mock_pose.assign(scfxn.dock_pose)
-            mcm_docking.apply(mock_pose)
-            self.docking = mcm_docking
-            self.docking.set_task_factory(local_tf)
-            self.docking.set_ignore_default_task(True)
-
-        if self.packer_option == "mcm_rosetta":
+        # docking option
+        if is_symmetric(scfxn.dock_pose):
             if is_symmetric(scfxn.dock_pose):
-                self.docking = SymDockMCMProtocol(self.config.num_first_cycle, self.config.num_second_cycle)
-            else:
+                if self.packer_option == "symshapedock":
+                    self.docking = SymShapeDock(config, scfxn)
+                elif self.packer_option == "docknrelax":
+                    self.docking = DockNRelaxProtocol(dock_pose, config)
+                else:
+                    raise NotImplementedError(f"Only 'symshapedock' and 'docknrelax' are valid local_search options")
+        else:
+            if self.packer_option == "sidechains":
+                local_tf = TaskFactory()
+                local_tf.push_back(InitializeFromCommandline())
+                local_tf.push_back(IncludeCurrent())
+                local_tf.push_back(RestrictToRepacking())
+                local_tf.push_back(NoRepackDisulfides())
+                extrarot = operation.ExtraRotamersGeneric()
+                extrarot.ex1(True)
+                extrarot.ex2aro(True)
+                local_tf.push_back(extrarot)
+                restrict = RestrictToInterface()
+                restrict.set_movable_jumps(Vector1([1]))
+                local_tf.push_back(restrict)
+                mcm_docking = DockMCMProtocol()
+                mcm_docking.set_native_pose(scfxn.dock_pose)
+                mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
+                mcm_docking.set_rt_min(False)
+                mcm_docking.set_sc_min(False)
+                mock_pose = Pose()
+                mock_pose.assign(scfxn.dock_pose)
+                mcm_docking.apply(mock_pose)
+                self.docking = mcm_docking
+                self.docking.set_task_factory(local_tf)
+                self.docking.set_ignore_default_task(True)
+            elif self.packer_option == "mcm_rosetta":
                 mcm_docking = DockMCMProtocol()
                 mcm_docking.set_first_cycle(self.config.num_first_cycle)
                 mcm_docking.set_second_cycle(self.config.num_second_cycle)
@@ -87,10 +92,14 @@ class LocalSearchStrategy:
                 self.docking = mcm_docking
                 self.docking.set_task_factory(mcm_docking.task_factory())
                 self.docking.set_ignore_default_task(True)
+            else:
+                raise NotImplementedError(f"Only 'sidechains', 'mcm_rosetta' are valid local_search options")
         # slide option
         if self.config.slide:
             if is_symmetric(scfxn.dock_pose):
-                self.slide_into_contact = CubicSymmetrySlider(dock_pose)
+                self.slide_into_contact = CubicSymmetrySlider(dock_pose, self.config.syminfo.input_symdef, pymolmover=self.config.pmm,
+                                                              max_slide_attempts=self.config.max_slide_attempts, trans_mag=self.config.slide_trans_mag,
+                                                              cubicboundary=self.config.syminfo.cubicboundary)
             else:
                 self.slide_into_contact = FaDockingSlideIntoContact(dock_pose.num_jump())
         else:
@@ -107,7 +116,7 @@ class LocalSearchStrategy:
             else:
                 # cloning is to make sure we don't symmetrize the stored pose in self.list_subunits
                 join_pose.clone()
-            for jump in self.config.syminfo.get("jumps_int"):
+            for jump in self.config.syminfo.jumps_int:
                 if not is_symmetric(join_pose):
                     self.symmetrymover.apply(join_pose)
                 join_pose.set_jump(jump, pose.jump(jump))
@@ -158,11 +167,11 @@ class LocalSearchStrategy:
         # join_pose.pdb_info().name("apply_bb_" + str(ind.idx))
         # print("apply_bb_" + str(ind.idx) + " : " + str(self.energy_score(join_pose)))
         # self.pymover.apply(join_pose)
-        before = self.scfxn.score(pose, ind)
+        before = self.scfxn.score(join_pose, ind)
         if local_search and self.packer_option != "None":
             self.slide_into_contact.apply(join_pose)
             self.docking.apply(join_pose)
-            after = self.scfxn.score(pose, ind)
+            after = self.scfxn.score(join_pose, ind)
         else:
             after = before
         return_data = {

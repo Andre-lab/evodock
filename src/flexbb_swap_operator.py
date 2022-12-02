@@ -3,7 +3,7 @@
 
 import glob
 import random
-
+import shutil
 
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
@@ -16,13 +16,15 @@ from pyrosetta.rosetta.core.import_pose import poses_from_files, pose_from_file
 from pyrosetta.rosetta.utility import vector1_std_string
 from pyrosetta import Pose
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
-from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from src.position_utils import to_rosetta
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from src.utils import get_rotation_euler, get_translation
 from scipy.spatial.transform import Rotation as R
 from pathlib import Path
-from pyrosetta.rosetta.protocols.moves import NullMover
+from pyrosetta.rosetta.core.pose.symmetry import extract_asymmetric_unit
+from scipy.spatial.transform import Rotation as R
+from src.utils import get_rotation_euler, get_translation
+from src.position_utils import to_rosetta
 
 class FlexbbSwapOperator:
     def __init__(self, config, scfxn, local_search_strategy):
@@ -31,7 +33,7 @@ class FlexbbSwapOperator:
         self.native_fold_tree = scfxn.dock_pose.fold_tree()
         self.config = config
         if self.config.syminfo:
-            self.symmetrymover = SetupForSymmetryMover(self.config.syminfo["input_symdef"])
+            self.symmetrymover = SetupForSymmetryMover(self.config.syminfo.input_symdef)
         else:
             self.symmetrymover = None
         self.local_search_strategy = local_search_strategy
@@ -42,9 +44,22 @@ class FlexbbSwapOperator:
                 filenames_subunits.append(f)
             self.list_subunits = []
             if self.config.low_memory_mode:
-                for path in filenames_subunits:
-                    pose = pose_from_file(path)
-                    self.list_subunits.append(path)
+                if config.save_bbs:
+                    save_bbs_path = Path(config.save_bbs)
+                    save_bbs_path.mkdir(exist_ok=True)
+                    for n, path in enumerate(filenames_subunits):
+                        new_path = config.save_bbs + "/" + Path(path).name
+                        shutil.copy(path, new_path) # copy all the subunits to the save_bbs path
+                        self.list_subunits.append(new_path)
+                else:
+                    self.list_subunits = [path for path in filenames_subunits]
+                # check that we can read all the poses without problems
+                for path in self.list_subunits:
+                    try:
+                        pose_from_file(path)
+                    except Exception as e:
+                        print(e)
+                        exit()
             else:
                 for pose in poses_from_files(filenames_subunits):
                     self.list_subunits.append(pose) # symmetrize later
@@ -53,6 +68,7 @@ class FlexbbSwapOperator:
                 self.list_subunits = [Pose(p) for p in self.list_subunits]
             # the relaxed backbones are newer used?
             # self.relaxed_backbones_subunits = [p.clone() for p in self.list_subunits]
+
         else:
             lst_ligand = glob.glob(config.path_ligands)
             lst_receptor = glob.glob(config.path_receptors)
@@ -73,6 +89,8 @@ class FlexbbSwapOperator:
             # self.relaxed_backbones_ligand = [Pose(p) for p in self.list_ligand]
             # self.relaxed_backbones_receptor = [Pose(p) for p in self.list_receptor]
 
+        # fixme: since this is setting 1 dof make it faster by either working on the translation or the rotation
+
     def set_symmetric_jump_dof(self, pose, jump_id, dof: int, value):
         """Set the jump with dof to a value"""
         flexible_jump = pose.jump(jump_id)
@@ -89,6 +107,26 @@ class FlexbbSwapOperator:
         flexible_jump.set_rotation(rot)
         pose.set_jump(jump_id, flexible_jump)
         return pose
+
+    def extract_asymmetric_pose(self, pose, syminfo):
+        """Extract the asymmetric pose from the symmetric pose and reset the genotype dofs to 0."""
+        pose = pose.clone()  # will shadow the pose and pose will not change
+        # set all degrees of freedom to 0
+        for jump, dofs in zip(syminfo.jumps_int, syminfo.dofs_int):
+            for dof in dofs:
+                self.set_symmetric_jump_dof(pose, jump, dof, 0)
+        # create a new pose object and fill it with the asymmetric pose
+        apose = Pose()
+        extract_asymmetric_unit(pose, apose, False)
+        return apose
+
+    def save_bb(self, pose, idx_l, idx_r, idx_s):
+        """Saves the backbones to file."""
+        if is_symmetric(pose):
+            path = self.list_subunits[idx_s]
+            self.extract_asymmetric_pose(pose, self.config.syminfo).dump_pdb(path)
+        else:
+            raise NotImplementedError
 
     def define_ensemble(self, ind, reference_pose, randomize_bb=True):
         improve_relax = False
@@ -113,7 +151,7 @@ class FlexbbSwapOperator:
                 join_pose = join_pose.clone()
             if not is_symmetric(join_pose):
                 self.symmetrymover.apply(join_pose)
-            for jump in self.config.syminfo.get("jumps_int"):
+            for jump in self.config.syminfo.jumps_int:
                 join_pose.set_jump(jump, reference_pose.jump(jump))
         else:
             pose_chainA = self.list_receptor[idx_receptor]

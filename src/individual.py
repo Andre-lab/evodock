@@ -17,23 +17,25 @@ class Individual:
         receptor_name="",
         subunit_name="",
     ):
-        if idx_ligand == -1:
-            idx_ligand = random.randit(1, 99)
-        else:
-            if idx_ligand > 100:
-                print("error at ligand idx")
 
-        if idx_receptor == -1:
-            idx_receptor = random.randit(1, 99)
-        else:
-            if idx_receptor > 100:
-                print("error at receptor idx")
-
-        if idx_subunit == -1:
-            idx_subunit = random.randit(1, 99)
-        else:
-            if idx_subunit > 100:
-                print("error at receptor idx")
+        # FIXME: as you can have larger ensembles than 100 this does not make sense
+        # if idx_ligand == -1:
+        #     idx_ligand = random.randit(1, 99)
+        # else:
+        #     if idx_ligand > 100:
+        #         print("error at ligand idx")
+        #
+        # if idx_receptor == -1:
+        #     idx_receptor = random.randit(1, 99)
+        # else:
+        #     if idx_receptor > 100:
+        #         print("error at receptor idx")
+        #
+        # if idx_subunit == -1:
+        #     idx_subunit = random.randit(1, 99)
+        # else:
+        #     if idx_subunit > 100:
+        #         print("error at receptor idx")
 
         self.idx = idx
         self.idx_receptor = idx_receptor

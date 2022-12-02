@@ -14,7 +14,10 @@ from pyrosetta.rosetta.utility import vector1_std_string
 from src.utils import convert_range, get_pose_from_file, get_position_info
 
 from pyrosetta.rosetta.protocols.toolbox import CA_superimpose
-
+from cubicsym.cubicsetup import CubicSetup
+from symmetryhandler.kinematics import get_jumpdof_str_str
+from symmetryhandler.kinematics import get_dofs
+from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, jump_num_sym_dof
 
 class RefineCluspro:
     def __init__(self, config, max_trans):
@@ -25,7 +28,7 @@ class RefineCluspro:
             filenames.append(f)
         self.list_models = poses_from_files(filenames)
         self.list_models = [CA_superimpose(input_pose, p) for p in self.list_models]
-        self.positions = [get_position_info(p) for p in self.list_models]
+        self.positions = [get_position_info(p, config.syminfo) for p in self.list_models]
         max_boundaries = [max([abs(x[i]) for x in self.positions]) for i in range(6)]
         max_boundaries = list(map(lambda i: (i, i * -1), max_boundaries))
         self.converter = GlobalGenotypeConverter(input_pose, max_trans)
@@ -40,7 +43,7 @@ def generate_genotype(pose_input, max_trans):
         max_rot = [8, 8, 8]
         max_trans = [3, 3, 3]
         bounds = []
-        init_pos = get_position_info(pose_input)
+        init_pos = get_position_info(pose_input, config.syminfo)
         init_rot = init_pos[:3]
         for i in range(3):
             bounds.append((init_rot[i] - max_rot[i], init_rot[i] + max_rot[i]))
@@ -78,23 +81,9 @@ class GlobalGenotypeConverter:
     def define_symmetric_bounds(self, native_pose, syminfo):
         """Define symmetrical bounds."""
         bounds = []
-        for jump, dofs, parsed_bounds in zip(syminfo.get("jumps_int"), syminfo.get("dofs_int"), syminfo.get("bounds")):
-            flexible_jump = native_pose.jump(jump)
-            rot = get_rotation_euler(flexible_jump)
-            trans = get_translation(flexible_jump)
+        for jump, dofs, parsed_bounds in zip(syminfo.jumps_str, syminfo.dofs_str, syminfo.bounds):
             for dof, bound in zip(dofs, parsed_bounds):
-                # rotation is from maximum from -180 to +180
-                # trans is from 0->inf and shouldnt go into the negatives (can mess up the symmetry)
-                if dof < 4: # translational dof
-                    native_val = trans[dof - 1]
-                    min_value = max(0, native_val - float(bound)) # make sure the lowest value is 0
-                    max_value = native_val + float(bound)
-                    bounds.append((min_value, max_value))
-                else: # rotational dof
-                    native_val = rot[dof - 4]
-                    min_value = max(-180, native_val - float(bound)) # makes sure the lowest value is -180
-                    max_value = min(180,  native_val + float(bound)) # makes sure the highest value is 180
-                    bounds.append((min_value,max_value))
+                bounds.append(syminfo.cubicboundary.get_boundary(jump, dof))
         return bounds
 
     def define_bounds(self):
@@ -139,7 +128,7 @@ class LocalGenotypeConverter(GlobalGenotypeConverter):
 
     def define_bounds(self):
         bounds = []
-        init_pos = get_position_info(self.pose)
+        init_pos = get_position_info(self.pose, self.config.syminfo)
         init_rot = init_pos[:3]
         for i in range(3):
             bounds.append(
