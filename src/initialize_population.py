@@ -1,9 +1,11 @@
 import random
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 import glob
 import time
 
 from src.genotype_converter import RefineCluspro, generate_genotype
 from src.utils import make_trial
+from src.symmetry import individual_is_within_bounds
 
 
 class InitializePopulationBuilder:
@@ -40,7 +42,7 @@ class InitializePopulation:
         self.popul_calculator = popul_calculator
         self.popsize = config.popsize
         if config.syminfo:
-            self.ind_size = config.syminfo.get("genotype_size")
+            self.ind_size = config.syminfo.genotype_size
         else:
             self.ind_size = 6
         self.bounds = [(-1, 1)] * self.ind_size
@@ -90,7 +92,6 @@ class InitializePopulationRefine(InitializePopulation):
         self.logger.info(f" population init in {end - start:.2f} seconds")
         return population
 
-# TODO for symmetry
 class InitializePopulationLocal(InitializePopulation):
     def init_population(self):
         population_calculator = self.popul_calculator
@@ -101,10 +102,20 @@ class InitializePopulationLocal(InitializePopulation):
         # default values
         popul = []
         for i in range(0, popsize):
-            indv = generate_genotype(self.scfxn.input_pose, self.max_translation)
-
+            if is_symmetric(self.scfxn.dock_pose):
+                # todo:
+                #  generate_genotype just sets the local bounds (8 degrees rotation + 3 Å translation) for the dimeric case.
+                #  for symmetry i still choose to use the symbounds set in the config file. I dont have default values as of yet: todo!
+                indv = []
+                if self.config.syminfo.init_bounds:
+                    bounds = self.config.syminfo.init_bounds
+                else:
+                    bounds = self.bounds
+                for j in range(len(bounds)):
+                    indv.append(random.uniform(bounds[j][0], bounds[j][1]))
+            else:
+                indv = generate_genotype(self.scfxn.dock_pose, self.max_translation)
             popul.append(make_trial(i, indv))
-
         init_population = True
         start = time.time()
         population = population_calculator.run(popul, init_population)
@@ -143,7 +154,17 @@ class InitializePopulationFlexbb(InitializePopulation):
                 popul.append(make_trial(i, indv, ligand=idx_ligand, receptor=idx_receptor))
         init_population = True
         start = time.time()
+        for ind in popul:
+            individual_is_within_bounds(self.config, self.scfxn, ind)
         population = population_calculator.run(popul, init_population)
+        for ind in population:
+            individual_is_within_bounds(self.config, self.scfxn, ind)
         end = time.time()
         self.logger.info(f" population init in {end - start:.2f} seconds")
+        # add the current names to each individual
+        for ind in population:
+            if self.config.syminfo:
+                ind.subunit_name = self.flexbb_swap_operator.swap_operator.list_subunits[ind.idx_subunit]
+            else:
+                raise NotImplementedError
         return population

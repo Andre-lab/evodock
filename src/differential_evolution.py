@@ -37,10 +37,13 @@ class DifferentialEvolutionAlgorithm:
         self.scfxn = fitness_function
         self.mutation_strategy = MutationStrategyBuilder(config).build(self.scfxn.size())
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
-            config, fitness_function
+            config, fitness_function, self.scfxn.dockmetric,
         ).build()
 
-        self.optimal_solution = get_position_info(fitness_function.native_pose)
+        if self.config.syminfo:
+            self.optimal_solution = get_position_info(fitness_function.native_symmetric_pose, self.config.syminfo)
+        else:
+            self.optimal_solution = get_position_info(fitness_function.native_pose, self.config.syminfo)
         # trial_score_config = config
         # trial_score_config.docking_type_option = "Global"
         # self.scfxn = FAFitnessFunction(
@@ -52,10 +55,6 @@ class DifferentialEvolutionAlgorithm:
 
     def init_population(self):
         self.population = InitializePopulationBuilder().run(self)
-        # add the current names to each individual
-        for ind in self.population:
-            if self.config.syminfo:
-                ind.subunit_name = self.flexbb_swap_operator.swap_operator.list_subunits[ind.idx_subunit]
 
     def init_file(self):
         # header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
@@ -67,11 +66,15 @@ class DifferentialEvolutionAlgorithm:
     def main(self):
         self.logger.info(" DE")
         self.popul_calculator.print_information(self.population)
+        self.popul_calculator.render_all(self.population)
         for generation in range(1, self.maxiter + 1):
             self.generation = generation
             self.logger.info(f" GENERATION: {self.generation}")
             self.gen_start = time.time()
-            self.gen_scores = [ind.score for ind in self.population]
+            if self.config.selection == "total":
+                self.gen_scores = [ind.score for ind in self.population]
+            else:
+                self.gen_scores = [ind.i_sc for ind in self.population]
             # cycle through each individual in the population
 
             # --- TRIAL CREATION (step #3.A) -------------+
@@ -108,7 +111,7 @@ class DifferentialEvolutionAlgorithm:
             self.population,
             self.gen_scores,
             self.trial_scores,
-        ) = GreedySelection().apply(trial_inds, self.population)
+        ) = GreedySelection().apply(trial_inds, self.population, self.config.selection)
 
     def score_keeping(self, generation):
         self.gen_avg = sum(self.gen_scores) / self.popsize
@@ -125,6 +128,8 @@ class DifferentialEvolutionAlgorithm:
             best_SixD_vector,
             best_rmsd,
         ) = self.popul_calculator.render_best(self.generation, gen_sol, self.population)
+
+        self.popul_calculator.render_all(self.population)
 
         best_sol_str = self.popul_calculator.get_sol_string(best_SixD_vector)
         improved = np.array(
@@ -188,6 +193,7 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
         self.logger.info(" DE")
         self.popul_calculator.print_information(self.population)
         self.popul_calculator.print_ensembles(self.population)
+        self.popul_calculator.render_all(self.population)
         self.archive_restart = [0] * self.popsize
         for generation in range(1, self.maxiter + 1):
             self.generation = generation

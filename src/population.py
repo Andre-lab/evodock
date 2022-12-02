@@ -15,6 +15,7 @@ class ScorePopulation:
         self.out_path = config.out_path
         self.scfxn = scfxn
         self.log_best = self.out_path + "/best_individual.csv"
+        self.log_all_geno = self.out_path + "/all_individuals.csv"
         self.log_interface = self.out_path + "/interface.csv"
         self.log_popul = self.out_path + "/popul.csv"
         self.log_trials = self.out_path + "/trials.csv"
@@ -25,6 +26,13 @@ class ScorePopulation:
     def print_header_logfiles(self):
         with open(self.log_best, "w") as file_object:
             file_object.write("g1,g2,g3,g4,g5,g6\n")
+        with open(self.log_all_geno, "w") as file_object:
+            if self.config.syminfo:
+                genes = self.config.syminfo.genotype_size
+            else:
+                genes = 6
+            vals = ",".join([",".join([f"g{gen}_{ind}" for gen in range(1, genes + 1)])  for ind in range(0, self.config.popsize)])
+            file_object.write(f"{vals}\n")
         with open(self.log_trials, "w") as file_object:
             vals = ",".join([f"sc_{t},rmsd_{t}" for t in range(0, self.config.popsize)])
             file_object.write(f"{vals}\n")
@@ -54,6 +62,11 @@ class ScorePopulation:
         # best_pdb = self.scfxn.apply_genotype_to_pose(best_solution.genotype)
         best_pdb = self.local_search.best_pose
         return best_pdb, DoFs_vector, rmsd
+
+    def render_all(self, population):
+        with open(self.log_all_geno, "a") as file_object:
+            vals = ",".join([",".join(map(str, self.scfxn.convert_genotype_to_positions(ind.genotype))) for ind in population])
+            file_object.write(vals + "\n")
 
     def size(self):
         return self.scfxn.size()

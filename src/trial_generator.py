@@ -1,5 +1,5 @@
 import random
-
+from src.symmetry import individual_is_within_bounds
 
 from src.utils import make_trial
 from operator import itemgetter
@@ -53,13 +53,15 @@ class FlexbbTrialGenerator(TrialGenerator):
         self.local_search = local_search
 
     def build(self, j, population, gen_scores):
+        individual_is_within_bounds(self.local_search.config, self.local_search.scfxn, population[j])
         v_donor = self.mutate(j, population, gen_scores)
         v_trial = self.recombine(j, population, v_donor)
         idx_receptor, idx_ligand, idx_subunit = population[j].idx_receptor, population[j].idx_ligand, population[j].idx_subunit
-        ind = make_trial(j, v_trial, idx_ligand, idx_receptor, idx_subunit)
+        receptor_name, ligand_name, subunit_name = population[j].receptor_name, population[j].ligand_name, population[j].subunit_name
+        ind = make_trial(j, v_trial, idx_ligand, idx_receptor, idx_subunit,  receptor_name, ligand_name, subunit_name )
+        individual_is_within_bounds(self.local_search.config, self.local_search.scfxn, ind)
         trial, _, _ = self.local_search.process_individual(ind)
         return trial
-
 
 class pBestGenerator(TrialGenerator):
     def __init__(self, config, rgen):

@@ -13,72 +13,56 @@ from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from pyrosetta.rosetta.core.kinematics import FoldTree
 from pyrosetta.rosetta.core.pose import chain_end_res
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
+import copy
+from symmetryhandler.kinematics import get_jumpdof_str_int, get_dofs
 
-# symmetric maps from dof name to dof int
-strtodofint = {"x": 1, "y": 2, "z": 3, "angle_x": 4, "angle_y": 5, "angle_z": 6}
-inttodofstr =  {v: k for k, v in strtodofint.items()}
 
-def map_jump_and_dofs_to_int(pose: Pose, syminfo: dict) -> None:
-    """Map jump strings to jump ints and dof str to dof ints."""
-    syminfo["jumps_int"] = [sym_dof_jump_num(pose, jump_str) for jump_str in syminfo.get("jumps_str")]
-    syminfo["dofs_int"] = [[strtodofint.get(dof_str) for dof_str in dofs_str] for dofs_str in syminfo.get("dofs_str")]
 
-def map_normalize_trans_to_jumpdofs(pose: Pose, syminfo: dict) -> None:
-    normalize_trans = syminfo.get("normalize_trans")
-    if normalize_trans:
-        trans = normalize_trans[:].split(",")
-        syminfo["normalize_trans_map"] = []
-        # first find the translational dofs
-        for jump_int, dof_str, dof_int in zip(syminfo.get("jumps_int"), syminfo.get("dofs_str"), syminfo.get("dofs_int")):
-            # jumpid, dofid, transmag
-            for dof_s, dof_i in zip(dof_str, dof_int):
-                if not "angle" in dof_s:
-                    transmag = int(trans.pop(0))
-                    syminfo["normalize_trans_map"].append((jump_int, dof_i, transmag))
 
-def get_symmetric_genotype_str(pose: Pose) -> str:
-    """Gets which symdofs are present in the genotype and in the order as they are in the genotype."""
-    symdofs = pose.conformation().Symmetry_Info().get_dofs()
-    symmetric_genotype = []
-    for jump_id, symdof in symdofs.items():
-        jump_str = jump_num_sym_dof(pose, jump_id)
-        for dof in range(1, 7):
-            if symdof.allow_dof(dof):
-                symmetric_genotype.append(f"{jump_str}:{inttodofstr[dof]}")
-    return " ".join(symmetric_genotype)
+# def get_symmetric_genotype_str(pose: Pose) -> str:
+#     """Gets which symdofs are present in the genotype and in the order as they are in the genotype."""
+#     symdofs = pose.conformation().Symmetry_Info().get_dofs()
+#     symmetric_genotype = []
+#     for jump_id, symdof in symdofs.items():
+#         jump_str = jump_num_sym_dof(pose, jump_id)
+#         for dof in range(1, 7):
+#             if symdof.allow_dof(dof):
+#                 symmetric_genotype.append(f"{jump_str}:{inttodofstr[dof]}")
+#     return " ".join(symmetric_genotype)
 
-def get_starting_poses(pose_input, native_input, config):
+def initialize_starting_poses(config):
     native = Pose()
-    pose_from_file(native, native_input)
-    pose = Pose()
-    pose_from_file(pose, pose_input)
+    pose_from_file(native, config.native_input)
+    input_pose = Pose()
+    pose_from_file(input_pose, config.pose_input)
     native.conformation().detect_disulfides()
-    pose.conformation().detect_disulfides()
+    input_pose.conformation().detect_disulfides()
+    native_symmetric = None
     if config.syminfo:
-        SetupForSymmetryMover(config.syminfo.get("input_symdef")).apply(pose)
-        SetupForSymmetryMover(config.syminfo.get("native_symdef")).apply(native)
-        map_jump_and_dofs_to_int(pose, config.syminfo)
-        map_normalize_trans_to_jumpdofs(pose, config.syminfo)
+        native_symmetric = pose_from_file(config.native_symmetric_input)
+        native_symmetric.conformation().detect_disulfides()
+        SetupForSymmetryMover(config.syminfo.input_symdef).apply(input_pose)
+        SetupForSymmetryMover(config.syminfo.native_symdef).apply(native_symmetric)
+        config.syminfo.store_info_from_pose(input_pose) # setup cubic boundaries
     else:
-        mres = chain_end_res(pose, 1)
+        mres = chain_end_res(input_pose, 1)
         ft = FoldTree()
         ft.add_edge(1, mres, -1)
         ft.add_edge(1, mres + 1, 1)
-        ft.add_edge(mres + 1, pose.total_residue(), -1)
-        pose.fold_tree(ft)
+        ft.add_edge(mres + 1, input_pose.total_residue(), -1)
+        input_pose.fold_tree(ft)
     if config.pmm:
-        pose.pdb_info().name("input_pose")
+        input_pose.pdb_info().name("input_pose")
         native.pdb_info().name("native_pose")
-        config.pmm.apply(pose)
+        config.pmm.apply(input_pose)
         config.pmm.apply(native)
-    return pose, native
+    return input_pose, native, native_symmetric
 
 def get_pose_from_file(pose_input):
     pose = Pose()
     pose_from_file(pose, pose_input)
     pose.conformation().detect_disulfides()
     return pose
-# >>>>>>> main
 
 # compute an axis-aligned bounding box for the given pdb structure
 def xyz_limits_for_pdb(pdb):
@@ -142,32 +126,24 @@ def random_individual(max_value=180):
 
 
 def get_rotation_euler(flexible_jump):
+    raise NotImplementedError #fixme: reinstate, but not for symemtry
     rot_matrix = R.from_matrix(np.asarray(flexible_jump.get_rotation()))
     vec = rot_matrix.as_euler("xyz", degrees=True)
     return vec
 
 def get_translation(flexible_jump):
+    raise NotImplementedError #fixme: reinstate, but not for symemtry
     return np.asarray(flexible_jump.rt().get_translation())
 
-def get_position_info(dock_pose):
+def get_position_info(dock_pose, syminfo=None):
     if is_symmetric(dock_pose):
-        native_val = []
-        dofs = dock_pose.conformation().Symmetry_Info().get_dofs()
-        for jump_id, symdof in dofs.items():
-            flexible_jump = dock_pose.jump(jump_id)
-            rot = get_rotation_euler(flexible_jump)
-            trans = get_translation(flexible_jump)
-            for dof in range(1, 7):
-                if symdof.allow_dof(dof):
-                    if dof < 4:
-                        native_val.append(trans[dof - 1])
-                    else:
-                        native_val.append(rot[dof - 4])
+        assert syminfo is not None, "syminfo should be defined if pose is symmetric!"
+        # map the symmetrical info in the right order as specified in syminfo
+        return syminfo.get_position_info(dock_pose)
     else:
         flexible_jump = dock_pose.jump(1)
         euler_vec = get_rotation_euler(flexible_jump)
-        native_val = list(euler_vec) + list(flexible_jump.get_translation())
-    return native_val
+        return list(euler_vec) + list(flexible_jump.get_translation())
 
 
 def set_new_max_translations(scfxn, popul):
@@ -219,5 +195,7 @@ def set_new_max_translations(scfxn, popul):
     return popul
 
 
-def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1):
-    return Individual(idx, genotype, score=1000, idx_ligand=ligand, idx_receptor=receptor, idx_subunit=subunit, rmsd=0, i_sc=0, irms=0)
+def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1, receptor_name="", ligand_name="", subunit_name=""):
+    return Individual(idx, genotype, score=1000, idx_ligand=ligand, idx_receptor=receptor, idx_subunit=subunit, rmsd=0, i_sc=0, irms=0,
+        receptor_name=receptor_name, ligand_name=ligand_name, subunit_name=subunit_name)
+

@@ -14,7 +14,7 @@ def build_rosetta_flags(config):
 def add_syminfo_to_init(syminfo: dict = None):
     #         "-unmute protocols.simple_moves_symmetry.SymDockingInitialPerturbation",
     #         "-out:file:output_pose_energies_table false", # FIXME bypasses this error: Energies::residue_total_energies( int const seqpos ): variable seqpos is out of range!
-    if syminfo and syminfo.get("initialize_rigid_body_dofs"):
+    if syminfo is not None and syminfo.initialize_rigid_body_dofs:
         return " -initialize_rigid_body_dofs 1 "
     else:
         return ""
