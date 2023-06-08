@@ -1,34 +1,43 @@
 
-# Protein-Protein docking using a Memetic Algorithm: EvoDOCK
+# EvoDOCK 
 
-Repository corresponding to the code used at article: 
+EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
+Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v3)
 
-# Dependencies
+Symmetric docking has been published at:
+[missing](link:missing)
 
-* PyRosetta==4
-<<<<<<< HEAD
-* numpy==1.19.4
-* vector3d
+# Installation 
 
-=======
-* numpy>=1.21.0
-* pandas>=1.3.4
-* scipy>=1.7.1
-* seaborn>=0.11.2
-* setuptools>=44.0.0
-* imageio>=2.10.1
-* matplotlib>=3.4.3
->>>>>>> main
+clone the evodock repository and ```cd``` into it
+```
+git clone https://github.com/Andre-lab/evodock.git
+cd ./evodock
+```
 
+## Conda installation
+EvoDOCK can be installed with [Anaconda](https://docs.anaconda.com/free/anaconda/install/index.html).
 
-# Installation
+A license for PyRosetta is needed and can be obtained from https://els2.comotion.uw.edu/product/pyrosetta. 
+Use the provided USERNAME and PASSWORD and insert it into the following line in ```env.yml```:
+```
+- https://USERNAME:PASSWORD@conda.rosettacommons.org
+```
 
-This package is only compatible with Python 3.4 and above. To install this package, please follow the instructions below:
+Then run the following conda command (it will take a few minutes):
 
-* Install the previous descripted dependencies
-* Download and install PyRosetta following the instructions found at http://www.pyrosetta.org/dow
+```
+conda install evodock
+```
+
+## pip installation
+
+This package is only compatible with Python-3.6 or later (PyRosetta dependency)
+
+* Download and install PyRosetta http://www.pyrosetta.org/dow
+* Download and install MAFFT (If using Symmetry) (https://mafft.cbrc.jp/alignment/software/)
 * Install the package itself:
 
 ```console
