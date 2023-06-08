@@ -16,6 +16,8 @@ class Individual:
         ligand_name="",
         receptor_name="",
         subunit_name="",
+        flipped=None,
+        fixed=None,
     ):
 
         # FIXME: as you can have larger ensembles than 100 this does not make sense
@@ -49,3 +51,5 @@ class Individual:
         self.receptor_name = receptor_name
         self.ligand_name = ligand_name
         self.subunit_name = subunit_name
+        self.flipped = flipped
+        self.fixed = fixed

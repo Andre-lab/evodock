@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import sys
-
 from pyrosetta import Pose, init, pose_from_file, standard_packer_task
 from pyrosetta.rosetta.core.pack.task import TaskFactory
 from pyrosetta.rosetta.core.pack.task.operation import (
@@ -16,13 +15,20 @@ from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
 from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
 from pyrosetta.rosetta.core.scoring import all_atom_rmsd
+import argparse
+from pathlib import Path
 
 
 class PosePacker:
-    def __init__(self, pose, filename, mode_="standard"):
+    def __init__(self, pose, filename, mode="standard"):
         self.pose = pose
-        self.output_name = filename.replace(".pdb", ".prepack.pdb")
-        self.mode = mode_
+        if "pdb" in filename:
+            self.output_name = filename.replace(".pdb", ".prepack.pdb")
+        elif "cif" in filename:
+            self.output_name = filename.replace(".cif", ".prepack.cif")
+        else:
+            raise ValueError(f"{filename} not understood. Only '.pdb' or '.cif' is understood")
+        self.mode = mode
         self.scorefxn = get_fa_scorefxn()
 
     def run(self):
@@ -91,11 +97,7 @@ def run_repacking(filename, opts, pymover=None):
         pymover.apply(packed_pdb)
     return final_energy, rmsd_diff, packed_pdb
 
-
-def main():
-    pymover = PyMOLMover(address="10.8.0.6", port=65000, max_packet_size=1400)
-    filename = sys.argv[-1]
-    opts = " ".join(
+opts = " ".join(
         [
             "-mute all",
             # "-unmute core.pack.pack_rotamers core.pack.dunbrack",
@@ -107,15 +109,21 @@ def main():
         ]
     )
 
+
+def main(file):
+    pymover = PyMOLMover(address="10.8.0.6", port=65000, max_packet_size=1400)
+
     data = []
     for i in range(1):
-        energy, rmsd_diff, _ = run_repacking(filename, opts, pymover)
+        energy, rmsd_diff, _ = run_repacking(file, opts, pymover)
         data.append(rmsd_diff)
 
-    tokens = filename.split("/")
-    with open(tokens[-2] + "_" + tokens[-1][0] + ".log", "w") as f:
+    with open(Path(file).name + ".log", "w") as f:
         f.write(f"{sum(data) / len(data)}\n")
 
-
 if __name__ == "__main__":
-    main()
+    description = "Runs a prepacking protocol for an input protein structure to be used for EvoDOCK"
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--file', help="Input structure.", type=str, required=True)
+    args = parser.parse_args()
+    main(args.file)

@@ -12,7 +12,7 @@ from src.differential_evolution import FlexbbDifferentialEvolution as FlexbbDE
 from src.options import build_rosetta_flags
 from src.scfxn_fullatom import FAFitnessFunction
 from src.utils import get_position_info, initialize_starting_poses
-from src.dock_metric import DockMetric, SymmetryDockMetric
+from src.dock_metric import DockMetric, CubicDockMetric
 
 MAIN_PATH = os.getcwd()
 
@@ -20,8 +20,8 @@ logging.basicConfig(level=logging.ERROR)
 
 
 def print_init_information(logger, scfxn, native_pose, input_pose, dockmetric, syminfo: dict = None, native_symmetric_pose=None):
-    input_score = f"{scfxn.scfxn_rosetta.score(input_pose):.2f}"
-    native_score = f"{scfxn.scfxn_rosetta.score(native_symmetric_pose if native_symmetric_pose is not None else native_pose):.2f}"
+    input_score = f"{scfxn.scfxn_rosetta.score(input_pose) :.2f}"
+    native_score = f"{scfxn.scfxn_rosetta.score(native_symmetric_pose if native_symmetric_pose is not None else native_pose) :.2f}"
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(input_pose, syminfo)]
     )
@@ -39,7 +39,7 @@ def print_init_information(logger, scfxn, native_pose, input_pose, dockmetric, s
     logger.info(f" Input vs native rmsd: {input_vs_native_rmsd:.2f}")
     logger.info("==============================")
 
-def initialize_dock_metric(config, native):
+def initialize_dock_metric(config, native, input_pose):
     if config.syminfo:
         ### fixme: delete this
         jump_ids, dof_ids, trans_mags = [], [], []
@@ -48,7 +48,8 @@ def initialize_dock_metric(config, native):
             dof_ids.append(b)
             trans_mags.append(c)
         ###
-        return SymmetryDockMetric(native, jump_ids=jump_ids, dof_ids=dof_ids, trans_mags=trans_mags)
+        return CubicDockMetric(native, input_pose, config.syminfo.native_symdef, config.syminfo.input_symdef,
+                               jump_ids=jump_ids, dof_ids=dof_ids, trans_mags=trans_mags)
     else:
         return DockMetric(native)
 
@@ -65,7 +66,7 @@ def main():
     input_pose, native_pose, native_symmetric_pose = initialize_starting_poses(config)
 
     # --- INIT METRIC CALCULATOR --------------------
-    dockmetric = initialize_dock_metric(config, native_pose)
+    dockmetric = initialize_dock_metric(config, native_pose, input_pose)
 
     # ---- INIT SCORE FUNCTION ----------------------
     scfxn = FAFitnessFunction(input_pose, native_pose, config, dockmetric, native_symmetric_pose)
@@ -74,7 +75,7 @@ def main():
     print_init_information(logger, scfxn, native_pose, input_pose, dockmetric, config.syminfo, native_symmetric_pose)
 
     # ---- START ALGORITHM --------------------------
-    if config.docking_type_option == "Flexbb":
+    if config.flexbb:
         alg = FlexbbDE(config, scfxn)
     else:
         alg = DE(config, scfxn)

@@ -12,15 +12,12 @@ class LocalSearchPopulation:
         self.local_logger = logging.getLogger("evodock.local")
         self.local_logger.setLevel(logging.INFO)
         self.local_search_strategy = LocalSearchStrategy(config, scfxn, scfxn.dock_pose)
-        self.starting_pose = Pose()
-        self.starting_pose.assign(scfxn.dock_pose)
+        # self.starting_pose = Pose()
+        # self.starting_pose.assign(scfxn.dock_pose)
         self.best_pose = Pose()
         self.best_pose.assign(scfxn.dock_pose)
         self.best_score = 100000000
         self.dockmetric = dockmetric
-        # self.best_pose = Pose()
-        # self.best_pose.assign(scfxn.dock_pose)
-        # self.best_score = 1000
 
     def energy_score(self, pose):
         score = self.scfxn.scfxn_rosetta(pose)
@@ -31,12 +28,10 @@ class LocalSearchPopulation:
         pose = data["pose"]
         rmsd = self.dockmetric.ca_rmsd(pose)
         interface = self.dockmetric.interaction_energy(pose)
-        irms = self.dockmetric.i_rmsd(pose)
+        irms = self.dockmetric.interface_rmsd(pose)
         if data["after"] < self.best_score:
             self.best_score = data["after"]
             self.best_pose.assign(pose)
-            if self.config.save_bbs:
-                self.local_search_strategy.swap_operator.save_bb(pose, data["idx_ligand"], data["idx_receptor"], data["idx_subunit"])
         # get position from pose
         positions = get_position_info(pose, self.config.syminfo)
         # replace trial with this new positions
@@ -53,11 +48,9 @@ class LocalSearchPopulation:
         irms=irms,
         ligand_name=ind.ligand_name,
         receptor_name=ind.receptor_name,
-        subunit_name=ind.subunit_name
+        subunit_name=ind.subunit_name,
+        flipped=ind.flipped,
+        fixed=ind.fixed
         )
-        if self.config.docking_type_option == "Unbound":
-            self.scfxn.dock_pose.assign(self.starting_pose)
-        else:
-            self.scfxn.dock_pose.assign(self.best_pose)
-
+        self.scfxn.dock_pose.assign(self.best_pose)
         return result_individual, data["before"], data["after"]

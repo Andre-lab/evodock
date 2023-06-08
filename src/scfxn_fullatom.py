@@ -53,89 +53,69 @@ class FAFitnessFunction:
         mros_temp = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         self.mros, _ = to_rosetta(mros_temp, [0, 0, 0])
         self.syminfo = config.syminfo
-        self.normalize_score = config.normalize_score
         self.slide_attempts = None
-        self.setup_interface_score()
+        # self.setup_interface_score()
         self.local_search = LocalSearchPopulation(
             self, config.local_search_option, config, dockmetric
         )
 
-    def setup_interface_score(self):
-        self.in_vdw_score = ScoreFunctionFactory.create_score_function("empty")
-        scoretype = ScoreTypeManager().score_type_from_name("interchain_vdw")
-        self.in_vdw_score.set_weight(scoretype, 1.0)
+    # def setup_interface_score(self):
+    #     self.in_vdw_score = ScoreFunctionFactory.create_score_function("empty")
+    #     scoretype = ScoreTypeManager().score_type_from_name("interchain_vdw")
+    #     self.in_vdw_score.set_weight(scoretype, 1.0)
 
-    def slide_away(self, pose, rnd_trans_mag=500, max_attemps=50, min_vdw_score=0.05):
-        """Apply translations to the pose in order to move all chains out of the way of each other. To make sure the
-        chains are not in contact the interchain_vdw score is evaluated. If it is above the acceptable threshold an increase in the
-        translational magnitude it applied randomly to any of the translation dofs."""
-        direction = 1
-        self.slide_attempts = 1
-        if self.syminfo:
-            while self.slide_attempts <= max_attemps:
-                for jumpid, dofid, transmag in self.syminfo.normalize_trans_map:
-                    jump = pose.jump(jumpid)
-                    trans = get_translation(jump)
-                    trans[dofid - 1] += transmag * direction
-                    jump.set_translation(xyzVector_double_t(*trans))
-                    pose.set_jump(jumpid, jump)
-                vdw_score = self.in_vdw_score.score(pose)
-                if vdw_score > min_vdw_score:
-                    # reset jumps by sliding back
-                    self.slide_in(pose)
-                    # increase translation in the trans_map
-                    trans_map = random.choice(self.syminfo.normalize_trans_map)
-                    trans_map[-1] += rnd_trans_mag
-                    self.slide_attempts += 1
-                else:
-                    break
-        else:
-            raise NotImplementedError
+    # def slide_away(self, pose, rnd_trans_mag=500, max_attemps=50, min_vdw_score=0.05):
+    #     """Apply translations to the pose in order to move all chains out of the way of each other. To make sure the
+    #     chains are not in contact the interchain_vdw score is evaluated. If it is above the acceptable threshold an increase in the
+    #     translational magnitude it applied randomly to any of the translation dofs."""
+    #     direction = 1
+    #     self.slide_attempts = 1
+    #     if self.syminfo:
+    #         while self.slide_attempts <= max_attemps:
+    #             for jumpid, dofid, transmag in self.syminfo.normalize_trans_map:
+    #                 jump = pose.jump(jumpid)
+    #                 trans = get_translation(jump)
+    #                 trans[dofid - 1] += transmag * direction
+    #                 jump.set_translation(xyzVector_double_t(*trans))
+    #                 pose.set_jump(jumpid, jump)
+    #             vdw_score = self.in_vdw_score.score(pose)
+    #             if vdw_score > min_vdw_score:
+    #                 # reset jumps by sliding back
+    #                 self.slide_in(pose)
+    #                 # increase translation in the trans_map
+    #                 trans_map = random.choice(self.syminfo.normalize_trans_map)
+    #                 trans_map[-1] += rnd_trans_mag
+    #                 self.slide_attempts += 1
+    #             else:
+    #                 break
+    #     else:
+    #         raise NotImplementedError
 
-    def slide_in(self, pose):
-        """Apply translations to the pose in order to move all chains back to their original position. This functions is the same as
-        the slide_away function but without clash detection. """
-        direction = -1
-        if self.syminfo:
-            for jumpid, dofid, transmag in self.syminfo.normalize_trans_map:
-                jump = pose.jump(jumpid)
-                trans = get_translation(jump)
-                trans[dofid - 1] += transmag * direction
-                jump.set_translation(xyzVector_double_t(*trans))
-                pose.set_jump(jumpid, jump)
-        else:
-            raise NotImplementedError
+    # def slide_in(self, pose):
+    #     """Apply translations to the pose in order to move all chains back to their original position. This functions is the same as
+    #     the slide_away function but without clash detection. """
+    #     direction = -1
+    #     if self.syminfo:
+    #         for jumpid, dofid, transmag in self.syminfo.normalize_trans_map:
+    #             jump = pose.jump(jumpid)
+    #             trans = get_translation(jump)
+    #             trans[dofid - 1] += transmag * direction
+    #             jump.set_translation(xyzVector_double_t(*trans))
+    #             pose.set_jump(jumpid, jump)
+    #     else:
+    #         raise NotImplementedError
 
-    def reset_trans_map(self):
-        """resets the normalize_trans_map to its original value"""
-        self.syminfo.normalize_trans_map = copy.deepcopy(self.syminfo.org_normalize_trans_map)
+    # def reset_trans_map(self):
+    #     """resets the normalize_trans_map to its original value"""
+    #     self.syminfo.normalize_trans_map = copy.deepcopy(self.syminfo.org_normalize_trans_map)
 
-    def score(self, pose, ind: Individual):
-        """Scores the pose and if normalize_scores is set it will normalize scores accordingly."""
-        if self.normalize_score:
-            raise NotImplementedError # FIXME: implement properly or delete
-            # if self.syminfo:
-            #     self.slide_away(pose)
-            #     monomeric_score = self.scfxn_rosetta.score(pose)
-            #     if monomeric_score > 0:
-            #         from pyrosetta.rosetta.protocols.minimization_packing import RotamerTrialsMover, MinMover, PackRotamersMover
-            #         from src.symmetry import SymDockMCMCycle
-            #         tf = SymDockMCMCycle.create_taskfactory(self.native_pose)
-            #         packer = PackRotamersMover(self.scfxn_rosetta)
-            #         packer.task_factory(tf)
-            #         packer.apply(pose)
-            #     self.slide_in(pose)
-            #     multimeric_score = self.scfxn_rosetta.score(pose)
-            #     self.reset_trans_map()
-            #     return multimeric_score - monomeric_score
-            # else:
-            #     raise NotImplementedError
-        else:
-            return self.scfxn_rosetta.score(pose)
+    def score(self, pose):
+        """Scores the pose"""""
+        return self.scfxn_rosetta.score(pose)
 
-    def get_rmsd(self, pose):
-        rmsd = self.dockmetric.ca_rmsd()
-        return rmsd
+    # def get_rmsd(self, pose):
+    #     rmsd = self.dockmetric.ca_rmsd()
+    #     return rmsd
 
     def size(self):
         return self.converter.size
@@ -168,9 +148,8 @@ class FAFitnessFunction:
         ind_pose.assign(self.dock_pose)
         if is_symmetric(ind_pose):
             dofsvector = iter(DoFs_vector)
-            for jump, dofs in zip(self.syminfo.jumps_int, self.syminfo.dofs_int):
-                for dof in dofs:
-                    set_jumpdof_int_int(ind_pose, jump, dof, next(dofsvector))
+            for jump, dof in zip(self.syminfo.dof_spec.jump_int, self.syminfo.dof_spec.dof_int):
+                set_jumpdof_int_int(ind_pose, jump, dof, next(dofsvector))
         else:
             # TODO: dont want to add self.jump_num instead of ind_pose.num_jump() ?
             euler = np.asarray(DoFs_vector[0:3])
@@ -186,7 +165,7 @@ class FAFitnessFunction:
         pose = individual.pose
         dst = self.scfxn_rosetta.score(pose)
         interface = self.dockmetric.interaction_energy(pose)
-        irms = self.dockmetric.i_rmsd(pose)
+        irms = self.dockmetric.interface_rmsd(pose)
         if np.isnan(dst):
             dst = 10000
         prot_name = "popul" if is_best is None else is_best
@@ -195,15 +174,15 @@ class FAFitnessFunction:
         rmsd = self.dockmetric.ca_rmsd(pose)
         return dst, rmsd, interface, irms
 
-    def render_models(self, pdb_id, genotype, is_best=None, interface=False):
-        pose = self.apply_genotype_to_pose(genotype)
-        dst = self.scfxn_rosetta.score(pose)
-        interface = self.dockmetric.interaction_energy(pose)
-        irms = self.dockmetric.i_rmsd(pose)
-        if np.isnan(dst):
-            dst = 10000
-        prot_name = "popul" if is_best is None else is_best
-        pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
-        # self.pymover.apply(pose)
-        rmsd = self.dockmetric.ca_rmsd(pose)
-        return dst, rmsd, interface, irms
+    # def render_models(self, pdb_id, genotype, is_best=None, interface=False):
+    #     pose = self.apply_genotype_to_pose(genotype)
+    #     dst = self.scfxn_rosetta.score(pose)
+    #     interface = self.dockmetric.interaction_energy(pose)
+    #     irms = self.dockmetric.i_rmsd(pose)
+    #     if np.isnan(dst):
+    #         dst = 10000
+    #     prot_name = "popul" if is_best is None else is_best
+    #     pose.pdb_info().name(prot_name + "_pose_" + str(pdb_id))
+    #     # self.pymover.apply(pose)
+    #     rmsd = self.dockmetric.ca_rmsd(pose)
+    #     return dst, rmsd, interface, irms
