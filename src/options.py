@@ -5,21 +5,9 @@ import numpy as np
 
 
 def build_rosetta_flags(config):
-    # if config.docking_type_option in ["Local", "Flexbb", "Refine"]:
-    #     raise NotImplementedError("Shouldnt use this. Need to be refactored!!")
-    #     return init_local_docking(config.pose_input, config.syminfo, config.seed)
-    # else:
-    return init_global_docking(config.pose_input, config.syminfo, config.seed)
-
-def add_syminfo_to_init(syminfo: dict = None):
-    #         "-unmute protocols.simple_moves_symmetry.SymDockingInitialPerturbation",
-    #         "-out:file:output_pose_energies_table false", # FIXME bypasses this error: Energies::residue_total_energies( int const seqpos ): variable seqpos is out of range!
-    if syminfo is not None and syminfo.initialize_rigid_body_dofs:
-        return " -initialize_rigid_body_dofs 1 "
-    else:
-        return ""
-
-def init_global_docking(filename, syminfo: dict = None, seed:int=None):
+    filename = config.pose_input
+    seed = config.seed
+    # add fixed options
     opts = [
         "-mute all",
         "-docking:dock_mcm_first_cycles 1",
@@ -31,13 +19,18 @@ def init_global_docking(filename, syminfo: dict = None, seed:int=None):
         "-extrachi_cutoff 1",
         "-unboundrot {}".format(filename),
     ]
+    # add additional_rosetta_options
+    if config.rosetta_options is not None:
+        for k,v in config.rosetta_options:
+            opts.append(f"-{k} {v}")
+    # add seed if set
     if seed:
         if len(str(seed)) > 10:
             exit("Seed is to High. Use 10 or less digits.")
         opts += ["-run:constant_seed", f"-run:jran {seed}"]
         random.seed(seed)
         np.random.seed(seed)
-    return " ".join(opts) + add_syminfo_to_init(syminfo)
+    return " ".join(opts)
 
 
 # def init_local_docking(filename, syminfo: dict = None):

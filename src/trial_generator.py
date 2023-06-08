@@ -44,7 +44,6 @@ class TrialGenerator:
         trial, _, _ = self.local_search.process_individual(ind)
         return trial
 
-
 class FlexbbTrialGenerator(TrialGenerator):
     def __init__(self, config, local_search):
         self.mutation = config.mutate
@@ -58,7 +57,8 @@ class FlexbbTrialGenerator(TrialGenerator):
         v_trial = self.recombine(j, population, v_donor)
         idx_receptor, idx_ligand, idx_subunit = population[j].idx_receptor, population[j].idx_ligand, population[j].idx_subunit
         receptor_name, ligand_name, subunit_name = population[j].receptor_name, population[j].ligand_name, population[j].subunit_name
-        ind = make_trial(j, v_trial, idx_ligand, idx_receptor, idx_subunit,  receptor_name, ligand_name, subunit_name )
+        flipped, fixed = population[j].flipped, population[j].fixed
+        ind = make_trial(j, v_trial, idx_ligand, idx_receptor, idx_subunit,  receptor_name, ligand_name, subunit_name, flipped, fixed)
         individual_is_within_bounds(self.local_search.config, self.local_search.scfxn, ind)
         trial, _, _ = self.local_search.process_individual(ind)
         return trial

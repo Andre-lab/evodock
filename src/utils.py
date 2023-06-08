@@ -1,36 +1,31 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-
 import numpy as np
 from pyrosetta import Pose, pose_from_file, Vector1
+from pyrosetta.rosetta.basic.datacache import CacheableStringMap
+from pyrosetta.rosetta.core.pose.datacache import CacheableDataType
 from scipy.spatial.transform import Rotation as R
 from src.individual import Individual
 from src.pdb_structure import pdbstructure_from_file
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
-from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, jump_num_sym_dof
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from pyrosetta.rosetta.core.kinematics import FoldTree
 from pyrosetta.rosetta.core.pose import chain_end_res
-from pyrosetta.rosetta.protocols.docking import setup_foldtree
-import copy
-from symmetryhandler.kinematics import get_jumpdof_str_int, get_dofs
+from pathlib import Path
+from symmetryhandler.reference_kinematics import set_jumpdof_str_str
+from cubicsym.utilities import get_jumpidentifier
+from cubicsym.utilities import get_base_from_pose, add_id_to_pose_w_base
+from cubicsym.actors.symdefswapper import SymDefSwapper
 
-
-
-
-# def get_symmetric_genotype_str(pose: Pose) -> str:
-#     """Gets which symdofs are present in the genotype and in the order as they are in the genotype."""
-#     symdofs = pose.conformation().Symmetry_Info().get_dofs()
-#     symmetric_genotype = []
-#     for jump_id, symdof in symdofs.items():
-#         jump_str = jump_num_sym_dof(pose, jump_id)
-#         for dof in range(1, 7):
-#             if symdof.allow_dof(dof):
-#                 symmetric_genotype.append(f"{jump_str}:{inttodofstr[dof]}")
-#     return " ".join(symmetric_genotype)
+def set_init_x(pose, config):
+    """Sets the initial x for the input pose if an x_transfile is given in the config file"""
+    xf = config.syminfo.x_transfile
+    if xf is not None:
+        init_x = xf[xf["model"] == Path(config.pose_input).name]["x_trans"].values[0]
+        set_jumpdof_str_str(pose, f"JUMP{get_jumpidentifier(pose)}fold111", "x", init_x)
 
 def initialize_starting_poses(config):
+    """Initialize the starting poses."""
     native = Pose()
     pose_from_file(native, config.native_input)
     input_pose = Pose()
@@ -39,10 +34,21 @@ def initialize_starting_poses(config):
     input_pose.conformation().detect_disulfides()
     native_symmetric = None
     if config.syminfo:
-        native_symmetric = pose_from_file(config.native_symmetric_input)
+        native_symmetric = pose_from_file(config.syminfo.native_symmetric_input)
         native_symmetric.conformation().detect_disulfides()
         SetupForSymmetryMover(config.syminfo.input_symdef).apply(input_pose)
         SetupForSymmetryMover(config.syminfo.native_symdef).apply(native_symmetric)
+        # symmetrize the native so that it is the same base
+        base = get_base_from_pose(input_pose)
+        if base != "HF":
+            sds = SymDefSwapper(native_symmetric, config.syminfo.native_symdef)
+            if base == "3F":
+                native_symmetric = sds.create_3fold_pose(native_symmetric)
+            elif base == "2F":
+                native_symmetric = sds.create_2fold_pose(native_symmetric)
+            else:
+                raise ValueError
+        set_init_x(input_pose, config)
         config.syminfo.store_info_from_pose(input_pose) # setup cubic boundaries
     else:
         mres = chain_end_res(input_pose, 1)
@@ -195,7 +201,7 @@ def set_new_max_translations(scfxn, popul):
     return popul
 
 
-def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1, receptor_name="", ligand_name="", subunit_name=""):
+def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1, receptor_name="", ligand_name="", subunit_name="", flipped=None, fixed=None):
     return Individual(idx, genotype, score=1000, idx_ligand=ligand, idx_receptor=receptor, idx_subunit=subunit, rmsd=0, i_sc=0, irms=0,
-        receptor_name=receptor_name, ligand_name=ligand_name, subunit_name=subunit_name)
+        receptor_name=receptor_name, ligand_name=ligand_name, subunit_name=subunit_name, flipped=flipped, fixed=fixed)
 

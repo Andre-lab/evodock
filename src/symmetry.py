@@ -19,6 +19,7 @@ TODO: if one want to constrain the RigidBodyDofAdaptive in the future - one have
 @Date: 6/30/21
 """
 import math
+from copy import deepcopy
 import time
 import os
 import copy
@@ -42,14 +43,18 @@ from pyrosetta.rosetta.core.select.movemap import MoveMapFactory, move_map_actio
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from cubicsym.actors.cubicboundary import CubicBoundary
 from cubicsym.cubicsetup import CubicSetup
-from cubicsym.cubicdofs import CubicDofs
-from cubicsym.kinematics import default_dofs, default_dofs_with_cubic_limits
+from cubicsym.dofspec import DofSpec
+from cubicsym.kinematics import default_HF_dofs, default_HF_dofs_with_cubic_limits
 from cloudcontactscore.cloudcontactscore import CloudContactScore
 from cubicsym.actors.common_movers import TrialMover, JumpOutMover, SequenceMover, CycleMover
 # from pyrosetta.rosetta.protocols.moves import MonteCarlo, CycleMover, TrialMover, SequenceMover, JumpOutMover, CycleMover
 from cubicsym.actors.boundedminmover import BoundedMinMover
 import numpy as np
 from cubicsym.cubicmontecarlo import CubicMonteCarlo
+from cloudcontactscore.cloudcontactscorecontainer import CloudContactScoreContainer
+from pyrosetta.rosetta.basic.datacache import CacheableStringMap
+from pyrosetta.rosetta.basic.datacache import CacheableStringFloatMap
+from pyrosetta.rosetta.core.pose.datacache import CacheableDataType
 
 def individual_is_within_bounds(config, fitnessfunc, ind):
     pose = fitnessfunc.apply_genotype_to_pose(ind.genotype)
@@ -95,17 +100,54 @@ class SymShapeDock:
         self.config = config
         self.scfxn = fafitnessfunc.scfxn_rosetta
         self.dock_attempts = dock_attempts
-        self.ccs = CloudContactScore(pose=fafitnessfunc.dock_pose, symdef=config.syminfo.input_symdef,
-                                     use_atoms_beyond_CB=False, use_neighbour_ss=False)
+        self.ccsc = self.config.syminfo.ccsc
+
+        #self.idx_to_ccs, self.idx_to_cmc = None, None
+        # # if running the same backbone all the time we only need 1 CloudContactScore/CubicMonteCarlo, else we need one for each backbone.
+        # # if using multiple backbones we construct the CloudContactScore during apply
+        # if config.flexbb:
+        #     self.ccs, self.cmc = None, None
+        #     self.idx_to_ccs, self.idx_to_cmc = {}, {}
+        # else:
+        #     self.set_ccs_and_cmc(fafitnessfunc.dock_pose)
+
         self.tf = self.create_taskfactory(fafitnessfunc.dock_pose)
         self.mc = MonteCarlo(self.scfxn, 0.8) # by NOT init pose here we have to set it later
         self.minmover = BoundedMinMover(self.config.syminfo.cubicboundary, self.scfxn)
         self.trial_minmover = TrialMover(self.minmover, self.mc)
         self.packer = self.create_packrotamers()
         self.trial_packer = TrialMover(self.packer, self.mc)
-        # self.rb_mover = self.config.syminfo.cubicboundary.construct_rigidbody_mover(fafitnessfunc.dock_pose)
         self.trial_pack_and_mc_min = self.construct_pack_and_mc_min(fafitnessfunc.dock_pose)
-        self.cmc = CubicMonteCarlo(scorefunction=self.ccs, cubicdofs=self.config.syminfo.cubicdofs)
+
+    # def construct_ccs_and_cmc(self, pose):
+    #     ccs = CloudContactScore(pose=pose, symdef=self.config.syminfo.input_symdef,
+    #                                  use_atoms_beyond_CB=False, use_neighbour_ss=False)
+    #     cmc = CubicMonteCarlo(scorefunction=ccs, cubicdofs=self.config.syminfo.cubicdofs)
+    #     return ccs, cmc
+    #
+    # def set_ccs_and_cmc(self, pose):
+    #     # get idx_subunit if present in the pose
+    #     if pose.data().has(CacheableDataType.ARBITRARY_STRING_DATA):
+    #         assert self.config.flexbb is True
+    #         stringmap = pose.data().get_ptr(CacheableDataType.ARBITRARY_STRING_DATA)
+    #         idx_subunit = stringmap.map()["idx_subunit"] # Must be defined in this case!
+    #     else:
+    #         assert self.config.flexbb is False
+    #         idx_subunit = None
+    #     # if no idx_subunit is defined, then construct from new
+    #     if idx_subunit is None:
+    #         self.ccs, self.cmc = self.construct_ccs_and_cmc(pose)
+    #     else:
+    #         # if idx_subunit is defined, then check if it has already been created.
+    #         # if it has, then return them, if not, construct them and save them.
+    #         if idx_subunit in self.idx_to_ccs:
+    #             self.ccs = self.idx_to_ccs[idx_subunit]
+    #             self.cmc = self.idx_to_cmc[idx_subunit]
+    #         else:
+    #             print(f"Constructing ccs and cmc for {idx_subunit}")
+    #             self.ccs, self.cmc = self.construct_ccs_and_cmc(pose)
+    #             self.idx_to_ccs[idx_subunit] = self.ccs
+    #             self.idx_to_cmc[idx_subunit] = self.cmc
 
     @staticmethod
     def create_taskfactory(pose, cb_dist_cutoff: int = 10.0, nearby_atom_cutoff: int = 5.5,
@@ -176,7 +218,7 @@ class SymShapeDock:
     def reset(self, pose):
         """Resets certain objects. Important before any moves are done!"""
         self.mc.reset(pose) # reset montecarlo
-        self.cmc.reset(pose) # reset cubicmontecarlo
+        self.ccsc.cmc.reset(pose) # reset cubicmontecarlo
         # self.rb_mover.reset_pose(pose)  # records the initial placement of the pose. Used to perturb the dofs.
         # self.rb_mover.reset()  # resets the params to the initial values
         self.rb_mover = self.config.syminfo.cubicboundary.construct_rigidbody_mover(pose)
@@ -197,6 +239,8 @@ class SymShapeDock:
         # return score
 
     def apply(self, pose):
+        # set the correct ccs and cmc
+        self.ccsc.set_ccs_and_cmc(pose)
         self.set_constraints(pose)
         self.reset(pose)
         # -- 1: initial pack --
@@ -221,8 +265,8 @@ class SymShapeDock:
     def inner_protocol(self, pose):
         for it in range(self.dock_attempts):
             self.rb_mover.apply(pose)
-            self.cmc.apply(pose)
-        self.cmc.recover_lowest_scored_pose(pose)
+            self.ccsc.cmc.apply(pose)
+        self.ccsc.cmc.recover_lowest_scored_pose(pose)
 
     # def inner_protocol(self, pose):
     #     got_0_clashes, n_applies = False, 0
@@ -474,8 +518,8 @@ class SymDockMCMProtocol:
         self.rt_min = False
         self.config = config
         # todo: has to be changed for flexbb
-        assert config.docking_type_option == "Local"
-        self.ccs = CloudContactScore(fafitnessfunc.dock_pose, config.syminfo.input_symdef)
+        assert config.flexbb is False
+        self.ccs = CloudContactScore(pose=fafitnessfunc.dock_pose, symdef=config.syminfo.input_symdef)
 
         # todo: delete this:
         self.initial_pack_time = []
@@ -541,7 +585,7 @@ class SymDockMCMProtocol:
 
 class DockNRelaxProtocol:
 
-    def __init__(self, pose, config,  dofspecification: dict = default_dofs):
+    def __init__(self, pose, config, dofspecification: dict = default_HF_dofs):
         self.min_option_bb = config.min_option_bb
         self.min_option_sc = config.min_option_sc
         self.tf = self.create_taskfactory(pose)
@@ -663,7 +707,7 @@ class DockNRelaxProtocol:
 class SymInfo:
     """Class for storing and accessing symmetrical information"""
 
-    def __init__(self, pose=None, config=None):
+    def __init__(self):
         """Initialize object"""
         self.input_symdef = None
         self.native_symdef = None
@@ -680,74 +724,56 @@ class SymInfo:
         self.jumps_int = None
         self.dofs_int = None
         self.initial_placement = None
-        if pose:
-            self.store_info_from_pose(pose)
-        if config:
-            self.store_info_from_config(config)
+        self.ccsc = None
+        self.bound_penalty = None
+        # if pose:
+        #     self.store_info_from_pose(pose)
+        # if config:
+        #     self.store_info_from_config(config)
 
     def get_position_info(self, pose: Pose) -> list:
-        return self.cubicdofs.get_positions_as_list(pose)
+        return self.dof_spec.get_positions_as_list(pose)
 
-    def store_info_from_config(self, config):
-        assert config.has_option("Symmetry", "input_symdef_file")
-        self.input_symdef = os.getcwd() + config.get("Symmetry", "input_symdef_file")
-        self.native_symdef = os.getcwd() + config.get("Symmetry", "native_symdef_file")
-        if config.has_option("Symmetry", "symdofs"):
-            self.jumps_str = [i.split(":")[0] for i in config.get("Symmetry", "symdofs").split(",")]
-            self.dofs_str = [i.split(":")[1:] for i in config.get("Symmetry", "symdofs").split(",")]
-            bounds = iter([i for i in config.get("Symmetry", "bounds").split(",")])
-            # for nicer mapping we have to map the bounds the same ways as the dofs
-            self.bounds = [list(islice(bounds, l)) for l in [len(i) for i in self.dofs_str]]
-            self.genotype_size = config.get("Symmetry", "symdofs").count(":")
-            assert len(self.jumps_str) == len(self.dofs_str)
-            assert len(self.jumps_str) == len(self.dofs_str)
-        else:  # apply defaults
-            raise NotImplementedError
-        if config.has_option("Symmetry", "init"):
-            init_bounds = iter([i for i in config.get("Symmetry", "init").split(",")])
-            init_bounds = [list(islice(init_bounds, l)) for l in [len(i) for i in self.dofs_str]]
-            self.init_bounds = [(-l, l) for l in [float(i[0]) / float(b[0]) for b, i in zip(self.bounds, init_bounds)]]
-        else:
-            self.init_bounds = None
-        if config.has_option("Symmetry", "initialize_rigid_body_dofs"):
-            self.initialize_rigid_body_dofs = config.getboolean("Symmetry", "initialize_rigid_body_dofs")
-        else:
-            raise NotImplementedError
-        self.normalize_trans = [int(i) for i in config.get("Symmetry", "normalize_trans", fallback="2000,1000").split(",")]
-        self.cubic_limits = config.getboolean("Symmetry", "cubic_limits", fallback=False)
-        self.bound_penalty = config.getfloat("Symmetry", "bound_penalty", fallback=1)
+    # def store_info_from_config(self, config):
+    #     assert config.has_option("Inputs", "symdef_file")
+    #     # self.input_symdef = os.getcwd() + config.get("Inputs", "symdef_file")
+    #     #self.native_symdef = os.getcwd() + config.get("Native", "symdef_file")
+    #     if config.has_option("Bounds", "symdofs"):
+    #         self.jumps_str = [i.split(":")[0] for i in config.get("Bounds", "symdofs").split(",")]
+    #         self.dofs_str = [i.split(":")[1:] for i in config.get("Bounds", "symdofs").split(",")]
+    #         bounds = iter([i for i in config.get("Bounds", "bounds").split(",")])
+    #         # for nicer mapping we have to map the bounds the same ways as the dofs
+    #         self.bounds = [list(islice(bounds, l)) for l in [len(i) for i in self.dofs_str]]
+    #         self.genotype_size = config.get("Bounds", "symdofs").count(":")
+    #         assert len(self.jumps_str) == len(self.dofs_str)
+    #         assert len(self.jumps_str) == len(self.dofs_str)
+    #     else:  # apply defaults
+    #         raise NotImplementedError
+    #     if config.has_option("Bounds", "init"):
+    #         init_bounds = iter([i for i in config.get("Bounds", "init").split(",")])
+    #         init_bounds = [list(islice(init_bounds, l)) for l in [len(i) for i in self.dofs_str]]
+    #         self.init_bounds = [(-l, l) for l in [float(i[0]) / float(b[0]) for b, i in zip(self.bounds, init_bounds)]]
+    #     else:
+    #         self.init_bounds = None
+    #     self.normalize_trans = [int(i) for i in config.get("Bounds", "normalize_trans", fallback="2000,1000").split(",")]
+    #     self.bound_penalty = config.getfloat("Bounds", "bound_penalty", fallback=1)
+
 
     def store_info_from_pose(self, pose):
-        dofspec = self.__create_dof_specification()
-        self.cubicboundary = CubicBoundary(self.input_symdef, pose_at_initial_position=pose, dofspecification=dofspec,
-                                           sd=self.bound_penalty)
-        self.cubicdofs = CubicDofs(pose, dofspec)
-        self.jumps_int = [d[0] for d in self.cubicdofs.doforder_int]
-        self.dofs_int = [[d[1]] for d in self.cubicdofs.doforder_int]
-        self.initial_placement = self.cubicdofs.get_positions_as_list(pose)
-        self.__map_normalize_trans_to_jumpdofs()
+        """Store symmetry information from pose."""
+        self.dof_spec = DofSpec(pose)
+        self.dof_spec.set_symmetrical_bounds(self.bounds)
+        self.genotype_size = self.dof_spec.dofsize
+        assert self.bound_penalty is not None
+        self.cubicboundary = CubicBoundary(self.input_symdef, pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
+        self.initial_placement = self.dof_spec.get_positions_as_list(pose)
+        self._map_normalize_trans_to_jumpdofs()
 
-    def __create_dof_specification(self):
-        dofspecification = {}
-        for jump_name, dof_names, bounds in zip(self.jumps_str, self.dofs_str, self.bounds):
-            dofspecification[jump_name] = {}
-            for dof_name, bound in zip(dof_names, bounds):
-                dofspecification[jump_name][dof_name] = {
-                    "limit_movement": True,
-                    "min": - float(bound),
-                    "max":   float(bound)
-                }
-        return dofspecification
-
-    def __map_normalize_trans_to_jumpdofs(self) -> None:
+    def _map_normalize_trans_to_jumpdofs(self) -> None:
         if self.normalize_trans:
-            trans = self.normalize_trans
+            trans = deepcopy(self.normalize_trans)
             self.normalize_trans_map = []
-            # first find the translational dofs
-            for jump_int, dof_str, dof_int in zip(self.jumps_int, self.dofs_str, self.dofs_int):
-                # jumpid, dofid, transmag
-                for dof_s, dof_i in zip(dof_str, dof_int):
-                    if not "angle" in dof_s:
-                        transmag = trans.pop(0)
-                        self.normalize_trans_map.append([jump_int, dof_i, transmag])
+            for jump_int, dof_int in self.dof_spec.get_translational_dofs_int():
+                transmag = trans.pop(0)
+                self.normalize_trans_map.append([jump_int, dof_int, transmag])
             self.org_normalize_trans_map = copy.deepcopy(self.normalize_trans_map)

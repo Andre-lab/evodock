@@ -15,8 +15,8 @@ from src.utils import convert_range, get_pose_from_file, get_position_info
 
 from pyrosetta.rosetta.protocols.toolbox import CA_superimpose
 from cubicsym.cubicsetup import CubicSetup
-from symmetryhandler.kinematics import get_jumpdof_str_str
-from symmetryhandler.kinematics import get_dofs
+from symmetryhandler.reference_kinematics import get_jumpdof_str_str
+from symmetryhandler.reference_kinematics import get_dofs
 from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, jump_num_sym_dof
 
 class RefineCluspro:
@@ -62,9 +62,10 @@ def generate_genotype(pose_input, max_trans):
     return genotype
 
 class GlobalGenotypeConverter:
-    def __init__(self, native_pose, max_trans=70, syminfo: dict = None):
-        if is_symmetric(native_pose):
-            self.bounds = self.define_symmetric_bounds(native_pose, syminfo)
+    def __init__(self, dock_pose, max_trans=70, syminfo: dict = None):
+        if is_symmetric(dock_pose):
+            assert syminfo is not None
+            self.bounds = self.define_symmetric_bounds(syminfo)
         else:
             self.max_rot = 180
             mtrans = max_trans
@@ -78,12 +79,11 @@ class GlobalGenotypeConverter:
     # For global docking: Set the bounds very high with and with -initialize_rigid_body_dof, with it give the starting
     #   position to be that including the bounds you give it.
     # if you dont parse -initialize_rigid_body_dof the native_val will be 0, otherwise the value set in the symdef file.
-    def define_symmetric_bounds(self, native_pose, syminfo):
+    def define_symmetric_bounds(self, syminfo):
         """Define symmetrical bounds."""
         bounds = []
-        for jump, dofs, parsed_bounds in zip(syminfo.jumps_str, syminfo.dofs_str, syminfo.bounds):
-            for dof, bound in zip(dofs, parsed_bounds):
-                bounds.append(syminfo.cubicboundary.get_boundary(jump, dof))
+        for jump, dof, bound in zip(syminfo.dof_spec.jump_str, syminfo.dof_spec.dof_str, syminfo.bounds):
+            bounds.append(syminfo.cubicboundary.get_boundary(jump, dof))
         return bounds
 
     def define_bounds(self):
@@ -118,10 +118,10 @@ class GlobalGenotypeConverter:
 
 
 class LocalGenotypeConverter(GlobalGenotypeConverter):
-    def __init__(self, native_pose):
+    def __init__(self, dock_pose):
         self.max_rot = [0.01, 0.01, 0.01]
         self.max_trans = [0.01, 0.01, 0.01]
-        self.pose = native_pose
+        self.pose = dock_pose
         self.bounds = self.define_bounds()
         print("Local Genotype is legacy code")
         exit()

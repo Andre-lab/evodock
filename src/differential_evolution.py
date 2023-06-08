@@ -14,7 +14,7 @@ from src.trial_generator import (
     TriangularGenerator,
     FlexbbTrialGenerator,
 )
-from src.initialize_population import InitializePopulationBuilder
+from src.initialize_population import InitializePopulation
 from src.utils import make_trial, get_position_info
 from src.landscape_metrics import fitness_distance_correlation
 
@@ -39,34 +39,27 @@ class DifferentialEvolutionAlgorithm:
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
             config, fitness_function, self.scfxn.dockmetric,
         ).build()
-
         if self.config.syminfo:
             self.optimal_solution = get_position_info(fitness_function.native_symmetric_pose, self.config.syminfo)
         else:
             self.optimal_solution = get_position_info(fitness_function.native_pose, self.config.syminfo)
-        # trial_score_config = config
-        # trial_score_config.docking_type_option = "Global"
-        # self.scfxn = FAFitnessFunction(
-        #     self.scfxn.input_pose, self.scfxn.native_pose, trial_score_config
-        # )
-
         self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
 
     def init_population(self):
-        self.population = InitializePopulationBuilder().run(self)
+        self.population = InitializePopulation(self.config, self.logger, self.popul_calculator, self.scfxn).init_population()
 
     def init_file(self):
         # header = f"# CONF: maxiter : {self.maxiter}, np : {self.popsize}, f {self.mutate}, cr {self.recombination}\n"
         with open(self.job_id, "w") as file_object:
             file_object.write("gen,avg,best,rmsd_from_best,fdc\n")
         with open(self.file_time_name, "w") as file_time:
-            file_time.write("generation_seconds\n")
+            file_time.write("gen,generation_seconds\n")
 
     def main(self):
         self.logger.info(" DE")
-        self.popul_calculator.print_information(self.population)
-        self.popul_calculator.render_all(self.population)
+        self.popul_calculator.print_information(self.population, "init")
+        self.popul_calculator.print_genotype_values(self.population, "init")
         for generation in range(1, self.maxiter + 1):
             self.generation = generation
             self.logger.info(f" GENERATION: {self.generation}")
@@ -84,7 +77,7 @@ class DifferentialEvolutionAlgorithm:
             self.selection(trials)
 
             # --- SCORE KEEPING --------------------------------+
-            self.score_keeping(generation)
+            self.score_keeping()
 
         return self.best_pdb
 
@@ -103,7 +96,7 @@ class DifferentialEvolutionAlgorithm:
 
     def selection(self, trials):
         trial_inds = trials
-        self.popul_calculator.print_information(trial_inds, True)
+        self.popul_calculator.print_information(trial_inds, self.generation, True)
         # self.popul_calculator.pymol_visualization(trial_inds)
 
         self.previous_gen_scores = self.gen_scores
@@ -113,7 +106,7 @@ class DifferentialEvolutionAlgorithm:
             self.trial_scores,
         ) = GreedySelection().apply(trial_inds, self.population, self.config.selection)
 
-    def score_keeping(self, generation):
+    def score_keeping(self):
         self.gen_avg = sum(self.gen_scores) / self.popsize
         self.gen_best = min(self.gen_scores)
         self.trial_avg = sum(self.trial_scores) / self.popsize
@@ -129,7 +122,7 @@ class DifferentialEvolutionAlgorithm:
             best_rmsd,
         ) = self.popul_calculator.render_best(self.generation, gen_sol, self.population)
 
-        self.popul_calculator.render_all(self.population)
+        self.popul_calculator.print_genotype_values(self.population, self.generation)
 
         best_sol_str = self.popul_calculator.get_sol_string(best_SixD_vector)
         improved = np.array(
@@ -142,10 +135,10 @@ class DifferentialEvolutionAlgorithm:
         )
 
         self.logger.info(f"   > BEST SOL: {best_sol_str}")
-        self.popul_calculator.print_information(self.population)
+        self.popul_calculator.print_information(self.population, self.generation)
 
         # print ensemble names
-        self.popul_calculator.print_ensembles(self.population)
+        self.popul_calculator.print_ensembles(self.population, self.generation)
 
         # self.popul_calculator.pymol_visualization(self.population)
 
@@ -153,7 +146,7 @@ class DifferentialEvolutionAlgorithm:
             name = self.config.out_path + "/evolved.pdb"
             self.best_pdb.dump_pdb(name)
         if self.config.output_pdb_per_generation:
-            name = self.config.out_path + f"/evolved_{generation}.pdb"
+            name = self.config.out_path + f"/evolved_{self.generation}.pdb"
             self.best_pdb.dump_pdb(name)
 
         fdc = fitness_distance_correlation(
@@ -168,7 +161,7 @@ class DifferentialEvolutionAlgorithm:
 
         file_time = open(self.file_time_name, "a")
         self.logger.info(f"selection stage in {gen_end - self.gen_start:.2f} s.")
-        file_time.write(f"{gen_end - self.gen_start:.2f}\n")
+        file_time.write(f"{self.generation},{gen_end - self.gen_start:.2f}\n")
         file_time.close()
 
     def apply_popul_flexbb(self, population):
@@ -191,15 +184,19 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
 
     def main(self):
         self.logger.info(" DE")
-        self.popul_calculator.print_information(self.population)
-        self.popul_calculator.print_ensembles(self.population)
-        self.popul_calculator.render_all(self.population)
+        self.popul_calculator.print_information(self.population, gen="init")
+        self.popul_calculator.print_ensembles(self.population, gen="init")
+        self.popul_calculator.print_flip_fix_info(self.population)
+        self.popul_calculator.print_genotype_values(self.population, gen="init")
         self.archive_restart = [0] * self.popsize
         for generation in range(1, self.maxiter + 1):
             self.generation = generation
             self.logger.info(f" GENERATION: {self.generation}")
             self.gen_start = time.time()
-            self.gen_scores = [ind.score for ind in self.population]
+            if self.config.selection == "total":
+                self.gen_scores = [ind.score for ind in self.population]
+            else:
+                self.gen_scores = [ind.i_sc for ind in self.population]
             # cycle through each individual in the population
 
             # --- TRIAL CREATION (step #3.A) -------------+
@@ -209,12 +206,10 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
             self.selection(trials)
 
             # --- Apply Flexbb search ---- #
-            self.best_pdb, self.population = self.flexbb_swap_operator.apply(
-                self.population
-            )
+            self.best_pdb, self.population = self.flexbb_swap_operator.apply(self.population, self.generation)
 
             # --- SCORE KEEPING --------------------------------+
-            self.score_keeping(generation)
+            self.score_keeping()
 
         return self.best_pdb
 
@@ -238,7 +233,7 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
 
     def main(self):
         self.logger.info(" DE")
-        self.popul_calculator.print_information(self.population)
+        self.popul_calculator.print_information(self.population, None)
         self.archive_restart = [0] * self.popsize
         for generation in range(1, self.maxiter + 1):
             self.generation = generation
@@ -279,7 +274,7 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
 #         return population
 # =======
             # --- SCORE KEEPING --------------------------------+
-            self.score_keeping(generation)
+            self.score_keeping()
 
         return self.best_pdb
 
