@@ -1,45 +1,74 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-
 import numpy as np
 from pyrosetta import Pose, pose_from_file, Vector1
+from pyrosetta.rosetta.basic.datacache import CacheableStringMap
+from pyrosetta.rosetta.core.pose.datacache import CacheableDataType
 from scipy.spatial.transform import Rotation as R
 from src.individual import Individual
 from src.pdb_structure import pdbstructure_from_file
+from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from pyrosetta.rosetta.core.kinematics import FoldTree
 from pyrosetta.rosetta.core.pose import chain_end_res
-from pyrosetta.rosetta.protocols.docking import setup_foldtree
+from pathlib import Path
+from symmetryhandler.reference_kinematics import set_jumpdof_str_str
+from cubicsym.utilities import get_jumpidentifier
+from cubicsym.utilities import get_base_from_pose, add_id_to_pose_w_base
+from cubicsym.actors.symdefswapper import SymDefSwapper
 
-IP_ADDRESS = "10.8.0.6"
+def set_init_x(pose, config):
+    """Sets the initial x for the input pose if an x_transfile is given in the config file"""
+    xf = config.syminfo.x_transfile
+    if xf is not None:
+        init_x = xf[xf["model"] == Path(config.pose_input).name]["x_trans"].values[0]
+        set_jumpdof_str_str(pose, f"JUMP{get_jumpidentifier(pose)}fold111", "x", init_x)
 
-
-def get_starting_poses(pose_input, native_input):
+def initialize_starting_poses(config):
+    """Initialize the starting poses."""
     native = Pose()
-    pose_from_file(native, native_input)
+    pose_from_file(native, config.native_input)
+    input_pose = Pose()
+    pose_from_file(input_pose, config.pose_input)
     native.conformation().detect_disulfides()
-
-    pose = Pose()
-    pose_from_file(pose, pose_input)
-    pose.conformation().detect_disulfides()
-
-    mres = chain_end_res(pose, 1)
-    ft = FoldTree()
-    ft.add_edge(1, mres, -1)
-    ft.add_edge(1, mres + 1, 1)
-    ft.add_edge(mres + 1, pose.total_residue(), -1)
-
-    pose.fold_tree(ft)
-
-    return pose, native
-
+    input_pose.conformation().detect_disulfides()
+    native_symmetric = None
+    if config.syminfo:
+        native_symmetric = pose_from_file(config.syminfo.native_symmetric_input)
+        native_symmetric.conformation().detect_disulfides()
+        SetupForSymmetryMover(config.syminfo.input_symdef).apply(input_pose)
+        SetupForSymmetryMover(config.syminfo.native_symdef).apply(native_symmetric)
+        # symmetrize the native so that it is the same base
+        base = get_base_from_pose(input_pose)
+        if base != "HF":
+            sds = SymDefSwapper(native_symmetric, config.syminfo.native_symdef)
+            if base == "3F":
+                native_symmetric = sds.create_3fold_pose(native_symmetric)
+            elif base == "2F":
+                native_symmetric = sds.create_2fold_pose(native_symmetric)
+            else:
+                raise ValueError
+        set_init_x(input_pose, config)
+        config.syminfo.store_info_from_pose(input_pose) # setup cubic boundaries
+    else:
+        mres = chain_end_res(input_pose, 1)
+        ft = FoldTree()
+        ft.add_edge(1, mres, -1)
+        ft.add_edge(1, mres + 1, 1)
+        ft.add_edge(mres + 1, input_pose.total_residue(), -1)
+        input_pose.fold_tree(ft)
+    if config.pmm:
+        input_pose.pdb_info().name("input_pose")
+        native.pdb_info().name("native_pose")
+        config.pmm.apply(input_pose)
+        config.pmm.apply(native)
+    return input_pose, native, native_symmetric
 
 def get_pose_from_file(pose_input):
     pose = Pose()
     pose_from_file(pose, pose_input)
     pose.conformation().detect_disulfides()
     return pose
-
 
 # compute an axis-aligned bounding box for the given pdb structure
 def xyz_limits_for_pdb(pdb):
@@ -103,16 +132,24 @@ def random_individual(max_value=180):
 
 
 def get_rotation_euler(flexible_jump):
+    raise NotImplementedError #fixme: reinstate, but not for symemtry
     rot_matrix = R.from_matrix(np.asarray(flexible_jump.get_rotation()))
     vec = rot_matrix.as_euler("xyz", degrees=True)
     return vec
 
+def get_translation(flexible_jump):
+    raise NotImplementedError #fixme: reinstate, but not for symemtry
+    return np.asarray(flexible_jump.rt().get_translation())
 
-def get_position_info(dock_pose):
-    # flexible_jump = dock_pose.jump(dock_pose.num_jump())
-    flexible_jump = dock_pose.jump(dock_pose.num_jump())
-    euler_vec = get_rotation_euler(flexible_jump)
-    return list(euler_vec) + list(flexible_jump.get_translation())
+def get_position_info(dock_pose, syminfo=None):
+    if is_symmetric(dock_pose):
+        assert syminfo is not None, "syminfo should be defined if pose is symmetric!"
+        # map the symmetrical info in the right order as specified in syminfo
+        return syminfo.get_position_info(dock_pose)
+    else:
+        flexible_jump = dock_pose.jump(1)
+        euler_vec = get_rotation_euler(flexible_jump)
+        return list(euler_vec) + list(flexible_jump.get_translation())
 
 
 def set_new_max_translations(scfxn, popul):
@@ -164,14 +201,7 @@ def set_new_max_translations(scfxn, popul):
     return popul
 
 
-def make_trial(idx, genotype, ligand=1, receptor=1):
-    ind = Individual(idx, genotype)
-    ind.idx = idx
-    ind.genotype = genotype
-    ind.score = 1000
-    ind.idx_ligand = ligand
-    ind.idx_receptor = receptor
-    ind.rmsd = 0
-    ind.i_sc = 0
-    ind.irms = 0
-    return ind
+def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1, receptor_name="", ligand_name="", subunit_name="", flipped=None, fixed=None):
+    return Individual(idx, genotype, score=1000, idx_ligand=ligand, idx_receptor=receptor, idx_subunit=subunit, rmsd=0, i_sc=0, irms=0,
+        receptor_name=receptor_name, ligand_name=ligand_name, subunit_name=subunit_name, flipped=flipped, fixed=fixed)
+

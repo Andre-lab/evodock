@@ -1,28 +1,43 @@
 
-# Protein-Protein docking using a Memetic Algorithm: EvoDOCK
+# EvoDOCK 
 
-Repository corresponding to the code used at article: 
+EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
+Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v3)
 
-# Dependencies
+Symmetric docking has been published at:
+[missing](link:missing)
 
-* PyRosetta==4
-* numpy>=1.21.0
-* pandas>=1.3.4
-* scipy>=1.7.1
-* seaborn>=0.11.2
-* setuptools>=44.0.0
-* imageio>=2.10.1
-* matplotlib>=3.4.3
+# Installation 
 
+clone the evodock repository and ```cd``` into it
+```
+git clone https://github.com/Andre-lab/evodock.git
+cd ./evodock
+```
 
-# Installation
+## Conda installation
+EvoDOCK can be installed with [Anaconda](https://docs.anaconda.com/free/anaconda/install/index.html).
 
-This package is only compatible with Python 3.4 and above. To install this package, please follow the instructions below:
+A license for PyRosetta is needed and can be obtained from https://els2.comotion.uw.edu/product/pyrosetta. 
+Use the provided USERNAME and PASSWORD and insert it into the following line in ```env.yml```:
+```
+- https://USERNAME:PASSWORD@conda.rosettacommons.org
+```
 
-* Install the previous descripted dependencies
-* Download and install PyRosetta following the instructions found at http://www.pyrosetta.org/dow
+Then run the following conda command (it will take a few minutes):
+
+```
+conda install evodock
+```
+
+## pip installation
+
+This package is only compatible with Python-3.6 or later (PyRosetta dependency)
+
+* Download and install PyRosetta http://www.pyrosetta.org/dow
+* Download and install MAFFT (If using Symmetry) (https://mafft.cbrc.jp/alignment/software/)
 * Install the package itself:
 
 ```console
@@ -103,9 +118,10 @@ or
 python -m evodock configs/sample_dock_global.ini
 ```
 
+
 ## Configuration Details
 
-Files configs/sample\_dock\_global.ini, configs/sample\_dock\_flexbb.ini and configs/sample\_dock_refinement.ini contains configuration examples for Global Docking, Flexible Backbone Docking and Global Docking with and initial population.
+Files configs/sample\_dock\_global.ini, configs/sample\_dock\_flexbb.ini and configs/sample\_dock_refinement.ini contains configuration examples for Global Docking, Flexible Backbone Docking and Global Docking with and initial population. There's also an configs/sample\_sym_dock.ini that contains a configuration example for running EvoDock with symmetry. For more information see **Running with symmetry** further below.  
 
 ### Section [Inputs]
 
@@ -129,6 +145,19 @@ Uses path\_ligands and path\_receptors to indicate the path of *.pdb files with 
 
 ### Section [Refine] (optional for Docking type "Refine")
 Uses init\_pdbs to indicate the path of *.pdbs used as initial population, i.e. models from ClusPro.
+
+## Running with symmetry
+To run with symmetry add the following configuration as below.
+
+```dosini
+[Symmetry]
+input_symdef_file=/inputs/symmetry_files/1stm.symm
+native_symdef_file=/inputs/symmetry_files/1stm.symm
+symdofs=JUMP5fold1:z:angle_z,JUMP5fold111:x,JUMP5fold1111:angle_x:angle_y:angle_z
+symbounds=15,15,15,15,15,15
+initialize_rigid_body_dofs=true
+```
+
 
 # Interpret output:
 

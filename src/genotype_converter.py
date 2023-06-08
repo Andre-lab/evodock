@@ -4,13 +4,20 @@
 import glob
 import random
 
+from src.distance_axes import calculate_local_coordinates
+from src.utils import convert_range, get_position_info
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from src.utils import get_rotation_euler, get_translation
 from pyrosetta.rosetta.core.import_pose import poses_from_files
 from pyrosetta.rosetta.utility import vector1_std_string
 
 from src.utils import convert_range, get_pose_from_file, get_position_info
 
 from pyrosetta.rosetta.protocols.toolbox import CA_superimpose
-
+from cubicsym.cubicsetup import CubicSetup
+from symmetryhandler.reference_kinematics import get_jumpdof_str_str
+from symmetryhandler.reference_kinematics import get_dofs
+from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, jump_num_sym_dof
 
 class RefineCluspro:
     def __init__(self, config, max_trans):
@@ -21,7 +28,7 @@ class RefineCluspro:
             filenames.append(f)
         self.list_models = poses_from_files(filenames)
         self.list_models = [CA_superimpose(input_pose, p) for p in self.list_models]
-        self.positions = [get_position_info(p) for p in self.list_models]
+        self.positions = [get_position_info(p, config.syminfo) for p in self.list_models]
         max_boundaries = [max([abs(x[i]) for x in self.positions]) for i in range(6)]
         max_boundaries = list(map(lambda i: (i, i * -1), max_boundaries))
         self.converter = GlobalGenotypeConverter(input_pose, max_trans)
@@ -36,7 +43,7 @@ def generate_genotype(pose_input, trans_max_magnitude):
     max_trans = [3, 3, 3]
     def set_bounds(pose_input):
         bounds = []
-        init_pos = get_position_info(pose_input)
+        init_pos = get_position_info(pose_input, config.syminfo)
         init_rot = init_pos[:3]
         for i in range(3):
             bounds.append((init_rot[i] - max_rot[i], init_rot[i] + max_rot[i]))
@@ -54,14 +61,30 @@ def generate_genotype(pose_input, trans_max_magnitude):
     genotype = converter.convert_positions_to_genotype(new_values)
     return genotype
 
-
 class GlobalGenotypeConverter:
-    def __init__(self, native_pose, max_trans=70):
-        self.max_rot = 180
-        mtrans = max_trans
-        self.max_trans = [mtrans for t in range(3)]
-        self.min_trans = [mtrans * -1 for t in range(3)]
-        self.bounds = self.define_bounds()
+    def __init__(self, dock_pose, max_trans=70, syminfo: dict = None):
+        if is_symmetric(dock_pose):
+            assert syminfo is not None
+            self.bounds = self.define_symmetric_bounds(syminfo)
+        else:
+            self.max_rot = 180
+            mtrans = max_trans
+            self.max_trans = [mtrans for t in range(3)]
+            self.min_trans = [mtrans * -1 for t in range(3)]
+            self.bounds = self.define_bounds()
+        self.size = len(self.bounds)
+
+    # Handles both local search and global search cases!!
+    # For local docking: Use -initialize_rigid_body_dof and set the bounds to whatever you want to search
+    # For global docking: Set the bounds very high with and with -initialize_rigid_body_dof, with it give the starting
+    #   position to be that including the bounds you give it.
+    # if you dont parse -initialize_rigid_body_dof the native_val will be 0, otherwise the value set in the symdef file.
+    def define_symmetric_bounds(self, syminfo):
+        """Define symmetrical bounds."""
+        bounds = []
+        for jump, dof, bound in zip(syminfo.dof_spec.jump_str, syminfo.dof_spec.dof_str, syminfo.bounds):
+            bounds.append(syminfo.cubicboundary.get_boundary(jump, dof))
+        return bounds
 
     def define_bounds(self):
         bounds = []
@@ -95,17 +118,17 @@ class GlobalGenotypeConverter:
 
 
 class LocalGenotypeConverter(GlobalGenotypeConverter):
-    def __init__(self, native_pose):
+    def __init__(self, dock_pose):
         self.max_rot = [0.01, 0.01, 0.01]
         self.max_trans = [0.01, 0.01, 0.01]
-        self.pose = native_pose
+        self.pose = dock_pose
         self.bounds = self.define_bounds()
         print("Local Genotype is legacy code")
         exit()
 
     def define_bounds(self):
         bounds = []
-        init_pos = get_position_info(self.pose)
+        init_pos = get_position_info(self.pose, self.config.syminfo)
         init_rot = init_pos[:3]
         for i in range(3):
             bounds.append(

@@ -1,5 +1,5 @@
 import random
-
+from src.symmetry import individual_is_within_bounds
 
 from src.utils import make_trial
 from operator import itemgetter
@@ -20,7 +20,7 @@ class TrialGenerator:
     def __init__(self, config, local_search):
         self.mutation = config.mutate
         self.recombination = config.recombination
-        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.mutation_strategy = MutationStrategyBuilder(config).build(size=local_search.scfxn.converter.size)
         self.local_search = local_search
 
     def mutate(self, j, population, gen_scores):
@@ -40,32 +40,34 @@ class TrialGenerator:
     def build(self, j, population, gen_scores):
         v_donor = self.mutate(j, population, gen_scores)
         v_trial = self.recombine(j, population, v_donor)
-        ind = make_trial(j, v_trial, 0, 0)
+        ind = make_trial(j, v_trial, 0, 0, 0)
         trial, _, _ = self.local_search.process_individual(ind)
         return trial
-
 
 class FlexbbTrialGenerator(TrialGenerator):
     def __init__(self, config, local_search):
         self.mutation = config.mutate
         self.recombination = config.recombination
-        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.mutation_strategy = MutationStrategyBuilder(config).build(size=local_search.scfxn.converter.size)
         self.local_search = local_search
 
     def build(self, j, population, gen_scores):
+        individual_is_within_bounds(self.local_search.config, self.local_search.scfxn, population[j])
         v_donor = self.mutate(j, population, gen_scores)
         v_trial = self.recombine(j, population, v_donor)
-        idx_receptor, idx_ligand = population[j].idx_receptor, population[j].idx_ligand
-        ind = make_trial(j, v_trial, idx_ligand, idx_receptor)
+        idx_receptor, idx_ligand, idx_subunit = population[j].idx_receptor, population[j].idx_ligand, population[j].idx_subunit
+        receptor_name, ligand_name, subunit_name = population[j].receptor_name, population[j].ligand_name, population[j].subunit_name
+        flipped, fixed = population[j].flipped, population[j].fixed
+        ind = make_trial(j, v_trial, idx_ligand, idx_receptor, idx_subunit,  receptor_name, ligand_name, subunit_name, flipped, fixed)
+        individual_is_within_bounds(self.local_search.config, self.local_search.scfxn, ind)
         trial, _, _ = self.local_search.process_individual(ind)
         return trial
-
 
 class pBestGenerator(TrialGenerator):
     def __init__(self, config, rgen):
         self.mutation = config.mutate
         self.recombination = config.recombination
-        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.mutation_strategy = MutationStrategyBuilder(config).build(None)
         self.rgen = rgen
 
     def mutate(self, j, population, gen_scores):
@@ -82,7 +84,7 @@ class CodeGenerator(TrialGenerator):
     def __init__(self, config, local_search):
         self.mutation = config.mutate
         self.recombination = config.recombination
-        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.mutation_strategy = MutationStrategyBuilder(config).build(None)
         self.local_search = local_search
 
     def random_config(self):
@@ -120,7 +122,7 @@ class TriangularGenerator(TrialGenerator):
         self.config = config
         self.mutation = config.mutate
         self.recombination = config.recombination
-        self.mutation_strategy = MutationStrategyBuilder(config).build()
+        self.mutation_strategy = MutationStrategyBuilder(config).build(None)
         self.rgen = rgen
         self.local_search = local_search
         self.recombination = 0.8 + (0.1 - 0.8) * pow(

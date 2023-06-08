@@ -7,7 +7,6 @@ import pyrosetta.rosetta as rosetta
 from pyrosetta import Pose
 from pyrosetta.rosetta.core.pose import append_pose_to_pose
 
-# from pyrosetta.rosetta.protocols.moves import PyMOLMover
 
 
 def print_rotation_translation(R, t):
