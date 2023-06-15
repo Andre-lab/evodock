@@ -6,7 +6,8 @@ import os
 import ast
 from src.utils import get_translation_max
 from itertools import islice
-from pyrosetta import PyMOLMover
+from pyrosetta import PyMOLMover, Pose
+from pyrosetta.rosetta.core.pose import append_pose_to_pose
 from src.individual import Individual
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 import glob
@@ -45,20 +46,19 @@ class EvodockConfig:
     def load_docking(self, config):
         """Load the docking_type."""
         self.docking_type_option = config["Docking"].get("type")
-        if not self.docking_type_option in ("Global, GlobalFromMultimer, Local, Refine"):
+        if not self.docking_type_option in ("Global, GlobalFromMultimer, Local"):
             raise ValueError("The docking_type must be of either 'Global', 'GlobalFromMultimer', 'Local' or 'Refine'")
-        if self.docking_type_option == "Refine":
-            raise NotImplementedError("Refine is not implemented properly as of yet!")
-        self.logger.info(f" Docking mode: {self.docking_type_option}")
+        # self.logger.info(f" Docking mode: {self.docking_type_option}")
 
     def load_inputs(self, config):
         """Loads all information in the Inputs option."""
         self.flexbb = False
         self.path_to_subunit_folder = None
+        self.template = None
         # check if we are running a single or multiple backbones
         if config.has_option("Inputs", "single"):
             self.pose_input = config["Inputs"].get("single")
-            self.logger.info(f" Single mode detected (single={self.pose_input})")
+            # self.logger.info(f" Single mode detected (single={self.pose_input})")
         elif config.has_option("Inputs", "subunits"):
             # find path to either a single structure a multiple structures
             self.path_to_subunit_folder = config["Inputs"].get("subunits")
@@ -73,9 +73,9 @@ class EvodockConfig:
                 self.logger.info(" For a symmetric system. Use either the 'subunits' or the 'single' parameter")
                 exit()
             # find path to either a single structure a multiple structures
-            if config.has_option("Inputs", "path_ligands") and config.has_option("Inputs", "path_receptors"):
-                self.path_to_ligand_folder = config["Inputs"].get("path_ligands")
-                self.path_to_receptor_folder =  config["Inputs"].get("path_receptors")
+            if config.has_option("Inputs", "ligands") and config.has_option("Inputs", "receptors"):
+                self.path_to_ligand_folder = config["Inputs"].get("ligands")
+                self.path_to_receptor_folder =  config["Inputs"].get("receptors")
                 self.ligand_paths = glob.glob(self.path_to_ligand_folder + "*")
                 self.receptor_paths = glob.glob(self.path_to_receptor_folder + "*")
                 self.ligand_library_size = len(self.ligand_paths)
@@ -83,11 +83,13 @@ class EvodockConfig:
                 assert self.ligand_library_size > 0, "The size of the ligand library is less than 1. At least 1 or more ligand files must be present"
                 assert self.receptor_library_size > 0, "The size of the receptor library is less than 1. At least 1 or more receptor files must be present"
                 self.flexbb = True
-                self.flexbb = True
-                raise NotImplementedError("WE SHOULD PICK AN INITIAL POSE INPUT - SO we have to combine a receptor and ligand right?")
-                self.pose_input = random.choice(glob.glob(self.path_to_subunit_folder + "*"))
+                ligand_input = random.choice(self.ligand_paths)
+                receptor_input = random.choice(self.receptor_paths)
+                self.pose_input = [receptor_input, ligand_input]
+                if config.has_option("Inputs", "template"):
+                    self.template = config["Inputs"].get("template")
             else:
-                self.logger.info(" For a non-symmetric system. Use both 'path_ligands' and 'path_receptors' or the 'single' parameter")
+                self.logger.info(" For a non-symmetric system. Use both 'ligands' and 'receptors' parameter")
                 exit()
         # get the symmetry file
         if self.symmetric:
@@ -96,11 +98,13 @@ class EvodockConfig:
     def load_native(self, config):
         """Loads all information in the Native option."""
         self.native_input = None
-        if config["Native"].get("crystallic_input"):
+        self.lower_diversity_limit = None
+        if config.has_option("Native", "crystallic_input"):
             self.native_input = config["Native"].get("crystallic_input")
             if self.symmetric and config.has_option("Native", "symmetric_input"):
                 self.syminfo.native_symmetric_input = config["Native"].get("symmetric_input")
                 self.syminfo.native_symdef = config.get("Native", "symdef_file")
+                self.lower_diversity_limit = config.get("Native", "lower_limit_diversity", fallback=0)
 
     def load_bounds(self, config):
         """Loads all information in the Bounds option."""
@@ -124,15 +128,17 @@ class EvodockConfig:
             if math.isclose(self.init_input_fix_percent, 0):
                 self.init_input_fix_percent = None
         else:
-            raise NotImplementedError
+            pass
+            # raise NotImplementedError
 
     def load_flexbb(self, config):
         if config.has_section("Flexbb"):
+            assert self.flexbb == True, "Flexbb cannot be set because becuase 'ligands', 'receptors' or 'subunits' is not present in [Inputs]"
             self.swap_prob = config["Flexbb"].getfloat("swap_prob", fallback=0.3)
             self.low_memory_mode = config["Flexbb"].getboolean("low_memory_mode", fallback=True)
         else:
-            self.swap_prob = None
-            self.low_memory_mode = False
+            self.swap_prob = 0.3
+            self.low_memory_mode = True
 
 
     def load_outputs(self, config):
@@ -192,7 +198,7 @@ class EvodockConfig:
     def load_symmetry(self, config):
         """Checks for symmetry and constructs a SymInfo object containing all symmetry information."""
         if config.has_option("Inputs", "symdef_file"):
-            self.logger.info(" Symmetry is detected.")
+            # self.logger.info(" Symmetry is detected.")
             self.symmetric = True
             self.syminfo = SymInfo()
         else:
@@ -213,15 +219,16 @@ class EvodockConfig:
         else:
             self.show_local_search = False
 
-    def get_max_translation(self):
+    def get_max_translation(self, pose):
         # --- Position Params -----------------------------+
+        assert isinstance(pose, Pose)
         if not self.syminfo:
             if self.config.has_option("position", "trans_max_magnitude"):
                 self.trans_max_magnitude = self.config["position"].getint(
                     "trans_max_magnitude"
                 )
             else:
-                self.trans_max_magnitude = get_translation_max(self.pose_input)
+                self.trans_max_magnitude = get_translation_max(pose)
             return self.trans_max_magnitude
 
     def read_config(self, ini_file):
@@ -231,22 +238,27 @@ class EvodockConfig:
 
     def load_DE(self, config):
         # --- DE PARAMS -----------------------------------+
-        self.scheme = config["DE"].get("scheme")
-        self.popsize = config["DE"].getint("popsize")
-        self.mutate = config["DE"].getfloat("mutate")
-        self.recombination = config["DE"].getfloat("recombination")
-        self.maxiter = config["DE"].getint("maxiter")
+        self.scheme = config["DE"].get("scheme", fallback="RANDOM")
+        self.popsize = config["DE"].getint("popsize", fallback=100)
+        self.mutate = config["DE"].getfloat("mutate", fallback=0.1)
+        self.recombination = config["DE"].getfloat("recombination", fallback=0.7)
+        self.maxiter = config["DE"].getint("maxiter", fallback=50)
         if config.has_option("DE", "selection"):
             self.selection = config["DE"].get("selection")
             assert self.selection in ("total", "interface"), "only 'total' and 'interface' is understood for DE:selection."
         else:
-            self.selection = "total"
+            if config.syminfo is not None:
+                self.selection = "interface"
+            else:
+                self.selection = "total"
         # --- MEMETIC PARAMS -----------------------------------+
         if config.has_option("DE", "local_search"):
             self.local_search_option = config["DE"].get("local_search")
         else:
-            self.logger.info("DANGER: local_search is None")
-            self.local_search_option = "None"
+            if config.syminfo is not None:
+                self.local_search_option = "symshapedock"
+            else:
+                self.local_search_option = "mcm_rosetta"
         # --- SLIDE PARAMS -----------------------------------+
         if config.has_option("DE", "slide"):
             self.slide = config.getboolean("DE", "slide")

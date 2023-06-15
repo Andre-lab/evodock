@@ -57,8 +57,11 @@ from pyrosetta.rosetta.basic.datacache import CacheableStringFloatMap
 from pyrosetta.rosetta.core.pose.datacache import CacheableDataType
 
 def individual_is_within_bounds(config, fitnessfunc, ind):
-    pose = fitnessfunc.apply_genotype_to_pose(ind.genotype)
-    return config.syminfo.cubicboundary.all_dofs_within_bounds(pose, raise_warning=True)
+    if config.syminfo is not None:
+        pose = fitnessfunc.apply_genotype_to_pose(ind.genotype)
+        return config.syminfo.cubicboundary.all_dofs_within_bounds(pose, raise_warning=True)
+    else:
+        pass
 
 class CycleWClashMover:
     """Class with same function as the CycleMover in Rosetta but skips the following steps in the cycle if clashes are detected."""
@@ -726,6 +729,7 @@ class SymInfo:
         self.initial_placement = None
         self.ccsc = None
         self.bound_penalty = None
+        self.native_symmetric_input = None
         # if pose:
         #     self.store_info_from_pose(pose)
         # if config:

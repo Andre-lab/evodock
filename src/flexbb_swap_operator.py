@@ -17,7 +17,7 @@ from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from pathlib import Path
 from pyrosetta.rosetta.core.pose.symmetry import extract_asymmetric_unit
 from scipy.spatial.transform import Rotation as R
-from src.utils import get_rotation_euler, get_translation
+from src.utils import get_rotation_euler, get_translation, align_two_chains_to_pose
 from src.position_utils import to_rosetta
 
 
@@ -56,8 +56,8 @@ class FlexbbSwapOperator:
             # self.relaxed_backbones_subunits = [p.clone() for p in self.list_subunits]
 
         else:
-            lst_ligand = glob.glob(config.path_to_ligand_folder)
-            lst_receptor = glob.glob(config.path_to_receptor_folder)
+            lst_ligand = config.ligand_paths
+            lst_receptor = config.receptor_paths
             filenames_ligand = vector1_std_string()
             for f in lst_ligand:
                 filenames_ligand.append(f)
@@ -146,17 +146,7 @@ class FlexbbSwapOperator:
         return join_pose, idx_receptor, idx_ligand, idx_subunit, improve_relax
 
     def make_pose_with_chains(self, reference_pose, pose_chainA, pose_chainB):
-        pose_receptor = Pose(reference_pose, 1, chain_end_res(reference_pose, 1))
-        pose_ligand = Pose(
-            reference_pose,
-            chain_end_res(reference_pose, 1) + 1,
-            reference_pose.total_residue(),
-        )
-        calpha_superimpose_pose(pose_chainA, pose_receptor)
-        calpha_superimpose_pose(pose_chainB, pose_ligand)
-        join_pose = Pose()
-        join_pose.assign(pose_chainA)
-        append_pose_to_pose(join_pose, pose_chainB, True)
+        join_pose = align_two_chains_to_pose(reference_pose, pose_chainA, pose_chainB)
         join_pose.pdb_info().rebuild_pdb2pose()
         join_pose.fold_tree(self.native_fold_tree)
         join_pose.conformation().detect_disulfides()

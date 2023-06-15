@@ -11,200 +11,261 @@ Symmetric docking has been published at:
 
 # Installation 
 
-clone the evodock repository and ```cd``` into it
-```
+The following packages must be installed: 
+* Python-3.6 or later (PyRosetta dependency). 
+* PyRosetta http://www.pyrosetta.org/dow (Can be installed with Anaconda)
+
+If using Symmetric Protein-Protein docking these additional packages must be installed:
+* MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
+* mpi4py (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
+
+Clone the cubicsym repository and ```cd``` into it. Then run the install script.
+```console
 git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
+pip install .
 ```
 
-## Conda installation
-EvoDOCK can be installed with [Anaconda](https://docs.anaconda.com/free/anaconda/install/index.html).
+# Usage
 
-A license for PyRosetta is needed and can be obtained from https://els2.comotion.uw.edu/product/pyrosetta. 
-Use the provided USERNAME and PASSWORD and insert it into the following line in ```env.yml```:
-```
-- https://USERNAME:PASSWORD@conda.rosettacommons.org
-```
-
-Then run the following conda command (it will take a few minutes):
-
-```
-conda install evodock
-```
-
-## pip installation
-
-This package is only compatible with Python-3.6 or later (PyRosetta dependency)
-
-* Download and install PyRosetta http://www.pyrosetta.org/dow
-* Download and install MAFFT (If using Symmetry) (https://mafft.cbrc.jp/alignment/software/)
-* Install the package itself:
+## Preprocessing complex with prepacking
+Before running EvoDOCK it is important to prepack the input files as so: 
 
 ```console
-git clone https://github.com/Andre-lab/evodock.git
-cd evodock
-pip install -r requirements.txt
+python ./scripts/prepacking.py --file <input_file>
 ```
 
-or
+## Converting AlphaFold predictions to an EvoDOCK ensemble
+ 
+`scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
+The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
+
+Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete docking is given. 
+
+Preparing an ensemble for Reassembly docking
+```console
+scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
+```
+
+Preparing an ensemble for Complete docking
+```console
+--path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
+```
+
+## EvoDOCK 
+EvoDOCK can be run with different configurations given a specifc config.ini input file as so. 
 
 ```console
-git clone https://github.com/Andre-lab/evodock.git
-pip setup.py install 
+python evodock.py configs.ini
 ```
 
-or 
+The following sections describe how to configure EvoDOCK through the config file. These options are available: 
+1. [Docking]
+2. [Input]
+3. [Outputs]
+4. [DE]
+5. [Flexbb] 
+6. [Bounds]
+7. [Pymol]
+8. [RosettaOptions]
+9. [Native]
 
-```console
-pip install git+https://github.com/Andre-lab/evodock.git
-```
+Examples of config files for different EvoDOCK configurations are found in the `config` folder with the following behavior: 
 
-A setup.py and environment.yml files are provided to use alternative installation using pip or conda.
+1. Heteromeric docking with single ligand and receptor backone: `configs/heterodimeric/sample_dock_single.ini` 
+2. Heteromeric docking with flexible backbones: `configs/heterodimeric/sample_dock_flexbb.ini` 
+3. Reassembly docking with a single backbone: `configs/symmetric/reassembly_single.ini` 
+4. Reassembly docking with flexible backbones: `configs/symmetric/reassembly_flexbb.ini` 
+5. Complete assembly docking with flexible backbones: `configs/symmetric/complete_assembly.ini`  
 
-
-# Basic Usage
-
-0. Preprocess complex pdb with prepacking
-
-```console
-python ./scripts/prepacking.py <input_pdb>
-```
-
-
-1. Create a configuration file following the example found at [sample\_dock.ini](https://github.com/Andre-lab/evodock/blob/2fbc755cf84f64641153ad75757ad4bb3bf6ff3f/configs/sample_dock.ini)
-
+### 1. [Docking]
+Specifies the type of docking protocol used of which there are 3 options:
+1. `Local` For heterodimeric local docking AND symmetric Reassembly docking
+3. `Global` For heterodimeric global docking 
+4. `GlobalFromMultimer` For symmetric Complete assembly docking
 ```dosini
 [Docking]
-# selects docking protocl [Global, Local]
-type=Global
-
-[Inputs]
-# complex pdb
-pose_input=/inputs/input_pdb/1ACB/1ACB_c_u_0001.pdb
-native_input=/inputs/native_pdb/1ACB/1ACB_c_b.pdb
-
-[Outputs]
-# output file log
-output_path=sample_dock/
-output_pdb=True
-
-[DE]
-# evolution algorithm parent strategy [RANDOM, BEST] 
-scheme=BEST
-# population size
-popsize=10
-# mutation rate (weight factor F) 
-mutate=0.9
-# crossover probability (CR) 
-recombination=0.3
-# maximum number of generations/iterations (stopping criteria)
-maxiter=10
-# hybrid local search strategy [None, only_slide, mcm_rosetta]
-local_search=mcm_rosetta
-
-```
-information about the DE parameters can be found at https://en.wikipedia.org/wiki/Differential_evolution
-
-
-2. Run with the algorithm with the desired configuration
-
-```console
-python evodock.py configs/sample_dock_global.ini
+type=<Local/Global/GlobalFromMultimer>
 ```
 
+### 2. [Input]
+
+Specifies the input type. For heteromeric docking you need to specify the either
+single or `ligands` AND `receptors` for docking either 2 single backbones or 2 sets of multiple backbones. For heterodimeric
+docking a `template` can be supplied. This is used to extact rotamers and to initially align the receptor and ligand onto.
+```dosini
+[Input]
+single=<path to a pdb file containing containg the heterodimer (2 chains)>
+```
+or
+```dosini
+[Input]
+ligands=<path to ligands>
+receptors=<path to receptors>
+```
+or
+```dosini
+[Input]
+template=<path to a pdb file to serve as a template>
+ligands=<path to ligands>
+receptors=<path to receptors>
+```
+
+For symmetric docking you need to specify the `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones
+```dosini
+[Input]
+single=<path to single pdb file>
+symdef_file=<path to the symdef file>
+```
 or 
-
-```console
-python -m evodock configs/sample_dock_global.ini
+```dosini
+[Input]
+subunits=<path to a directory containing all of the subunits>
+symdef_file=<path to the symdef file>
 ```
 
+### 3. [Outputs]
 
-## Configuration Details
-
-Files configs/sample\_dock\_global.ini, configs/sample\_dock\_flexbb.ini and configs/sample\_dock_refinement.ini contains configuration examples for Global Docking, Flexible Backbone Docking and Global Docking with and initial population. There's also an configs/sample\_sym_dock.ini that contains a configuration example for running EvoDock with symmetry. For more information see **Running with symmetry** further below.  
-
-### Section [Inputs]
-
-At pose\_input, you might provide the path to a complex with two chains, which previously was preprocessed with a prepack protocol in order to fix possible collisions at the sidechain. An script at script folders is provided. 
-
-### Section [Outputs]
-
-At  output\_path indicates the output folder for the results in .csv format.
-output\_pdb is a boolean to dump pdbs during the evolution and the final evolved protein.
-
-
-### Section [Docking]
-Option "type" allows to select between global docking (Global), local docking (Local), flexible backbone (Flexbb) and
-using an starting population such as models from ClusPro (Refinement).
-
-### Section [DE]
-The set of parameters for Differential Evolution ([DE])  that you must change for a production run are populsize (from 10 to 100) and maxiter (from 10 to 100), which would lead into an evolution of 100 individuals during 100 iterations/generations. Evolutionary parameters (mutation F and crossover CR), can be fine tuned for specific purposes, although this set (0.3 and 0.9) have shown a good balance between exploration and exploration at our benchmark runs, which leads into good results. Scheme corresponds to the selection strategy for the base vector at mutation operation (https://en.wikipedia.org/wiki/Differential_evolution for more details). Parameter "local\_search" can be changed to None (aka, only DE is performed), only\_slide (local search operation is equivalent to apply slide\_into\_contact) or mcm\_rosetta (which applies slide\_into\_contact + MC energy minimization and sidechain optimization, recommended option and used at our benchmarks)
-
-### Section [Flexbb] (optional for Docking type "Flexbb")
-Uses path\_ligands and path\_receptors to indicate the path of *.pdb files with different backbone ensembles.
-
-### Section [Refine] (optional for Docking type "Refine")
-Uses init\_pdbs to indicate the path of *.pdbs used as initial population, i.e. models from ClusPro.
-
-## Running with symmetry
-To run with symmetry add the following configuration as below.
+Output options for the results:
+1. `output_path` Directory in which to output all files.
+2. `output_pdb` Output pdb
+3. `output_pdb_per_generation` Output the best pdb for each generation
 
 ```dosini
-[Symmetry]
-input_symdef_file=/inputs/symmetry_files/1stm.symm
-native_symdef_file=/inputs/symmetry_files/1stm.symm
-symdofs=JUMP5fold1:z:angle_z,JUMP5fold111:x,JUMP5fold1111:angle_x:angle_y:angle_z
-symbounds=15,15,15,15,15,15
-initialize_rigid_body_dofs=true
+[Outputs]
+output_path=<path to the output directory>
+output_pdb=<boolean>
+output_pdb_per_generation=<boolean>
 ```
 
+#### 4. [DE]
+Differential Evolution options:
+1. `scheme`: The selection strategy for the base vector at mutation operation. 1. Selection randomly (=RANDOM, default), 2. Select the best (=BEST)
+2. `popsize`: The size of the population. Default is 100.
+3. `mutate`: mutation rate (weight factor F). Must be between 0 and 1.0. Default is 0.1.
+4. `recombination`: crossover probability (CR). Must be between 0 and 1.0. Default is 0.7.
+5. `maxiter`: Generations to perform. Default is 50
+6. `local_search`: The local search docking scheme. For heteromeric docking use [None, only_slide, mcm_rosetta] for symmetryic docking use symshapedock. Default for heterodimeric docking is mcm_rosetta and for symmetryic docking symshapedock.
+7. `slide`: Use sliding or not. Default is True.
+8. `selection`: The energy type for use when selecting. 1. Select by interface (=interface, default for symmetric docking), 2. select by total energy (=total, default for heterodimeric docking)
 
-# Interpret output:
+```dosini
+[DE]
+scheme=<RANDOM/BEST>
+popsize=<integer>
+mutate=<float>
+recombination=<float>
+maxiter=<integer>
+local_search=<None/only_slide/mcm_rosetta/symshapedock>
+slide=<boolean>
+selection=<interface/total>
+```
 
-It is going to produce 4 different log files:
+### 5. [Flexbb]
 
--   evolution\*csv is a summary of the evolutionary process, which indicates the number of generation,
+If this section is present EvoDOCK will do flexible backbone docking. 2 options can be set:
+1. `swap_prob` The probability of doing a backbone trial. Must be in the interval: [0, 1.0] 
+2. `low_memory_mode` Will save memory by only loading in 1 backbone at the time at the cost of some computional time. Is only available for symmetrical docking and is highly recommend when using symmetrical docking. 
 
-average energy of the population, lowest energy of population and the RMSD of the best individual with the lowest energy.
+```dosini
+[Flexbb]
+swap_prob=<float>
+low_memory_mode=<boolean>
+```
 
--   popul\*csv is the status of each generation during the evolution. Each line correponds to the population information of one generation.
+### 6. [Bounds]
+Set options for the bounds of the rigid body parameters when doing symmetrical docking:
+1. `init`: The initial bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking.
+2. `bounds:`:  The maximum bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking.
+3. `init_input_fix_percent`: The percent chance of keeping an individual to its exact input values and not randomizing inside the init bounds. Should be between 0 and 100. 
+4. `allow_flip`: allow the individual to flip 180 degrees. 
+5. `xtrans_file`: The path to the file containing the x translations for each subunit. This file is output from af_to_evodock.py when running with --ensemble=GlobalFromMultimer
 
--   interface\*csv is similar to popul, but it reports the interface energy value and the iRMSD for each corresponding individual at each generation.
+```dosini
+[Bounds]
+init=<initial bounds, example: 0,60,5,40,40,40>
+bounds=<maximum bounds, example: 1000,60,5,180,40,40>
+init_input_fix_percent=<float>
+allow_flip=<boolean>
+xtrans_file=<path to the xtrans_file>
+```
 
--   trials\*csv is the equivalent file to popul\*csv, but it reports the trials (candidates) generated during the each generation. This can be practically useful in case that you want to check if the DE+MC is creating proper candidates that can contribute to the evolution.
+### 7. [Pymol]
+EvoDOCK can be run with PyMOL as described in https://www.rosettacommons.org/docs/latest/rosetta_basics/PyMOL.
+This sets options for PyMOL:
+1. `on`: Use PyMOL.
+2. `history`: Turn history on.
+3. `show_local_search`: Show the processes in during local search.
+4. `ipaddress`: The IP address to use.  
 
--   time\*csv is the computational time (in seconds) for each generation.
+```
+[Pymol]
+on=<boolean>
+history=<boolean>
+show_local_search=<boolean>
+ipaddress=<IP address>
+```
 
--   best\*csv contains, at each line, the rotation (first 3 values) and translation (3 values) of the individual with lowest energy value.
+### 8. [RosettaOptions]
+Rosetta flags to use. Any can be specified. 
 
+```dosini
+[RosettaOptions]
+initialize_rigid_body_dofs=<boolean>
+```
 
-## Getting images
+### 9. [Native]
 
-### Get scatter plot
+Calculates metrics againts the native structure (RMSD for instance). There are 3 input types:
+1. `crystallic_native` The native structure
+2. `symmetric_input` The symmetric input file of the native structure
+3. `symdef_file` The symdef file for the native structure
+4. `lower_diversity_limit` The lowest RMSD limit the structures should have to their native structure
 
-python ./scripts/make\_scatter\_plot.py "<path\_to\_popul\*.csv>"
+2 and 3 is required for symmetric docking.
 
-It creates the global energy value vs RMSD plot if input is popul*csv or interface energy vs iRMSD plot if input corresponds to interface*csv. Each point corresponds to an individual in the last generation. Several \*csv files can be specified in order to collect the results from different independent runs, where each color corresponds to a run.
+```dosini
+[Native]
+crystallic_input=<path to native structure>
+symmetric_input=<path to the symmetric input>
+symdef_file=<path to the input file>
+lower_diversity_limit=<float>
+```
 
-![interface Energy vs iRMSD scatter plot](https://github.com/Andre-lab/evodock/blob/main/images/scatterplot.png)
+# Interpretation of the EvoDOCK output:
 
+EvoDOCK produces several different log files:
 
-### Get evolution performance
+1. `evolution.csv` is a general summary of the evolutionary process across the entire population. Per generation (gen) it logs:
+    - The average energy of the population (avg)
+    - The lowest energy of population (best)
+    - The RMSD of the best individual with the lowest energy (rmsd_from_best) if running with a native structure.
 
-For each popul\*csv
+2. `popul.csv` is a general summary of the evolutionary process for each individual in the population. Per generation (gen) it logs:
+    - The current score (sc_*)
+    - The current rmsd (rmsd_*) if running with a native structure.
+    - The current interface score (Isc_*)
+    - The current Interface rmsd (Irmsd_*) if running with a native structure.
 
-python ./scripts/make\_evolution\_plot.py <path to evolution\*.csv>
+3. `trials.csv` is the equivalent file to popul.csv, but it reports the trials (candidates) generated during the each generation. This can be practically useful in case that you want to check if the DE+MC is creating proper candidates that can contribute to the evolution.
 
-Creates a lineplot where y-axis corresponds to the global energy function (used as fitness function during the evolution) and x-axis corresponds to each generation.
+4. `time.csv` is the computational time (in seconds) for each generation (gen).
 
-Green line corresponds to the average energy value of the population, while the red line corresponds to the lowest energy value of the population. A proper evolution should maintain a close distance between both lines and average line should follow the tend of the lowest energy line. That would indicate that the population evolves towards the best energy individual. In case that there is a large different between both lines, F and CR parameters should be tuned. For example, reducing the exploration of the algorithm by decreasing the value of F.
+5. `all_individual.csv` contains, for each generation (gen), the best genotype (rigid body degrees of freedom) of all individuals. 
 
-![Evolution sample image](https://github.com/Andre-lab/evodock/blob/main/images/evolution_sample.png)
+6. `best_individual.csv` contains, for each generation (gen), the best genotype (rigid body degrees of freedom) of the individual with lowest energy value.
+
+7. `population_swap.csv` contains, for each generation (gen), the backbone swap success. 
+
+8. `flip_fix.csv` list for each individual if they were initially flipped or fixed. Is useful when running running with `GlobalFromMultimer` .
+
+9. `ensemble.csv` contains, for each generation (gen), the name of file that is used as the current backbone for each individual.
+
+EvoDOCK also outputs a pdb file of the final optimized model (`final_docked_evo.pdb`) as well as the lowest energy structure for each geneation (`evolved.pdb`)
 
 # Differential Evolution Algorithm
 
 Differential Evolution [Price97] is a population-based search method. DE creates new candidate solutions by combining existing ones according to a simple formula of vector crossover and mutation, and then keeping whichever candidate solution has the best score or fitness on the optimization problem at hand.
-
 
 # Bibliography
 

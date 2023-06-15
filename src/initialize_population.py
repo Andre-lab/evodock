@@ -27,14 +27,10 @@ class InitializePopulation:
         self.init_slider = None
         if self.config.symmetric:
             if self.config.docking_type_option == "Global":
-                raise NotImplementedError("HAVE TO BE TESTED APPROPIATELY") # FIXME
-                # self.init_slider = CubicGlobalSymmetrySlider(scfxn.dock_pose, self.config.syminfo.input_symdef,
-                #                     normalize_trans=self.config.syminfo.normalize_trans_map,  pymolmover=self.config.pmm, slide_x_away=True)
+                raise NotImplementedError
             elif self.config.docking_type_option == "GlobalFromMultimer":
                 self.init_slider = InitCubicSymmetrySlider(scfxn.dock_pose, self.config.syminfo.input_symdef, self.config.syminfo.ccsc,
                                                             pymolmover=self.config.pmm)
-        else:
-            raise NotImplementedError
 
     def popul_is_within_bounds(self, popul):
         """Checks that the individuals, if symmetric, are wihtin bounds."""
@@ -49,7 +45,9 @@ class InitializePopulation:
                 if self.config.syminfo:
                     ind.subunit_name = self.popul_calculator.local_search.local_search_strategy.swap_operator.list_subunits[ind.idx_subunit]
                 else:
-                    raise NotImplementedError
+                    #FIXME: Not implemented
+                    pass
+
 
     def set_genotype_from_init_bounds(self):
         starting_dofs = self.config.syminfo.get_position_info(self.scfxn.dock_pose)
@@ -186,7 +184,7 @@ class InitializePopulationRefine(InitializePopulation):
     def init_population(self):
         population_calculator = self.popul_calculator
         popsize = self.popsize
-        refCluspro = RefineCluspro(self.config, self.config.get_max_translation())
+        refCluspro = RefineCluspro(self.config, self.config.get_max_translation(None))
 
         if popsize is None:
             popsize = self.popsize

@@ -6,27 +6,19 @@ Aligns the alphafold predictions
 @Date: 5/25/22
 """
 import random
-
 import numpy as np
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
-import pandas as pd
-from shapedesign.settings import SYMMETRICAL
 from pathlib import Path
 from pyrosetta import init, pose_from_file
-import shutil
 from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
 from pyrosetta.rosetta.core.scoring import CA_rmsd, CA_rmsd_symmetric
-from shapedesign.src.utilities.alignment import tmalign
 import pandas as pd
-import copy
 import json
 import pickle
 from pyrosetta.rosetta.core.scoring.dssp import Dssp
 from scipy.spatial.distance import cdist
-from shapedesign.src.utilities.pose import contactmap_with_mapped_resi
 import fnmatch
 from cubicsym.alphafold.symmetrymapper import SymmetryMapper
-from symmetryhandler.reference_kinematics import get_dofs
 from pyrosetta.rosetta.protocols.loops import get_fa_scorefxn
 from prepacking import PosePacker, opts
 from pyrosetta.rosetta.core.scoring import all_atom_rmsd
@@ -35,6 +27,7 @@ from cubicsym.cubicsetup import CubicSetup
 from cubicsym.actors.cubicsymmetryslider import InitCubicSymmetrySlider
 from cloudcontactscore.cloudcontactscorecontainer import CloudContactScoreContainer
 from symmetryhandler.reference_kinematics import set_jumpdof_str_str
+from cubicsym.alignment import tmalign, contactmap_with_mapped_resi
 
 class AF2EvoDOCK:
 
@@ -180,8 +173,7 @@ class AF2EvoDOCK:
 
     def get_multimer_predictions(self, pdbid, pdb_info):
         """Gets the multimer predictions for the pdbid and fills it in into the pdb_info object."""
-        multimer_predictions = [p for p in Path(self.af_output_path).glob(f"output/{pdbid}_*") if not "_1" in str(p)]
-        # multimer predictions
+        multimer_predictions = [p for p in Path(self.af_output_path).glob(f"{pdbid}_*_*") if not "_1_" in str(p.name)]
         if len(multimer_predictions) > 0:
             for completed, prediction in enumerate(multimer_predictions):
                 if not has_all_files(prediction):
@@ -240,7 +232,7 @@ class AF2EvoDOCK:
 
     def get_monomer_predictions(self, pdbid, pdb_info):
         """Gets the monomer predictions for the pdbid and fills it in into the pdb_info object."""
-        monomer_predictions = self.sort_monomer_models([p for p in Path(self.af_output_path).glob(f"output/{pdbid}_*_*") if "_1_" in str(p)])
+        monomer_predictions = self.sort_monomer_models([p for p in Path(self.af_output_path).glob(f"{pdbid}_1_*")])
         # monomer predictions
         if len(monomer_predictions) > 0:
             for completed, prediction in enumerate(monomer_predictions):
@@ -362,6 +354,8 @@ class AF2EvoDOCK:
                                                                                                                  symmetry=self.symmetry,
                                                                                                                  chains_allowed=chains_allowed,
                                                                                                                  T3F=False)  # fixme: remove T3F for public code
+            if cs is None:
+                continue
             pdb_info_new["model_name"].append(model)
             pdb_info_new["x_trans"].append(x_trans)
             pdb_info_new["chain"].append(chain_used)
@@ -369,6 +363,9 @@ class AF2EvoDOCK:
                 pdb_info_new["input"].append(input_pose_asym)
             if self.is_direction_allowed("down"):
                 pdb_info_new["input_flip"].append(input_pose_flip_asym)
+
+        if len(pdb_info_new["model_name"]) == 0:
+            raise ValueError("No symmetrical models were found!")
 
         # Now we clean the pdb_info
         indices_to_delete = []
@@ -387,20 +384,20 @@ class AF2EvoDOCK:
 
         return pdb_info_new
 
-    def apply(self, pdbid, align_structure=None, cn=None):
+    def apply(self, model_name, align_structure=None, cn=None):
         # construct an emtpy pdb_info dictionary containing all information we want to store
         pdb_info = self.construct_pdb_info()
 
         # make a subdirectory in which you will dump the output files
-        pdb_out = self.out_dir.joinpath(pdbid).joinpath("pdbs")
-        data_out = self.out_dir.joinpath(pdbid).joinpath("data")
+        pdb_out = self.out_dir.joinpath(model_name).joinpath("pdbs")
+        data_out = self.out_dir.joinpath(model_name).joinpath("data")
         pdb_out.mkdir(exist_ok=True, parents=True)
         data_out.mkdir(exist_ok=True, parents=True)
 
         # fill into the pdb_info object information from either or both the monomer or multimeric predictions
         if self.ensemble != "GlobalFromMultimer":
-            self.get_monomer_predictions(pdbid, pdb_info)
-        self.get_multimer_predictions(pdbid, pdb_info)
+            self.get_monomer_predictions(model_name, pdb_info)
+        self.get_multimer_predictions(model_name, pdb_info)
         assert len(set(pdb_info["unique_id"])) == len(pdb_info["model_name"]), "Not all names are unique - this should not happen!"
 
         # Checks if we have found accepted predictions. Returns an Error if not.
@@ -434,11 +431,11 @@ class AF2EvoDOCK:
 
         # output the final ensemble
         if self.ensemble == "GlobalFromMultimer":
-            self.output_globalfrommultimer(pdb_info, pdb_out, pdbid, cn, data_out, score_data)
+            self.output_globalfrommultimer(pdb_info, pdb_out, model_name, cn, data_out, score_data)
         elif self.ensemble == "Local":
-            self.output_local(pdb_info, pdb_out, data_out, pdbid, score_data)
+            self.output_local(pdb_info, pdb_out, data_out, model_name, score_data)
 
-        self.output_data(pdb_info, data_out, pdbid, n_resi, c_resi, final_rmsd)
+        self.output_data(pdb_info, data_out, model_name, n_resi, c_resi, final_rmsd)
 
     @staticmethod
     def cn_to_sympath(symmetry, cn):
@@ -594,90 +591,98 @@ def has_all_files(prediction):
     # _pred_0.pkl
     return True
 
-def main(path, date, out_dir, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
-         ensemble, max_monomers, max_multimers, align_structure, total_max_models, modify_rmsd_to_reach_min_models,
-         use_flipped_models):
-    init()
-    temp_path = path + f"/{{}}/{date}"
+def check_correct_format(path, ensemble):
+    # the format should be <name of model>_<number of subunits>_*, * can be whatever but cannot contain an '_'.
+    # check that all
+    names = set()
+    cns = []
+    for p in Path(path).glob("*"):
+        try:
+            name, cn, _ = str(p.name).split("_")
+        except ValueError:
+            raise ValueError("The AF prediction folder must be of the format '<name of model>_<number of subunits>_*' and must not contain '_' other than the two '_' specified as it's used as the seperator.")
+        names.add(name)
+        cns.append(cn)
+    assert len(names), "The name of the model must stay consistent across all folders. The following names are different: " \
+                       f"{', '.join(names)}"
+    assert all((i.isdigit() for i in cns)), "The number of subunits must all be an integer"
+    cn = None
+    if ensemble == "GlobalFromMultimer":
+        assert len(set(cns)) == 1, "When using --ensemble=GlobalFromMultimer only one type of oligomeric type is supported"
+        cn = cns[0]
+    model_name = names.pop()
+    return model_name, cn
 
-    for sym in ("T", "O", "I"):
-        af_output_path = temp_path.format(sym)
-        out_path = Path(af_output_path).joinpath(out_dir)
-        out_path.mkdir(exist_ok=True)
-        af2evo = AF2EvoDOCK(sym, af_output_path, out_path, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
-                            ensemble, max_monomers, max_multimers, total_max_models, modify_rmsd_to_reach_min_models, use_flipped_models)
-        # get all predicted pdb ids
-        for pdbid, cn in {(p.name[0:4], p.name[4:].replace("_", "")) for p in Path(af_output_path).glob("output/*")}:
-            if not str(pdbid) in ("7B3Y", "6ZLO", "1JH5"):
-                continue
-            # if pdbid in ("1HQK", ):
-            print(f"working on {pdbid} / {cn}")
-            align_structure = SYMMETRICAL.joinpath(f"{sym}/idealized/input/native/{pdbid}.cif")
-            af2evo.apply(pdbid, align_structure=align_structure, cn=cn)
+def main(path, symmetry, out_dir, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
+         ensemble, max_monomers, max_multimers, align_structure, total_max_models, modify_rmsd_to_reach_min_models,
+         direction):
+    model_name, cn = check_correct_format(path, ensemble)
+    init()
+    out_dir.mkdir(exist_ok=True)
+    af2evo = AF2EvoDOCK(symmetry, path, out_dir, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
+                        ensemble, max_monomers, max_multimers, total_max_models, modify_rmsd_to_reach_min_models, direction)
+    # get all predicted pdb ids
+    print(f"Analysing {model_name}")
+    af2evo.apply(model_name, align_structure=align_structure, cn=cn)
 
 if __name__ == "__main__":
-    description = """
-Selection logic for a residue:
-start downstream and then upstream:
-    if residue == L and disconnected, delete
-    elif  residue == 'L', then only delete if AF thinks it is below a certain threshold
-    elif  residue == 'H' or 'E' for a majority (cut_at_ss) of the ensemble then cut
-    """
+    description = """Turns AlphaFold predictions into an ensemble for EvoDOCK."""
 
     import argparse
     parser = argparse.ArgumentParser()
     # parsing general options
-    parser.add_argument('--path', help="path to the predictions.", type=str, required=True)
-    parser.add_argument('--date', help="data directory to use.", type=str, required=True) # fixme: remove this
-    parser.add_argument('--out_dir', help="output directory in which to store the output ensemble.", type=str, required=True)
+    parser.add_argument('--path', help="Path to the predictions. It should point to a directory which contains output folders of AlphaFold 2 and/or AlphaFold-Multimer predictions."
+                                       "It expects a particular name format for the folders. They should look like:'<name of model>_<number of subunits>_*' where * can be anything. It must not contain "
+                                       "'_' other than the two '_' specified as it's used as the seperator. For example 1STM_1_ or 1STM_5_whatever. The _X_ is used to identify"
+                                       "what the oligomeric state is. When running --ensemble=GlobalFromMultimer all of the folders must be of the same oligomeric type.", type=str, required=True)
+    parser.add_argument('--symmetry', help="Symmetry to model", type=str, choices=("T", "O", "I"), required=True)
+    parser.add_argument('--out_dir', help="Output directory in which to store the output ensemble. Directory will be created if it does not exists.", type=str, required=True)
     # parsing options
     parser.add_argument('--ensemble', help="Ensemble type to create. "
-                                           "Local: Creates an ensemble used for local docking with EvoDOCK. The whole ensemble will be aligned onto"
-                                           "a structure specified with --align_structure. The --align_structure option must be set with this option."
-                                           "GlobalFromMultimer: Creates an ensemble used for global docking with EvoDOCK based on AlphaFold Multimer predicitions.",
+                          "Local: Creates an ensemble used for Reassembly docking with EvoDOCK. The whole ensemble will be aligned onto"
+                          "a structure specified with --align_structure. The --align_structure option must be set with this option."
+                          "GlobalFromMultimer: Creates an ensemble used for Complete assembly docking with EvoDOCK based on AlphaFold Multimer predicitions.",
                         type=str, choices=["Local", "GlobalFromMultimer"], required=True)
-    parser.add_argument('--align_structure', help="For end user this has point to the structure one wants to align to. It should be the input " \
-                                                  "that comes of the symmetry script.", type=str) # fixme, change this behavior to the user want
+    parser.add_argument('--align_structure', help="When running --ensemble=Local this has point to the structure one wants to align to. It should be the input " \
+                          "that has been produced by the symmetrization script: 'cubic_to_rosetta.py'.", type=str)
     parser.add_argument('--max_monomers', help="The maximum number of monomer prediction models to include in the ensemble.", type=int)
     parser.add_argument('--max_multimers', help="The maximum number of multimer prediction models to include in the ensemble. Notice that, "
-                                                "since a multimer model consists of multiple chains more than one chain can be included in "
-                                                "the ensemble from the same prediction model without"
-                                                " counting as more than one towards the maximum.", type=int)
+                          "since a multimer model consists of multiple chains more than one chain can be included in "
+                          "the ensemble from the same prediction model without"
+                          " counting as more than one towards the maximum.", type=int)
     parser.add_argument('--max_total_models', help="The maximum number of models (monomer and multimer) to include in the final ensemble. This will"
-                                                   "be the final maximum output ensemble size. However, this will not nescesarily be the final"
-                                                   "ensemble size because this depends on the --rmsd_threshold value and the input models "
-                                                   "pLDDT and iptm+ptm values. If more models are accepted than allowed with --max_total_models, "
-                                                   "the script will filter the models based on their avg_plddt and output the ones with the"
-                                                   "best avg_plddt.", type=int)
+                           "be the final maximum output ensemble size. However, this will not nescesarily be the final"
+                           "ensemble size because this depends on the --rmsd_threshold value and the input models "
+                           "pLDDT and iptm+ptm values. If more models are accepted than allowed with --max_total_models, "
+                           "the script will filter the models based on their avg_plddt and output the ones with the"
+                           "best avg_plddt.", type=int)
     parser.add_argument('--modify_rmsd_to_reach_min_models', help="Will iteratively lower the rmsd_threshold until the minimum number of models"
-                                                    " (given by the value passed to the flag) are included in the ensemble. However, this will"
-                                                    " not nescesarilly be the final ensemble size because this depends on input models "
-                                                    " pLDDT and iptm+ptm values. To reach this minmum", type=int)
+                           " (given by the value passed to the flag) are included in the ensemble. However, this will"
+                           " not nescesarilly be the final ensemble size because this depends on input models "
+                           " pLDDT and iptm+ptm values. To reach this minimum", type=int)
     parser.add_argument("--direction", help="Chose which directions of the prediction to output. Options are 'up', 'down' and 'both'. The"
-                                            " former 2 options outputs either the up or down predictions and both outputs both of them",
-                                        choices=('up', 'down', 'both'), default="both")
-    parser.add_argument('--use_flipped_models', help="Output flipped models, aka, models that are rotated 180 degrees around their x-axis",
-                        action="store_true")
+                           " former 2 options outputs either the up or down predictions and both outputs both of them.",
+                           choices=('up', 'down', 'both'), default="both")
     # threshold options for ensemble inclusion
     parser.add_argument('--avg_plddt_threshold', help="The minimum value of the average pLDDT needed for the structure to be included in the"
-                                                      "ensemble.", type=float, default=90)
+                          "ensemble.", type=float, default=90)
     parser.add_argument('--iptm_plus_ptm_threshold', help="The minimum value of average iptm+ptm needed for the multimeric structure to be "
-                                                          "included in the ensemble.", type=float, default=0.90)
+                          "included in the ensemble.", type=float, default=0.90)
     parser.add_argument('--rmsd_threshold', help="Minimum pairwise RMSD between all structures in the ensemble.", type=float, default=0.1)
     # cutting options
     parser.add_argument('--plddt_confidence', help="The threshold for the mean score of plddt that stops cutting the terminis "
-                                                   "if a residue i designated 'L' by DSSP", type=float, default=90)
+                          "if a residue i designated 'L' by DSSP", type=float, default=90)
     parser.add_argument('--ss_confidence', help="The percentage of predictions that must NOT be designated 'L' in order to stup cutting the "
-                                                "terminis", type=float, default=70)
+                          "terminis", type=float, default=70)
     parser.add_argument('--disconnect_confidence', help="The percentage of predictions that must be designated 'disconnected' in order to "
-                                                        "continue the cutting if a residue is designated 'L'", type=float, default=70)
+                          "continue the cutting if a residue is designated 'L'", type=float, default=70)
     # plddt_confidence, ss_confidence, disconnect_confidence
     args = parser.parse_args()
 
-    if args.ensemble.upper() == "Local" and args.align_structure is None:
+    if args.ensemble.upper() == "LOCAL" and args.align_structure is None:
         raise ValueError("when running --ensemble=Local, --align_structure must be set.")
 
-    main(args.path, args.date, args.out_dir, args.plddt_confidence, args.ss_confidence, args.disconnect_confidence,
+    main(args.path, args.symmetry, Path(args.out_dir), args.plddt_confidence, args.ss_confidence, args.disconnect_confidence,
          args.avg_plddt_threshold, args.iptm_plus_ptm_threshold, args.rmsd_threshold, args.ensemble,
          args.max_monomers, args.max_multimers, args.align_structure, args.max_total_models, args.modify_rmsd_to_reach_min_models,
          args.direction)

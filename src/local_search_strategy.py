@@ -79,8 +79,6 @@ class LocalSearchStrategy:
                 self.docking.set_ignore_default_task(True)
             elif self.packer_option == "mcm_rosetta":
                 mcm_docking = DockMCMProtocol()
-                mcm_docking.set_first_cycle(self.config.num_first_cycle)
-                mcm_docking.set_second_cycle(self.config.num_second_cycle)
                 mcm_docking.set_native_pose(scfxn.dock_pose)
                 mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
                 mcm_docking.set_rt_min(False)

@@ -24,7 +24,7 @@ class FAFitnessFunction:
         if  is_symmetric(input_pose):
             self.trans_max_magnitude = None
         else:
-            self.trans_max_magnitude = config.get_max_translation()
+            self.trans_max_magnitude = config.get_max_translation(input_pose)
         self.native_pose = native_pose
         self.native_symmetric_pose = native_symmetric_pose
         self.original_reference_scores = []

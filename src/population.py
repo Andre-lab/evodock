@@ -1,12 +1,5 @@
 import os
 
-# from pyrosetta.rosetta.protocols.moves import PyMOLMover
-
-# from src.utils import IP_ADDRESS
-
-LOW_LIMIT_INIT_DIVERSITY = 2
-
-
 class ScorePopulation:
     # def __init__(self, scfxn, jobid, local_search_opt="None", config=None):
     def __init__(self, config, scfxn):
@@ -98,8 +91,6 @@ class ScorePopulation:
             with open(self.log_flipfix, "a") as f:
                 f.write("flipped," + ','.join([str(int(ind.flipped)) for ind in population]) + "\n")
                 f.write("fixed," + ','.join([str(int(ind.fixed)) for ind in population]) + "\n")
-        else:
-            print("nope", self.config.flexbb, self.config.docking_type_option)
 
     def print_information(self, popul, gen, trial_popul=False):
         if trial_popul is False:
@@ -126,11 +117,8 @@ class ScorePopulation:
                     before,
                     after,
                 ) = self.local_search.process_individual(ind)
-                if (
-                    self.config.docking_type_option == "Refine"
-                    and LOW_LIMIT_INIT_DIVERSITY > 0
-                ):
-                    while scored_ind.rmsd < LOW_LIMIT_INIT_DIVERSITY:
+                if (self.config.lower_diversity_limit is not None and self.config.lower_diversity_limit > 0):
+                    while scored_ind.rmsd < self.config.lower_diversity_limit:
                         (scored_ind, before, after) = self.randomize_ind(scored_ind)
             else:
                 scored_ind, _, _ = self.local_search.process_individual(ind)

@@ -21,22 +21,24 @@ logging.basicConfig(level=logging.ERROR)
 
 def print_init_information(logger, scfxn, native_pose, input_pose, dockmetric, syminfo: dict = None, native_symmetric_pose=None):
     input_score = f"{scfxn.scfxn_rosetta.score(input_pose) :.2f}"
-    native_score = f"{scfxn.scfxn_rosetta.score(native_symmetric_pose if native_symmetric_pose is not None else native_pose) :.2f}"
     position_str = ", ".join(
         ["{:.2f}".format(e) for e in get_position_info(input_pose, syminfo)]
     )
-    native_position_str = ", ".join(
-        ["{:.2f}".format(e) for e in get_position_info(native_symmetric_pose if native_symmetric_pose is not None else native_pose, syminfo)]
-    )
-    input_vs_native_rmsd = dockmetric.ca_rmsd(input_pose)
+    if native_pose is not None:
+        native_score = f"{scfxn.scfxn_rosetta.score(native_symmetric_pose if native_symmetric_pose is not None else native_pose) :.2f}"
+        native_position_str = ", ".join(
+            ["{:.2f}".format(e) for e in get_position_info(native_symmetric_pose if native_symmetric_pose is not None else native_pose, syminfo)]
+        )
+        input_vs_native_rmsd = dockmetric.ca_rmsd(input_pose)
 
     logger.info("==============================")
     logger.info(" input information ")
     logger.info(f" Input position: {position_str}{' (is symmetrical)' if syminfo else ''}")
     logger.info(f" Input pose score {input_score}")
-    logger.info(f" Native pose score {native_score}")
-    logger.info(f" Native position: {native_position_str}")
-    logger.info(f" Input vs native rmsd: {input_vs_native_rmsd:.2f}")
+    if native_pose is not None:
+        logger.info(f" Native pose score {native_score}")
+        logger.info(f" Native position: {native_position_str}")
+        logger.info(f" Input vs native rmsd: {input_vs_native_rmsd:.2f}")
     logger.info("==============================")
 
 def initialize_dock_metric(config, native, input_pose):

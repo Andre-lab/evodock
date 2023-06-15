@@ -41,12 +41,18 @@ class DockMetric:
 
     def ca_rmsd(self, pose):
         """Calculate RMSD."""
-        return CA_rmsd(self.native, pose)
+        if self.native is not None:
+            return CA_rmsd(self.native, pose)
+        else:
+            return -1
         # return self.symdock.calc_irms(pose) - CA_rmsd_symmetric is called under the hood anyways
 
-    def i_rmsd(self, pose):
+    def interface_rmsd(self, pose):
         """Calculate interface RMSD."""
-        return calc_Irmsd(self.native, pose)
+        if self.native is not None:
+            return calc_Irmsd(self.native, pose)
+        else:
+            return -1
 
     def interaction_energy(self, pose):
         """Calculate interface energy across jump 1 of the pose."""
@@ -70,19 +76,23 @@ class CubicDockMetric:
         :param trans_mags: translation magnitudes to employ when calculating the interaction energy. should match jump_ids and dof_ids.
         """
         self.crystallic_native = crystallic_native
-        assert not is_symmetric(self.crystallic_native)
-        self.cubicsetup_native = CubicSetup(native_symdef)
+        self.cubicsetup_native = None
+        self.same_handedness = None
         self.cubicsetup_input = CubicSetup(input_symdef)
-        self.same_handedness = self.cubicsetup_input.righthanded == self.cubicsetup_native.righthanded
+        # This is important if using a native
+        if crystallic_native is not None:
+            assert not is_symmetric(self.crystallic_native)
+            self.cubicsetup_native = CubicSetup(native_symdef)
+            self.same_handedness = self.cubicsetup_input.righthanded == self.cubicsetup_native.righthanded
+            self.CA_atom_map = self.cubicsetup_input.construct_atom_map_any2hf(input_pose, self.crystallic_native,
+                                                                               same_handedness=self.same_handedness,
+                                                                               interface=False,
+                                                                               predicate="ca", )
+            self.CA_interface_atom_map = self.cubicsetup_input.construct_atom_map_any2hf(input_pose, self.crystallic_native,
+                                                                                         same_handedness=self.same_handedness,
+                                                                                         interface=True,
+                                                                                         predicate="ca")
         # construct CA chain map to be used for CA_rmsd calculations
-        self.CA_atom_map = self.cubicsetup_input.construct_atom_map_any2hf(input_pose, self.crystallic_native,
-                                                                           same_handedness=self.same_handedness,
-                                                                           interface=False,
-                                                                           predicate="ca", )
-        self.CA_interface_atom_map = self.cubicsetup_input.construct_atom_map_any2hf(input_pose, self.crystallic_native,
-                                                                                     same_handedness=self.same_handedness,
-                                                                                     interface=True,
-                                                                                     predicate="ca")
         if jump_ids or dof_ids or trans_mags:
             assert len(jump_ids) == len(dof_ids) and len(jump_ids) == len(trans_mags), "jump_ids, dof_ids and trans_mag must be of equal length"
         self.jump_ids = jump_ids
@@ -121,11 +131,17 @@ class CubicDockMetric:
 
     def ca_rmsd(self, pose):
         """Calculate cubic symmetric RMSD."""
-        return self.cubicsetup_input.rmsd_hf_map_with_atom_map(pose, self.crystallic_native, self.CA_atom_map)
+        if self.crystallic_native is not None:
+            return self.cubicsetup_input.rmsd_hf_map_with_atom_map(pose, self.crystallic_native, self.CA_atom_map)
+        else:
+            return -1
 
     def interface_rmsd(self, pose):
         """Calculate symmetric interface RMSD."""
-        return self.cubicsetup_input.rmsd_hf_map_with_atom_map(pose, self.crystallic_native, self.CA_interface_atom_map)
+        if self.crystallic_native is not None:
+            return self.cubicsetup_input.rmsd_hf_map_with_atom_map(pose, self.crystallic_native, self.CA_interface_atom_map)
+        else:
+            return -1
 
     def interaction_energy(self, pose):
         """Calculates interface energy."""

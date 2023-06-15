@@ -6,6 +6,13 @@ import numpy as np
 
 def build_rosetta_flags(config):
     filename = config.pose_input
+    unboundrot = filename
+    # create unbound rotamers from the template
+    if config.template is not None:
+        unboundrot = config.template
+    # create unbound rotamers from the
+    elif config.syminfo is None and config.flexbb:
+        unboundrot = f"{filename[0]} {filename[1]}" if isinstance(filename, list) else f"{filename}",
     seed = config.seed
     # add fixed options
     opts = [
@@ -17,7 +24,7 @@ def build_rosetta_flags(config):
         "-ex2aro",
         "-use_input_sc",
         "-extrachi_cutoff 1",
-        "-unboundrot {}".format(filename),
+        "-unboundrot " + unboundrot,
     ]
     # add additional_rosetta_options
     if config.rosetta_options is not None:

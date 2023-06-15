@@ -16,6 +16,8 @@ from symmetryhandler.reference_kinematics import set_jumpdof_str_str
 from cubicsym.utilities import get_jumpidentifier
 from cubicsym.utilities import get_base_from_pose, add_id_to_pose_w_base
 from cubicsym.actors.symdefswapper import SymDefSwapper
+from pyrosetta.rosetta.core.pose import append_pose_to_pose
+from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
 
 def set_init_x(pose, config):
     """Sets the initial x for the input pose if an x_transfile is given in the config file"""
@@ -26,28 +28,42 @@ def set_init_x(pose, config):
 
 def initialize_starting_poses(config):
     """Initialize the starting poses."""
-    native = Pose()
-    pose_from_file(native, config.native_input)
-    input_pose = Pose()
-    pose_from_file(input_pose, config.pose_input)
-    native.conformation().detect_disulfides()
+    native = None
+    if config.native_input is not None:
+        native = Pose()
+        pose_from_file(native, config.native_input)
+        native.conformation().detect_disulfides()
+    # if flexbb we have to merge the receptor and ligand together
+    if isinstance(config.pose_input, list):
+        receptor = pose_from_file(config.pose_input[0])
+        ligand = pose_from_file(config.pose_input[1])
+        if config.template is not None:
+            input_pose = align_two_chains_to_pose(pose_from_file(config.template), receptor, ligand)
+        else:
+            append_pose_to_pose(receptor, ligand, True)
+            input_pose = receptor.clone()
+    else:
+        input_pose = Pose()
+        pose_from_file(input_pose, config.pose_input)
     input_pose.conformation().detect_disulfides()
     native_symmetric = None
     if config.syminfo:
-        native_symmetric = pose_from_file(config.syminfo.native_symmetric_input)
-        native_symmetric.conformation().detect_disulfides()
+        # native suff
         SetupForSymmetryMover(config.syminfo.input_symdef).apply(input_pose)
-        SetupForSymmetryMover(config.syminfo.native_symdef).apply(native_symmetric)
         # symmetrize the native so that it is the same base
-        base = get_base_from_pose(input_pose)
-        if base != "HF":
-            sds = SymDefSwapper(native_symmetric, config.syminfo.native_symdef)
-            if base == "3F":
-                native_symmetric = sds.create_3fold_pose(native_symmetric)
-            elif base == "2F":
-                native_symmetric = sds.create_2fold_pose(native_symmetric)
-            else:
-                raise ValueError
+        if config.syminfo.native_symmetric_input is not None:
+            native_symmetric = pose_from_file(config.syminfo.native_symmetric_input)
+            native_symmetric.conformation().detect_disulfides()
+            SetupForSymmetryMover(config.syminfo.native_symdef).apply(native_symmetric)
+            base = get_base_from_pose(input_pose)
+            if base != "HF":
+                sds = SymDefSwapper(native_symmetric, config.syminfo.native_symdef)
+                if base == "3F":
+                    native_symmetric = sds.create_3fold_pose(native_symmetric)
+                elif base == "2F":
+                    native_symmetric = sds.create_2fold_pose(native_symmetric)
+                else:
+                    raise ValueError
         set_init_x(input_pose, config)
         config.syminfo.store_info_from_pose(input_pose) # setup cubic boundaries
     else:
@@ -59,7 +75,8 @@ def initialize_starting_poses(config):
         input_pose.fold_tree(ft)
     if config.pmm:
         input_pose.pdb_info().name("input_pose")
-        native.pdb_info().name("native_pose")
+        if config.native_input is not None:
+            native.pdb_info().name("native_pose")
         config.pmm.apply(input_pose)
         config.pmm.apply(native)
     return input_pose, native, native_symmetric
@@ -90,9 +107,20 @@ def xyz_limits_for_pdb(pdb):
     return lower_xyz, upper_xyz
 
 
-def get_translation_max(input_pdb):
-    pdb = pdbstructure_from_file(input_pdb)
-    lower_xyz, upper_xyz = xyz_limits_for_pdb(pdb)
+def get_translation_max(pose):
+    # we just do this on the pose instead
+    for resi in range(1, pose.size() + 1):
+        if resi == 1:
+            for atom in pose.residue(resi).atoms():
+                val = np.array(atom.xyz()).tolist()
+                lower_xyz = val
+                upper_xyz = val
+        else:
+            for atom in pose.residue(resi).atoms():
+                val = np.array(atom.xyz()).tolist()
+                lower_xyz = np.minimum(lower_xyz, val)
+                upper_xyz = np.maximum(upper_xyz, val)
+    # pdb = pdbstructure_from_file(input_pdb)
     max_translation = max(np.maximum(abs(lower_xyz), abs(upper_xyz)))
     return max_translation + 10
 
@@ -132,13 +160,11 @@ def random_individual(max_value=180):
 
 
 def get_rotation_euler(flexible_jump):
-    raise NotImplementedError #fixme: reinstate, but not for symemtry
     rot_matrix = R.from_matrix(np.asarray(flexible_jump.get_rotation()))
     vec = rot_matrix.as_euler("xyz", degrees=True)
     return vec
 
 def get_translation(flexible_jump):
-    raise NotImplementedError #fixme: reinstate, but not for symemtry
     return np.asarray(flexible_jump.rt().get_translation())
 
 def get_position_info(dock_pose, syminfo=None):
@@ -205,3 +231,17 @@ def make_trial(idx, genotype, ligand=1, receptor=1, subunit=1, receptor_name="",
     return Individual(idx, genotype, score=1000, idx_ligand=ligand, idx_receptor=receptor, idx_subunit=subunit, rmsd=0, i_sc=0, irms=0,
         receptor_name=receptor_name, ligand_name=ligand_name, subunit_name=subunit_name, flipped=flipped, fixed=fixed)
 
+def align_two_chains_to_pose(reference_pose, pose_chainA, pose_chainB):
+    """Aligs pose_chainA and pose_chainB onto the chain A and B of the reference_pose respectively."""
+    pose_receptor = Pose(reference_pose, 1, chain_end_res(reference_pose, 1))
+    pose_ligand = Pose(
+        reference_pose,
+        chain_end_res(reference_pose, 1) + 1,
+        reference_pose.total_residue(),
+    )
+    calpha_superimpose_pose(pose_chainA, pose_receptor)
+    calpha_superimpose_pose(pose_chainB, pose_ligand)
+    join_pose = Pose()
+    join_pose.assign(pose_chainA)
+    append_pose_to_pose(join_pose, pose_chainB, True)
+    return join_pose

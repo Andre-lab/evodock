@@ -33,16 +33,19 @@ class DifferentialEvolutionAlgorithm:
         self.ind_size = fitness_function.size()
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.config.out_path + "/time.csv"
-        self.max_translation = config.get_max_translation()
+        self.max_translation = config.get_max_translation(fitness_function.dock_pose)
         self.scfxn = fitness_function
         self.mutation_strategy = MutationStrategyBuilder(config).build(self.scfxn.size())
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
             config, fitness_function, self.scfxn.dockmetric,
         ).build()
-        if self.config.syminfo:
-            self.optimal_solution = get_position_info(fitness_function.native_symmetric_pose, self.config.syminfo)
+        if fitness_function.native_pose is not None:
+            if self.config.syminfo:
+                self.optimal_solution = get_position_info(fitness_function.native_symmetric_pose, self.config.syminfo)
+            else:
+                self.optimal_solution = get_position_info(fitness_function.native_pose, self.config.syminfo)
         else:
-            self.optimal_solution = get_position_info(fitness_function.native_pose, self.config.syminfo)
+            self.optimal_solution = None
         self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
 
@@ -149,9 +152,12 @@ class DifferentialEvolutionAlgorithm:
             name = self.config.out_path + f"/evolved_{self.generation}.pdb"
             self.best_pdb.dump_pdb(name)
 
-        fdc = fitness_distance_correlation(
-            self.population, self.optimal_solution, self.scfxn
-        )
+        if self.optimal_solution is not None:
+            fdc = fitness_distance_correlation(
+                self.population, self.optimal_solution, self.scfxn
+            )
+        else:
+            fdc = -1
 
         file_object = open(self.job_id, "a")
         evolution_str = f"{self.generation:.0f},{self.gen_avg:.2f},{self.gen_best:.2f},{best_rmsd:.2f},{fdc:.2f}"
@@ -251,7 +257,6 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
             # --- RESTART ---- #
             self.restart_mechanism()
 
-# <<<<<<< HEAD
 #             best_SixD_vector, best_rmsd = self.popul_calculator.cost_func.render_best(
 #                 i, gen_sol, population
 #             )
@@ -272,7 +277,6 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
 #             file_time.close()
 #
 #         return population
-# =======
             # --- SCORE KEEPING --------------------------------+
             self.score_keeping()
 
@@ -301,4 +305,3 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
                     ) = self.scfxn.local_search.process_individual(ind)
                     self.population[j] = ind
                     self.gen_scores[j] = after
-# >>>>>>> main
