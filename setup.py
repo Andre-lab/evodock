@@ -32,6 +32,8 @@ setup(
         "scripts/fake_scatter.py",
         "scripts/make_scatter_vs_rosetta.py",
         "scripts/prepacking.py",
+        "scripts/symmetric_relax.py",
+        "scripts/af_to_evodock.py",
     ],
     packages=[
         "src",

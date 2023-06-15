@@ -263,6 +263,24 @@ EvoDOCK produces several different log files:
 
 EvoDOCK also outputs a pdb file of the final optimized model (`final_docked_evo.pdb`) as well as the lowest energy structure for each geneation (`evolved.pdb`)
 
+# Symmetric relax of EvoDOCK output structures
+
+The script `scripts/symmetric_relax.py` can be used to relax structures from the EvoDOCK output. The script is well documented. Use `python scripts/symmetric_relax.py -h` to see more.
+It is advisable to use this script when parsing AlphaFold models as compared to Rosettas relax protocol it guards against the structures blowing up 
+if the AlphaFold structures have bad energies. It does however require more user interference as explained below.
+
+
+Use the `ensemble.csv` and `all_individual.csv` to get the backbone and genotype ([z, λ, x, ψ, ϴ, φ]) for any model you want for any generation. If you want the lowest energy one parse this into a pandas 
+DataFrame and fish it out. Use the genotype to modify the symmetry file you parsed to EvoDOCK (see https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry for more information about the symmetry files in Rosetta). 
+You have to modify the set_dof lines to match the genotype. 
+Then to the script parse the backbone (pdb file) to --file and the modified symmetry file to --symmetry_file.
+
+A test can be run with:
+
+```console
+python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --rosetta_out tests/outputs/ --input_out tests/outputs/ 
+```
+
 # Differential Evolution Algorithm
 
 Differential Evolution [Price97] is a population-based search method. DE creates new candidate solutions by combining existing ones according to a simple formula of vector crossover and mutation, and then keeping whichever candidate solution has the best score or fitness on the optimization problem at hand.

@@ -180,28 +180,27 @@ def init_rosetta(pose_file, constrain_coords=False, ex1=False, ex2aro=False, ex2
         opts.append('-ex2')
     init(extra_options=" ".join(opts))
 
-def symmetric_relax(pose_file, symmetry_file, native_symdef_file, cycles=5, constrain_coords=False,
-                    rosetta_out=".", input_out=".", symm_out=".", ex1=False, ex2aro=False, ex2=False, info_out=None, native_file=None, suffix=None,
-                    bb=True, sc=True, jumps=False):
+def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, rosetta_out=".", input_out=".", symm_out=".",
+                    info_out=None, native_file=None, suffix=None):
 
     # score function and read in symmetric pose
     init_rosetta(pose_file)
     pose = pose_from_file(pose_file)
     pose.conformation().detect_disulfides()
+    if native_file is None:
+        native = pose.clone()
+    else:
+        native = pose_from_file(native_file)
     SetupForSymmetryMover(symmetry_file).apply(pose)
-    native = pose_from_file(native_file)
-    #native.conformation().detect_disulfides()
     pose.conformation().detect_disulfides()
     sfxn = ScoreFunctionFactory.create_score_function("ref2015")
     sfxn.score(pose)
-    # init_pose.conformation().detect_disulfides()
-    #
     packer = PosePackRotamers(pose, pose_file, "custom")
     pose = packer.pack()
-    #
     init_pose = pose.clone()
+    if native_symdef_file is None:
+        native_symdef_file = symmetry_file
     init_metrics = calculate_metrics(init_pose, native, init_pose, native_symdef_file, symmetry_file)
-
 
     # todo: if this does not work.
     # could do expensive and might not work, do interface refinement.
@@ -277,7 +276,6 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file, cycles=5, cons
     #     print(f"With constrained relax the energy is now: {after_score} with RMSD to the input structure {CA_rmsd(pose_init, pose_asym)}")
     #     init_rosetta(constrain_coords, ex1, ex2aro, ex2)
 
-
     # Now output the final symmetry file
     sfxn.score(pose)
     symmetrysetup = SymmetrySetup()
@@ -304,40 +302,41 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file, cycles=5, cons
     pose.dump_pdb(rosetta_out + f"/rosetta_recreated_from_input_and_symm_file_{name}.pdb")
 
 def main():
-    description = "Wrapper script for the relax binary. In addition to regular relax which outputs the full symmetric structure, this scripts " \
+    description = "Wrapper script for the relax protocol in Rosetta/PyRosetta. In addition to regular relax it finetunes the relax to protect against the structure" \
+                  " blowing up. This can happen if the structures produced by AF/AFM are energetically unfavorable when parsed into Rosetta. " \
+                  "In addition to regular relax output, this  " \
                   "also outputs an input structure (to be made symmetric in Rosetta) and the symmetry file which dofs values (in set_dofs) " \
-                  "are set to the end point of the relax protocol and a csv file of the final unweighted score terms, total score and RMSD." \
-                  "a recreated file using the outputtet input file and symmetry file is also created."
+                  "are set to the end point of the relax protocol as well as a csv file of the final unweighted score terms, total score and RMSD." \
+                  "A recreated file using the output input file and symmetry file is also created."
 
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--file", help="pose to relax", type=str, required=False)
-    parser.add_argument("--symmetry_file", help="symmetry definition file", type=str)
-    parser.add_argument("--native_file", help="native file. If not set it will use --file instead.", type=str)
-    parser.add_argument("--native_symmetry_file", help="The native symmetry file", type=str)
-    parser.add_argument("--constrain_coords", help="Constrain to starting coordinates", action="store_true")
-    parser.add_argument("--rosetta_out", help="output of the full symmetric structure", type=str, default=".")
-    parser.add_argument("--input_out", help="output of the input structure", type=str, default=".")
-    parser.add_argument("--sym_out", help="output of the symmetry file", type=str, default=".")
-    parser.add_argument("--info_out", help="output of the csv file containing score terms and RMSD", type=str, default=".")
-    parser.add_argument("--suffix", help="suffix given to all output structures", type=str)
-    # fixme: need to do packing before and after, and to be even more thorough prob do relax as well
+    parser.add_argument("--file", help="Input structure to relax", type=str, required=True)
+    parser.add_argument("--symmetry_file", help="Symmetry definition file", type=str, required=True)
+    parser.add_argument("--native_file", help="Native file. If not set it will use --file instead.", type=str)
+    parser.add_argument("--native_symmetry_file", help="The native symmetry file. If not set it will use --symmetry_file", type=str)
+    parser.add_argument("--rosetta_out", help="Output of the full symmetric structure", type=str, default=".")
+    parser.add_argument("--input_out", help="Output of the input structure", type=str, default=".")
+    parser.add_argument("--sym_out", help="Output of the symmetry file", type=str, default=".")
+    parser.add_argument("--info_out", help="Output of the csv file containing score terms and RMSD", type=str, default=".")
+    parser.add_argument("--suffix", help="Suffix given to all output structures", type=str)
     # parser.add_argument("--move_jumpdofs", help="When calculating the interaction energy move these jumpdofs with a certain amount. "
     #                                             "A jumpdof and is pertubation is specified by its jump name, dof name and an amount as follows: "
     #                                             "<jumpname>:<dofname>:<amount>. Example: Jump1:z:1000.", nargs="+", required=True)
     # minization options
-    parser.add_argument("--bb", help="minimize backbone.", action="store_true")
-    parser.add_argument("--sc", help="minimize sidecahins.", action="store_true")
-    parser.add_argument("--jumps", help="minimize jumps.", action="store_true")
-    # direct relax optionsoptions
-    parser.add_argument("--cycles", help="cycles to use.", type=int, default=15)
-    parser.add_argument("--ex1", help="Do ex1 rotamer sampling", action="store_true")
-    parser.add_argument("--ex2aro", help="Do ex2aro rotamer sampling", action="store_true")
-    parser.add_argument("--ex2", help="Do ex2 rotamer sampling", action="store_true")
+    # parser.add_argument("--bb", help="minimize backbone.", action="store_true")
+    # parser.add_argument("--sc", help="minimize sidecahins.", action="store_true")
+    # parser.add_argument("--jumps", help="minimize jumps.", action="store_true")
+    # # direct relax optionsoptions
+    # parser.add_argument("--cycles", help="cycles to use.", type=int, default=15)
+    # parser.add_argument("--ex1", help="Do ex1 rotamer sampling", action="store_true")
+    # parser.add_argument("--ex2aro", help="Do ex2aro rotamer sampling", action="store_true")
+    # parser.add_argument("--ex2", help="Do ex2 rotamer sampling", action="store_true")
     args = parser.parse_args()
 
-    symmetric_relax(args.file, args.symmetry_file, args.native_symmetry_file, args.cycles, args.constrain_coords,
-                    args.rosetta_out, args.input_out, args.sym_out, args.ex1, args.ex2aro, args.ex2, args.info_out, args.native_file, args.suffix,
-                     args.bb, args.sc, args.jumps)
+    symmetric_relax(pose_file=args.file, symmetry_file=args.symmetry_file, native_symdef_file=args.native_symmetry_file,
+                    rosetta_out=args.rosetta_out, input_out=args.input_out, symm_out=args.sym_out, info_out=args.info_out,
+                    native_file=args.native_file, suffix=args.suffix)
+
 
 if __name__ == "__main__":
 
