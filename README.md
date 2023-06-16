@@ -31,7 +31,7 @@ The following packages must be installed:
 
 If using Symmetric Protein-Protein docking these additional packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
-* mpi4py (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
+* mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
 
 Furthermore the following packages are also needed but are automatically installed by pip install (see Installation Guide)
 
