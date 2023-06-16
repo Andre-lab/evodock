@@ -68,7 +68,7 @@ Installation time should only take a couple of seconds but downloading the requi
 # Usage
 
 ## Preprocessing a complex with prepacking
-Before running EvoDOCK it is important to prepack the input files as so: 
+Before running EvoDOCK it is important to prepack the input files as so (takes several seconds): 
 
 ```console
 python ./scripts/prepacking.py --file <input_file>
@@ -81,18 +81,18 @@ The script is well documented. Use `python scripts/af_to_evodock.py -h` to see m
 
 Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete assembly docking is given. 
 
-Preparing an ensemble for Reassembly docking
+Preparing an ensemble for Reassembly docking (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
-Preparing an ensemble for Complete assembly docking
+Preparing an ensemble for Complete assembly docking (takes a few minutes):
 ```console
 --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
 ## EvoDOCK 
-EvoDOCK can be run with different configurations given a specifc config.ini input file as so. 
+EvoDOCK can be run with different configurations given a specifc config.ini input file as so: 
 
 ```console
 python evodock.py configs.ini
@@ -111,11 +111,11 @@ The following sections describe how to configure EvoDOCK through the config file
 
 Examples of config files for different EvoDOCK configurations are found in the `config` folder with the following behavior: 
 
-1. Heteromeric docking with single ligand and receptor backone: `configs/heterodimeric/sample_dock_single.ini` 
-2. Heteromeric docking with flexible backbones: `configs/heterodimeric/sample_dock_flexbb.ini` 
-3. Reassembly docking with a single backbone: `configs/symmetric/reassembly_single.ini` 
-4. Reassembly docking with flexible backbones: `configs/symmetric/reassembly_flexbb.ini` 
-5. Complete assembly docking with flexible backbones: `configs/symmetric/complete_assembly.ini`  
+1. Heteromeric docking with single ligand and receptor backone (takes a few minutes): `configs/heterodimeric/sample_dock_single.ini` 
+2. Heteromeric docking with flexible backbones (takes a few minutes): `configs/heterodimeric/sample_dock_flexbb.ini` 
+3. Reassembly docking with a single backbone (takes a few minutes): `configs/symmetric/reassembly_single.ini` 
+4. Reassembly docking with flexible backbones (takes a few minutes): `configs/symmetric/reassembly_flexbb.ini` 
+5. Complete assembly docking with flexible backbones (takes a few minutes): `configs/symmetric/complete_assembly.ini`  
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
@@ -314,7 +314,7 @@ DataFrame and fish it out. Use the genotype to modify the symmetry file you pars
 You have to modify the set_dof lines to match the genotype. 
 Then to the script parse the backbone (pdb file) to --file and the modified symmetry file to --symmetry_file.
 
-A test can be run with:
+A test can be run with (can take up to an hour or more):
 
 ```console
 python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --rosetta_out tests/outputs/ --input_out tests/outputs/ 
