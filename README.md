@@ -7,7 +7,7 @@ Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v3)
 
 Symmetric docking has been published at:
-[missing](link:missing)
+[missing](link:Coming soon!)
 
 # Installation 
 
@@ -28,26 +28,26 @@ pip install .
 
 # Usage
 
-## Preprocessing complex with prepacking
+## Preprocessing a complex with prepacking
 Before running EvoDOCK it is important to prepack the input files as so: 
 
 ```console
 python ./scripts/prepacking.py --file <input_file>
 ```
 
-## Converting AlphaFold predictions to an EvoDOCK ensemble
+## Converting AlphaFold predictions to a symmetric EvoDOCK ensemble
  
 `scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
-Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete docking is given. 
+Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete assembly docking is given. 
 
 Preparing an ensemble for Reassembly docking
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
-Preparing an ensemble for Complete docking
+Preparing an ensemble for Complete assembly docking
 ```console
 --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
