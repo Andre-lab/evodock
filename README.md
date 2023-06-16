@@ -9,7 +9,21 @@ Heterodimeric docking has been published at:
 Symmetric docking has been published at:
 [missing](link:Coming soon!)
 
-# Installation 
+# System Requirements
+
+## Hardware requirements
+
+EvoDOCK only requires a standard computer to run but as population size increase more RAM is needed. 
+
+## Software requirements
+
+### OS Requirements
+
+This package is supported for macOS and Linux. The package has been tested on the following systems:
+
+Linux: Ubuntu 20.04.5/20.04.6 and CentOS Linux 7
+
+## Package requirements
 
 The following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
@@ -19,7 +33,30 @@ If using Symmetric Protein-Protein docking these additional packages must be ins
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
 
-Clone the cubicsym repository and ```cd``` into it. Then run the install script.
+Furthermore the following packages are also needed by automatically installed by pip install (see Installation Guide)
+
+```
+cubicsym @ git+https://github.com/Andre-lab/cubicsym",
+cloudcontactscore @ git+https://github.com/Andre-lab/cloudcontactscore",
+numpy>=1.21.0
+pandas>=1.3.4
+pillow>=9.1.0
+scipy>=1.7.1
+seaborn>=0.11.2
+setuptools>=44.0.0
+imageio>=2.10.1
+matplotlib>=3.4.3
+```
+
+```console
+git clone https://github.com/Andre-lab/evodock.git
+cd ./evodock
+pip install .
+```
+
+# Installation Guide
+
+Clone the cubicsym repository and `cd` into it. Then run the install script.
 ```console
 git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
