@@ -63,6 +63,8 @@ cd ./evodock
 pip install .
 ```
 
+Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
+
 # Usage
 
 ## Preprocessing a complex with prepacking
