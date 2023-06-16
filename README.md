@@ -36,8 +36,8 @@ If using Symmetric Protein-Protein docking these additional packages must be ins
 Furthermore the following packages are also needed but are automatically installed by pip install (see Installation Guide)
 
 ```
-cubicsym @ git+https://github.com/Andre-lab/cubicsym",
-cloudcontactscore @ git+https://github.com/Andre-lab/cloudcontactscore",
+cubicsym @ git+https://github.com/Andre-lab/cubicsym,
+cloudcontactscore @ git+https://github.com/Andre-lab/cloudcontactscore,
 numpy>=1.21.0
 pandas>=1.3.4
 pillow>=9.1.0
