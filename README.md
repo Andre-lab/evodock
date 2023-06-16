@@ -48,12 +48,6 @@ imageio>=2.10.1
 matplotlib>=3.4.3
 ```
 
-```console
-git clone https://github.com/Andre-lab/evodock.git
-cd ./evodock
-pip install .
-```
-
 # Installation Guide
 
 Clone the cubicsym repository and `cd` into it. Then run the install script.
