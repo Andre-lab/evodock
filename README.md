@@ -32,7 +32,7 @@ The following packages must be installed:
 If using Symmetric Protein-Protein docking these additional packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Bbtain a license as previously. Then download the following wheel file from [Coming soon]. Then run:
+* Specifc PyRosetta branch. Obtain a license as previously. Then download the following wheel file from [Coming soon]. Then run:
 
 ```console
 pip install [coming soon]
@@ -78,7 +78,13 @@ python ./scripts/prepacking.py --file <input_file>
 `scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
-Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete assembly docking is given. 
+Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete assembly docking is given. You need to download `af_data.tar.gz` [here](https://zenodo.org/record/8047514). Unzip it with 
+
+```console
+tar -xf af_data.tar.gz
+```
+
+Put the AF_data in `evodock/inputs` before running the tests below. 
 
 Preparing an ensemble for Reassembly docking (takes a few minutes):
 ```console
@@ -304,9 +310,7 @@ EvoDOCK also outputs a pdb file of the final optimized model (`final_docked_evo.
 # Symmetric relax of EvoDOCK output structures
 
 The script `scripts/symmetric_relax.py` can be used to relax structures from the EvoDOCK output. The script is well documented. Use `python scripts/symmetric_relax.py -h` to see more.
-It is advisable to use this script when parsing AlphaFold models as compared to Rosettas relax protocol it guards against the structures blowing up 
-if the AlphaFold structures have bad energies. It does however require more user interference as explained below.
-
+It is advisable to use this script when parsing AlphaFold models as compared to Rosettas relax protocol it guards against the structures blowing up if the AlphaFold structures have bad energies. It does however require more user interference as explained below.
 
 Use the `ensemble.csv` and `all_individual.csv` to get the backbone and genotype ([z, λ, x, ψ, ϴ, φ]) for any model you want for any generation. If you want the lowest energy one parse this into a pandas 
 DataFrame and fish it out. Use the genotype to modify the symmetry file you parsed to EvoDOCK (see https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry for more information about the symmetry files in Rosetta). 
