@@ -27,12 +27,12 @@ Linux: Ubuntu 20.04.5/20.04.6 and CentOS Linux 7
 
 The following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
-* PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need a free license for this. 
+* PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need to obtain a license before use (see the link) 
 
 If using Symmetric Protein-Protein docking these additional packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously. Then download the following wheel file from [Coming soon]. Then run:
+* Specifc PyRosetta branch. Obtain a license as previously. Then download the following pyrosetta wheel file from [here](http://graylab.jhu.edu/download/PyRosetta4/archive/release/). Then run:
 
 ```console
 pip install [coming soon]
