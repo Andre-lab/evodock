@@ -32,10 +32,10 @@ The following packages must be installed:
 If using Symmetric Protein-Protein docking these additional packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously. Then download the following pyrosetta wheel file from [here](http://graylab.jhu.edu/download/PyRosetta4/archive/release/). Then run:
+* Specifc PyRosetta branch. Obtain a license as previously. Then download the following pyrosetta (pyrosetta-2023.24.post.dev+48.commits.68ccf66-py37_0.tar.bz2) wheel file from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/). unzip it and run:
 
 ```console
-pip install [coming soon]
+pip install [wheel file]
 ```
   
 Furthermore the following packages are also needed but are automatically installed by pip install (see Installation Guide)
