@@ -19,9 +19,9 @@ EvoDOCK only requires a standard computer to run but as population size increase
 
 ### OS Requirements
 
-This package is supported for macOS and Linux. The package has been tested on the following systems:
+This package is supported for Linux (macOS will soon be added). The package has been tested on the following systems:
 
-Linux: Ubuntu 20.04.5/20.04.6 and CentOS Linux 7
+Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
 ## Package requirements
 
@@ -32,13 +32,24 @@ The following packages must be installed:
 If using Symmetric Protein-Protein docking these additional packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously. Then download the following pyrosetta (pyrosetta-2023.24.post.dev+48.commits.68ccf66-py37_0.tar.bz2) wheel file from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/). unzip it and run:
+* Specifc PyRosetta branch. Obtain a license as previously. Then download one of the following pyrosetta wheel files from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/:
+
+```
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py36_0.tar.bz2	
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py37_0.tar.bz2	
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py38_0.tar.bz2
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py39_0.tar.bz2
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py310_0.tar.bz2	
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py311_0.tar.bz2	
+```
+
+unzip it and run:
 
 ```console
 pip install [wheel file]
 ```
   
-Furthermore the following packages are also needed but are automatically installed by pip install (see Installation Guide)
+Furthermore the following packages are also needed but are automatically installed by pip install using the setup.py script (see Installation Guide).
 
 ```
 cubicsym @ git+https://github.com/Andre-lab/cubicsym,
