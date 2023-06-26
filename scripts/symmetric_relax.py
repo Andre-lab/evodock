@@ -192,7 +192,8 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, rosetta_o
     else:
         native = pose_from_file(native_file)
     SetupForSymmetryMover(symmetry_file).apply(pose)
-    pose.conformation().detect_disulfides()
+    # fixme: since master merge this does not work with symmetry
+    #pose.conformation().detect_disulfides()
     sfxn = ScoreFunctionFactory.create_score_function("ref2015")
     sfxn.score(pose)
     packer = PosePackRotamers(pose, pose_file, "custom")
