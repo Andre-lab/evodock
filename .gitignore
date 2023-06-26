@@ -11,6 +11,8 @@
 flycheck*py
 
 !configs/
+!configs/heterodimeric
+!configs/symmetric/
 !configs/**.ini
 
 
