@@ -113,7 +113,7 @@ scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Loc
 
 Preparing an ensemble for Complete assembly docking (takes a few minutes):
 ```console
---path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
+scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
 ## EvoDOCK 
