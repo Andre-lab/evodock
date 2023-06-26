@@ -330,7 +330,7 @@ EvoDOCK also outputs a pdb file of the final optimized model (`final_docked_evo.
 # Symmetric relax of EvoDOCK output structures
 
 The script `scripts/symmetric_relax.py` can be used to relax structures from the EvoDOCK output. The script is well documented. Use `python scripts/symmetric_relax.py -h` to see more.
-It is advisable to use this script when parsing AlphaFold models as compared to Rosettas relax protocol it guards against the structures blowing up if the AlphaFold structures have bad energies. It does however require more user interference as explained below.
+It is advisable to use this script when parsing AlphaFold models as compared to Rosettas relax protocol as it guards against the structures blowing up if the AlphaFold structures have bad energies. It does however require more user interference as explained below.
 
 Use the `ensemble.csv` and `all_individual.csv` to get the backbone and genotype ([z, λ, x, ψ, ϴ, φ]) for any model you want for any generation. If you want the lowest energy one parse this into a pandas 
 DataFrame and fish it out. Use the genotype to modify the symmetry file you parsed to EvoDOCK (see https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry for more information about the symmetry files in Rosetta). 
