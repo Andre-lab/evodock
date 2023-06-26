@@ -196,7 +196,8 @@ class CubicDockMetric:
             trans[dofid - 1] += transmag * slidedir
             flexible_jump.set_translation(xyzVector_double_t(*trans))
             pose.set_jump(jumpid, flexible_jump)
-        pose.conformation().detect_disulfides() # else disulfide energy can blow up!
+        # fixme: does not work for symmetry when merged from master now!
+        # pose.conformation().detect_disulfides() # else disulfide energy can blow up!
 
     # def __set_inteface_atoms(self, input_pose):
     #     """Sets which atoms are determined to be in the interface in the native structure."""
