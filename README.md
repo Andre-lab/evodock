@@ -25,14 +25,14 @@ Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
 ## Package requirements
 
-The following packages must be installed: 
+If using heterodimeric only the following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
 * PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need to obtain a license before use (see the link) 
 
-If using Symmetric Protein-Protein docking these additional packages must be installed:
+If using Symmetric Protein-Protein docking these packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously. Then download one of the following pyrosetta VERSIONS from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/):
+* Specifc PyRosetta branch. Obtain a license as previously.Then download one of the following pyrosetta VERSIONS from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/):
 
 The different VERSIONS:
 ```
