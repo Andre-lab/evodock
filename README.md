@@ -32,7 +32,7 @@ If using heterodimeric only the following packages must be installed:
 If using Symmetric Protein-Protein docking these packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously.Then download one of the following pyrosetta VERSIONS from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/):
+* Specifc PyRosetta branch. Obtain a license as previously.Then download one of the following pyrosetta VERSIONS from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/) (WILL BE UPLOADED AGAIN SOON!):
 
 The different VERSIONS:
 ```
