@@ -53,7 +53,7 @@ tar -xf pyrosetta-2023.24.post.dev+48.commits.68ccf66-<VERSION>.tar.bz2
 You can then add it to your PYTHONPATH:
 
 ```console
-export PYTHONPATH=$PYTHONPATH:<install directory>/lib/python3.10/site-packages
+export PYTHONPATH=$PYTHONPATH:<install directory>/lib/python<VERSION>/site-packages
 ```
 
 or you can move the package to the site-packages for you python environment.
