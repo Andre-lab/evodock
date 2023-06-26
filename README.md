@@ -4,10 +4,10 @@
 EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
 Heterodimeric docking has been published at:
-[A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v3)
+[A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.cell.com/structure/fulltext/S0969-2126(22)00372-0?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0969212622003720%3Fshowall%3Dtrue)
 
-Symmetric docking has been published at:
-[missing](link:Coming soon!)
+Symmetric docking has been publishedd (as preprint) at:
+[Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.biorxiv.org/content/10.1101/2023.06.22.546069v1)
 
 # System Requirements
 
@@ -19,26 +19,46 @@ EvoDOCK only requires a standard computer to run but as population size increase
 
 ### OS Requirements
 
-This package is supported for macOS and Linux. The package has been tested on the following systems:
+This package is supported for Linux (macOS will soon be added). The package has been tested on the following systems:
 
-Linux: Ubuntu 20.04.5/20.04.6 and CentOS Linux 7
+Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
 ## Package requirements
 
 The following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
-* PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need a free license for this. 
+* PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need to obtain a license before use (see the link) 
 
 If using Symmetric Protein-Protein docking these additional packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously. Then download the following wheel file from [Coming soon]. Then run:
+* Specifc PyRosetta branch. Obtain a license as previously. Then download one of the following pyrosetta VERSIONS from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/):
+
+The different VERSIONS:
+```
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py36_0.tar.bz2	
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py37_0.tar.bz2	
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py38_0.tar.bz2
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py39_0.tar.bz2
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py310_0.tar.bz2	
+pyrosetta-2023.24.post.dev+48.commits.68ccf66-py311_0.tar.bz2	
+```
+
+Untar it:
 
 ```console
-pip install [coming soon]
+tar -xf pyrosetta-2023.24.post.dev+48.commits.68ccf66-<VERSION>.tar.bz2
 ```
+
+You can then add it to your PYTHONPATH:
+
+```console
+export PYTHONPATH=$PYTHONPATH:<install directory>/lib/python3.10/site-packages
+```
+
+or you can move the package to the site-packages for you python environment.
   
-Furthermore the following packages are also needed but are automatically installed by pip install (see Installation Guide)
+Furthermore the following packages are also needed but are automatically installed by pip install using the setup.py script (see Installation Guide).
 
 ```
 cubicsym @ git+https://github.com/Andre-lab/cubicsym,
