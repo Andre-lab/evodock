@@ -7,7 +7,7 @@ Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.biorxiv.org/content/10.1101/2021.04.12.437963v3)
 
 Symmetric docking has been published at:
-[missing](link:Coming soon!)
+[Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.biorxiv.org/content/10.1101/2023.06.22.546069v1)
 
 # System Requirements
 
