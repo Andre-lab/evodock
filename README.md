@@ -43,11 +43,19 @@ pyrosetta-2023.24.post.dev+48.commits.68ccf66-py310_0.tar.bz2
 pyrosetta-2023.24.post.dev+48.commits.68ccf66-py311_0.tar.bz2	
 ```
 
-unzip it and run:
+unzip it:
 
 ```console
-pip install [wheel file]
+tar -xf pyrosetta-2023.24.post.dev+48.commits.68ccf66-<VERSION>.tar.bz2
 ```
+
+You can then add it to your PYTHONPATH:
+
+```console
+export PYTHONPATH=$PYTHONPATH:<install directory>/lib/python3.10/site-packages
+```
+
+or you can move the package to the site-packages for you python environment.
   
 Furthermore the following packages are also needed but are automatically installed by pip install using the setup.py script (see Installation Guide).
 
