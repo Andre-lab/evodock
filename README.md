@@ -6,7 +6,7 @@ EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.cell.com/structure/fulltext/S0969-2126(22)00372-0?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0969212622003720%3Fshowall%3Dtrue)
 
-Symmetric docking has been publishedd (as preprint) at:
+Symmetric docking has been published (as preprint) at:
 [Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.biorxiv.org/content/10.1101/2023.06.22.546069v1)
 
 # System Requirements
