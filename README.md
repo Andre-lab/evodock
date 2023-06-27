@@ -33,7 +33,7 @@ If using Symmetric Protein-Protein docking these additional packages must be ins
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
   
-Furthermore the following packages are also needed but are automatically installed by pip install using the setup.py script (see Installation Guide).
+Furthermore the following packages are also needed but are automatically installed by pip using the setup.py script (see Installation Guide).
 
 ```
 cubicsym @ git+https://github.com/Andre-lab/cubicsym,
