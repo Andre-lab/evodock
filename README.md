@@ -32,31 +32,6 @@ If using heterodimeric only the following packages must be installed:
 If using Symmetric Protein-Protein docking these packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
-* Specifc PyRosetta branch. Obtain a license as previously.Then download one of the following pyrosetta VERSIONS from [here](https://graylab.jhu.edu/download/PyRosetta4/conda/devel/linux-64/) (WILL BE UPLOADED AGAIN SOON!):
-
-The different VERSIONS:
-```
-pyrosetta-2023.24.post.dev+48.commits.68ccf66-py36_0.tar.bz2	
-pyrosetta-2023.24.post.dev+48.commits.68ccf66-py37_0.tar.bz2	
-pyrosetta-2023.24.post.dev+48.commits.68ccf66-py38_0.tar.bz2
-pyrosetta-2023.24.post.dev+48.commits.68ccf66-py39_0.tar.bz2
-pyrosetta-2023.24.post.dev+48.commits.68ccf66-py310_0.tar.bz2	
-pyrosetta-2023.24.post.dev+48.commits.68ccf66-py311_0.tar.bz2	
-```
-
-Untar it:
-
-```console
-tar -xf pyrosetta-2023.24.post.dev+48.commits.68ccf66-<VERSION>.tar.bz2
-```
-
-You can then add it to your PYTHONPATH:
-
-```console
-export PYTHONPATH=$PYTHONPATH:<install directory>/lib/python<VERSION>/site-packages
-```
-
-or you can move the package to the site-packages for you python environment.
   
 Furthermore the following packages are also needed but are automatically installed by pip install using the setup.py script (see Installation Guide).
 
