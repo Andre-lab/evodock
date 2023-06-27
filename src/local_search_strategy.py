@@ -21,7 +21,7 @@ from pyrosetta.rosetta.protocols.moves import NullMover
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pyrosetta import pose_from_file
 from cubicsym.actors.cubicsymmetryslider import CubicSymmetrySlider
-from src.symmetry import SymDockMCMProtocol, DockNRelaxProtocol, SymShapeDock
+from src.symmetry import SymShapeDock
 from pyrosetta.rosetta.core.kinematics import Jump
 from pyrosetta.rosetta.core.scoring import calpha_superimpose_pose
 from pyrosetta.rosetta.core.pose.symmetry import extract_asymmetric_unit
