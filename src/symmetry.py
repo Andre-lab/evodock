@@ -22,7 +22,6 @@ from pyrosetta.rosetta.core.pack.rotamer_set import UnboundRotamersOperation
 from pyrosetta.rosetta.core.pack.task import TaskFactory
 from pyrosetta.rosetta.utility import vector1_unsigned_long
 # from pyrosetta.rosetta.protocols.rigid import RigidBodyDofAdaptiveMover
-from cubicsym.actors.rigidbodydofadaptivemover import RigidBodyDofAdaptiveMover
 from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num, is_symmetric, jump_num_sym_dof
 from pyrosetta.rosetta.core.kinematics import MoveMap
 from pyrosetta.rosetta.protocols.residue_selectors import TaskSelector
