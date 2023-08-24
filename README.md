@@ -13,7 +13,7 @@ Symmetric docking has been published (as preprint) at:
 
 ## Hardware requirements
 
-EvoDOCK only requires a standard computer to run but as population size increase more RAM is needed. 
+EvoDOCK only requires a standard computer with linux installed (MacOS will be supported soon). High RAM is needed for large populations (>= 100). 
 
 ## Software requirements
 
