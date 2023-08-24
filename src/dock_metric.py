@@ -11,7 +11,7 @@ from pyrosetta.rosetta.protocols.symmetric_docking import SymDockProtocol
 import numpy as np
 from pyrosetta.rosetta.numeric import xyzVector_double_t
 from pyrosetta.rosetta.protocols.docking import calc_interaction_energy, calc_Irmsd
-from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory, rms_at_all_corresponding_atoms
+from pyrosetta.rosetta.core.scoring import CA_rmsd, ScoreFunctionFactory, rms_at_all_corresponding_atoms, CA_rmsd_symmetric
 from pyrosetta import Vector1
 from pyrosetta.rosetta.protocols.scoring import Interface
 from pyrosetta import AtomID
@@ -26,6 +26,9 @@ from pyrosetta.rosetta.core.pose import residue_center_of_mass
 from copy import deepcopy
 from warnings import warn
 from symmetryhandler.reference_kinematics import get_dofs
+from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num
+from pyrosetta.rosetta.protocols.symmetric_docking import SymDockProtocol
+from pyrosetta.rosetta.utility import vector1_std_pair_unsigned_long_unsigned_long_t
 
 class DockMetric:
     """Calculates metrics related to docking such as RMSD, interface RMSD and interface score."""
@@ -59,11 +62,62 @@ class DockMetric:
         return calc_interaction_energy(pose, self.score_func, Vector1([1]))
 
 
+class SymmetricDockMetric(DockMetric):
+    """Calculates metrics related to docking such as RMSD, interface RMSD and interface score."""
+
+    def __init__(self, native, score_func=None):
+        """Initializes a DockMetric object.
+
+        :param native: symmetric native pose.
+        :param score_func: score function to use when calculating the interaction energy.
+        """
+        super().__init__(native, score_func)
+        self.trans_jump = None
+        self.symdockproto = SymDockProtocol()
+        self.symdockproto.set_native_pose(native)
+
+    def get_translational_jump(self, pose):
+        """Gets the translational dof. Usually """
+        if self.trans_jump is None:
+            for k, v in pose.conformation().Symmetry_Info().get_dofs().items():
+                if v.allow_dof(1) or v.allow_dof(2) or v.allow_dof(3):
+                    self.trans_jump = Vector1([k])
+                    return self.trans_jump
+            raise ValueError("No translational DOF found!")
+        else:
+            return self.trans_jump
+
+
+    # CA_rmsd_symmetric
+    def ca_rmsd(self, pose):
+        """Calculate RMSD."""
+        if self.native is not None:
+            # old approach: CA_rmsd_symmetric(self.native, pose)
+            return self.symdockproto.calc_rms(pose)
+        else:
+            return -1
+
+    def interface_rmsd(self, pose):
+        """Calculate interface RMSD."""
+        if self.native is not None:
+            # old aproach
+            # self.trans_jump = self.get_translational_jump(pose)
+            # pose.conformation().Symmetry_Info().get_dofs()
+            # calc_Irmsd(pose, self.native, self.score_func, self.get_translational_jump(pose)) - does not work with symmetry
+            raise NotImplementedError("This does not work for some reason!!!!")
+            return self.symdockproto.calc_Irms(pose)
+        else:
+            return -1
+
+    def interaction_energy(self, pose):
+        """Calculate interface energy across jump 1 of the pose."""
+        return self.symdockproto.calc_interaction_energy(pose) #calc_interaction_energy(pose, self.score_func, self.get_translational_jump(pose))
+
 class CubicDockMetric:
     """Calculates metrics related to docking such as RMSD, interface RMSD and interface score."""
 
     def __init__(self, crystallic_native, input_pose, native_symdef, input_symdef, score_func=None,
-                 jump_ids: list = None, dof_ids: list = None, trans_mags: list = None):
+                 jump_ids: list = None, dof_ids: list = None, trans_mags: list = None, use_map=None):
         """Initializes a SymmetryDockMetric object.
 
         :param input_pose:
@@ -87,11 +141,11 @@ class CubicDockMetric:
             self.CA_atom_map = self.cubicsetup_input.construct_atom_map_any2hf(input_pose, self.crystallic_native,
                                                                                same_handedness=self.same_handedness,
                                                                                interface=False,
-                                                                               predicate="ca", )
+                                                                               predicate="ca", use_map=use_map)
             self.CA_interface_atom_map = self.cubicsetup_input.construct_atom_map_any2hf(input_pose, self.crystallic_native,
                                                                                          same_handedness=self.same_handedness,
                                                                                          interface=True,
-                                                                                         predicate="ca")
+                                                                                         predicate="ca", use_map=use_map)
         # construct CA chain map to be used for CA_rmsd calculations
         if jump_ids or dof_ids or trans_mags:
             assert len(jump_ids) == len(dof_ids) and len(jump_ids) == len(trans_mags), "jump_ids, dof_ids and trans_mag must be of equal length"
@@ -196,8 +250,8 @@ class CubicDockMetric:
             trans[dofid - 1] += transmag * slidedir
             flexible_jump.set_translation(xyzVector_double_t(*trans))
             pose.set_jump(jumpid, flexible_jump)
-        # fixme: does not work for symmetry when merged from master now!
-        # pose.conformation().detect_disulfides() # else disulfide energy can blow up!
+        # fixme: THIS NEEDS TO BE HERE!
+        pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
 
     # def __set_inteface_atoms(self, input_pose):
     #     """Sets which atoms are determined to be in the interface in the native structure."""
