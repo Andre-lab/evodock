@@ -66,13 +66,13 @@ class SymShapeDock:
         # else:
         #     self.set_ccs_and_cmc(fafitnessfunc.dock_pose)
 
-        self.tf = self.create_taskfactory(fafitnessfunc.dock_pose)
+        self.tf = self.create_taskfactory(fafitnessfunc.initial_pose)
         self.mc = MonteCarlo(self.scfxn, 0.8) # by NOT init pose here we have to set it later
         self.minmover = BoundedMinMover(self.config.syminfo.cubicboundary, self.scfxn)
         self.trial_minmover = TrialMover(self.minmover, self.mc)
         self.packer = self.create_packrotamers()
         self.trial_packer = TrialMover(self.packer, self.mc)
-        self.trial_pack_and_mc_min = self.construct_pack_and_mc_min(fafitnessfunc.dock_pose)
+        self.trial_pack_and_mc_min = self.construct_pack_and_mc_min(fafitnessfunc.initial_pose)
 
     # def construct_ccs_and_cmc(self, pose):
     #     ccs = CloudContactScore(pose=pose, symdef=self.config.syminfo.input_symdef,
@@ -311,7 +311,7 @@ class SymInfo:
         self.dof_spec.set_symmetrical_bounds(self.bounds)
         self.genotype_size = self.dof_spec.dofsize
         assert self.bound_penalty is not None
-        self.cubicboundary = CubicBoundary(self.input_symdef, pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
+        self.cubicboundary = CubicBoundary(CubicSetup(symdef=self.input_symdef), pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
         self.initial_placement = self.dof_spec.get_positions_as_list(pose)
         self._map_normalize_trans_to_jumpdofs()
 

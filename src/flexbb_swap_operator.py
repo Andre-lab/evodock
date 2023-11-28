@@ -25,7 +25,7 @@ class FlexbbSwapOperator:
     def __init__(self, config, scfxn, local_search_strategy):
         self.bb_strategy = "library"
         self.scfxn = scfxn
-        self.native_fold_tree = scfxn.dock_pose.fold_tree()
+        self.native_fold_tree = scfxn.initial_pose.fold_tree()
         self.config = config
         if self.config.syminfo:
             self.symmetrymover = SetupForSymmetryMover(self.config.syminfo.input_symdef)

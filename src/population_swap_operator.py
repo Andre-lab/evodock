@@ -86,27 +86,33 @@ class PopulationSwapOperator:
         new_population = []
         for ind in population:
             if random.uniform(0, 1) <= self.swap_prob:
-                pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
-                join_pose, idx_r, idx_l, idx_s, relaxed = self.swap_operator.apply_bb_strategy(ind, pose)
+                temp_pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
+                join_pose, idx_r, idx_l, idx_s, relaxed = self.swap_operator.apply_bb_strategy(ind, temp_pose)
                 add_id_to_pose_w_base(join_pose, idx_s)
                 self.local_search.local_search_strategy.slide_into_contact.apply(join_pose)
                 self.local_search.local_search_strategy.docking.apply(join_pose)
-                after = self.local_search.energy_score(join_pose)
-                if after < ind.score:
+                full_score_after = self.scfxn.full_score(join_pose)
+                interface_score_after = self.dockmetric.interaction_energy(join_pose)
+                if self.config.selection == "total":
+                    after = full_score_after
+                    before = ind.score
+                else:
+                    after = interface_score_after
+                    before = ind.i_sc
+                if after < before:
                     positions = get_position_info(join_pose, self.config.syminfo)
                     genotype = self.scfxn.convert_positions_to_genotype(positions)
                     rmsd = self.dockmetric.ca_rmsd(join_pose)
-                    interface = self.dockmetric.interaction_energy(join_pose)
                     irms = self.dockmetric.interface_rmsd(join_pose)
                     result_individual = Individual(
                         idx=ind.idx,
                         genotype=genotype,
-                        score=after,
+                        score=full_score_after,
                         idx_ligand=idx_l,
                         idx_receptor=idx_r,
                         idx_subunit=idx_s,
                         rmsd=rmsd,
-                        i_sc=interface,
+                        i_sc=interface_score_after,
                         irms=irms,
                         flipped=ind.flipped,
                         fixed=ind.fixed
@@ -116,9 +122,6 @@ class PopulationSwapOperator:
                     ratio_swap_success += 1
                     if relaxed:
                         relaxed_sucess += 1
-                    if after < self.local_search.best_score:
-                        self.local_search.best_score = after
-                        self.local_search.best_pose.assign(join_pose)
                 else:
                     new_population.append(ind)
             else:
@@ -131,4 +134,4 @@ class PopulationSwapOperator:
         with open(self.log_relax_success, "a") as file_object:
             file_object.write(f"{generation}," + "{}\n".format(relaxed_sucess))
 
-        return self.local_search.best_pose, new_population
+        return new_population

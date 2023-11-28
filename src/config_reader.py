@@ -99,12 +99,15 @@ class EvodockConfig:
         """Loads all information in the Native option."""
         self.native_input = None
         self.lower_diversity_limit = None
+        self.rmsd_map = None
         if config.has_option("Native", "crystallic_input"):
             self.native_input = config["Native"].get("crystallic_input")
             if self.symmetric and config.has_option("Native", "symmetric_input"):
                 self.syminfo.native_symmetric_input = config["Native"].get("symmetric_input")
                 self.syminfo.native_symdef = config.get("Native", "symdef_file")
                 self.lower_diversity_limit = config.get("Native", "lower_limit_diversity", fallback=0)
+                if config.has_option("Native", "rmsd_map"):
+                    self.rmsd_map = tuple([int(i) if i != "-" else None for i in config.get("Native", "rmsd_map", fallback=None).split(",")])
 
     def load_bounds(self, config):
         """Loads all information in the Bounds option."""

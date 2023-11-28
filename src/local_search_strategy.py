@@ -38,13 +38,13 @@ class LocalSearchStrategy:
         self.scfxn = scfxn
         self.dock_pose = dock_pose
         self.packer_option = config.local_search_option
-        self.native_fold_tree = scfxn.dock_pose.fold_tree()
+        self.native_fold_tree = scfxn.initial_pose.fold_tree()
         if self.config.syminfo:
             self.symmetrymover = SetupForSymmetryMover(self.config.syminfo.input_symdef)
         else:
             self.symmetrymover = None
         # docking option
-        if is_symmetric(scfxn.dock_pose):
+        if is_symmetric(scfxn.initial_pose):
             # construct a CloudContactScoreContainer in the SymInfo object
             self.config.syminfo.ccsc = CloudContactScoreContainer(self.dock_pose, self.config.syminfo.input_symdef,
                                                                   low_memory= self.config.low_memory_mode)
@@ -67,24 +67,24 @@ class LocalSearchStrategy:
                 restrict.set_movable_jumps(Vector1([1]))
                 local_tf.push_back(restrict)
                 mcm_docking = DockMCMProtocol()
-                mcm_docking.set_native_pose(scfxn.dock_pose)
+                mcm_docking.set_native_pose(scfxn.initial_pose)
                 mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
                 mcm_docking.set_rt_min(False)
                 mcm_docking.set_sc_min(False)
                 mock_pose = Pose()
-                mock_pose.assign(scfxn.dock_pose)
+                mock_pose.assign(scfxn.initial_pose)
                 mcm_docking.apply(mock_pose)
                 self.docking = mcm_docking
                 self.docking.set_task_factory(local_tf)
                 self.docking.set_ignore_default_task(True)
             elif self.packer_option == "mcm_rosetta":
                 mcm_docking = DockMCMProtocol()
-                mcm_docking.set_native_pose(scfxn.dock_pose)
+                mcm_docking.set_native_pose(scfxn.initial_pose)
                 mcm_docking.set_scorefxn(scfxn.scfxn_rosetta)
                 mcm_docking.set_rt_min(False)
                 mcm_docking.set_sc_min(False)
                 mock_pose = Pose()
-                mock_pose.assign(scfxn.dock_pose)
+                mock_pose.assign(scfxn.initial_pose)
                 mcm_docking.apply(mock_pose)
                 self.docking = mcm_docking
                 self.docking.set_task_factory(mcm_docking.task_factory())
@@ -93,7 +93,7 @@ class LocalSearchStrategy:
                 raise NotImplementedError(f"Only 'sidechains', 'mcm_rosetta' are valid local_search options")
         # slide option
         if self.config.slide:
-            if is_symmetric(scfxn.dock_pose):
+            if is_symmetric(scfxn.initial_pose):
                 self.slide_into_contact = CubicSymmetrySlider(dock_pose, self.config.syminfo.input_symdef, ccsc=self.config.syminfo.ccsc,
                                                               trans_mag=self.config.slide_trans_mag, pymolmover=self.config.pmm,
                                                               max_slide_attempts=self.config.max_slide_attempts,
@@ -149,7 +149,6 @@ class LocalSearchStrategy:
 
     def apply_bound_docking(self, ind, local_search=True):
         pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
-        before = self.scfxn.score(pose)
         if local_search and self.packer_option != "None":
             if self.config.show_local_search:
                 pose.pdb_info().name(f"IND{ind.idx}")
@@ -158,43 +157,41 @@ class LocalSearchStrategy:
                 add_base_to_pose(pose)
             self.slide_into_contact.apply(pose)
             self.docking.apply(pose)
-            after = self.scfxn.score(pose)
             if self.config.show_local_search:
                 pose.pdb_info().name(f"IND{ind.idx}")
                 self.config.pmm.apply(pose)
-        else:
-            after = before
 
         return_data = {
             "pose": pose,
-            "before": before,
-            "after": after,
             "idx_ligand": ind.idx_ligand,
             "idx_receptor": ind.idx_receptor,
             "idx_subunit": ind.idx_subunit
         }
         return return_data
 
+    def get_pose(self, ind):
+        """Gets the pose with the individuals genotype. If running flexible backbone, the backbone is inserted into
+        the pose as well."""
+        # Generate the current pose with the genotype
+        pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
+        if self.config.flexbb:
+            # The backbone needs to be made into the pose: internally uses the ind.idx_<>
+            join_pose, idx_receptor, idx_ligand, idx_subunit = self.apply_bb_strategy(ind, pose)
+            return join_pose, idx_receptor, idx_ligand, idx_subunit
+        else:
+            return pose
+
 
     def apply_unbound_docking(self, ind, local_search=True):
-        # Generate the current pose with the genotype, but it does not have the correct backbone as it only uses the ind.genotype
-        pose = self.scfxn.apply_genotype_to_pose(ind.genotype)
+        pose, idx_receptor, idx_ligand, idx_subunit = self.get_pose(ind)
         self.config.visualize_pose(pose, ind.idx)
-        # Generate the correct backbone as this, internally uses the ind.idx_<>
-        join_pose, idx_receptor, idx_ligand, idx_subunit = self.apply_bb_strategy(ind, pose)
-        before = self.scfxn.score(join_pose)
         if local_search and self.packer_option != "None":
             if self.config.syminfo is not None:
-                add_id_to_pose_w_base(join_pose, idx_subunit)
-            self.slide_into_contact.apply(join_pose)
-            self.docking.apply(join_pose)
-            after = self.scfxn.score(join_pose)
-        else:
-            after = before
+                add_id_to_pose_w_base(pose, idx_subunit)
+            self.slide_into_contact.apply(pose)
+            self.docking.apply(pose)
         return_data = {
-            "pose": join_pose,
-            "before": before,
-            "after": after,
+            "pose": pose,
             "idx_ligand": idx_ligand,
             "idx_receptor": idx_receptor,
             "idx_subunit": idx_subunit,

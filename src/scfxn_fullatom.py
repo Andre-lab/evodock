@@ -37,15 +37,15 @@ class FAFitnessFunction:
         self.logger.setLevel(logging.INFO)
         # self.pymover = PyMOLMover(address=IP_ADDRESS, port=65000, max_packet_size=1400)
         self.scfxn_rosetta = ScoreFunctionFactory.create_score_function("ref2015")
-        self.dock_pose = Pose()
-        self.dock_pose.assign(input_pose)
-        self.dock_pose.pdb_info().name("INIT_STATE")
+        self.initial_pose = Pose()
+        self.initial_pose.assign(input_pose)
+        self.initial_pose.pdb_info().name("INIT_STATE")
         if config.syminfo:
-            SetupForSymmetryMover(config.syminfo.input_symdef).apply(self.dock_pose)
+            SetupForSymmetryMover(config.syminfo.input_symdef).apply(self.initial_pose)
             self.config.syminfo.cubicboundary.turn_on_constraint_for_score(self.scfxn_rosetta)
 
         self.converter = GlobalGenotypeConverter(
-            self.dock_pose, self.trans_max_magnitude, config.syminfo
+            self.initial_pose, self.trans_max_magnitude, config.syminfo
         )
         # self.pymover.apply(self.dock_pose)
         self.jump_num = 1
@@ -109,7 +109,7 @@ class FAFitnessFunction:
     #     """resets the normalize_trans_map to its original value"""
     #     self.syminfo.normalize_trans_map = copy.deepcopy(self.syminfo.org_normalize_trans_map)
 
-    def score(self, pose):
+    def full_score(self, pose):
         """Scores the pose"""""
         return self.scfxn_rosetta.score(pose)
 
@@ -131,7 +131,7 @@ class FAFitnessFunction:
 
     def get_solution_from_positions(self, DoFs_vector):
         ind_pose = Pose()
-        ind_pose.assign(self.dock_pose)
+        ind_pose.assign(self.initial_pose)
         euler = np.asarray(DoFs_vector[0:3])
         r = R.from_euler("xyz", euler, degrees=True).as_matrix()
         flexible_jump = ind_pose.jump(ind_pose.num_jump())
@@ -145,7 +145,7 @@ class FAFitnessFunction:
     def apply_genotype_to_pose(self, genotype):
         DoFs_vector = self.convert_genotype_to_positions(genotype)
         ind_pose = Pose()
-        ind_pose.assign(self.dock_pose)
+        ind_pose.assign(self.initial_pose)
         if is_symmetric(ind_pose):
             dofsvector = iter(DoFs_vector)
             for jump, dof in zip(self.syminfo.dof_spec.jump_int, self.syminfo.dof_spec.dof_int):

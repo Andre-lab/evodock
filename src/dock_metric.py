@@ -209,6 +209,7 @@ class CubicDockMetric:
         # And I can't seem to resolve it. I believe it has to do with disulfide bonds but even with disulfide bond
         # detection through pose.conformation().detect_disulfides() it still happens. Therefore I work on a
         # clone pose. Test cases are 1JH5 and 1X36.
+        pose.conformation().detect_disulfides()
         multimeric_score = self.score_func.score(pose)
         pose_clone = pose.clone()
         init_trans_mags = deepcopy(self.trans_mags)
@@ -251,7 +252,8 @@ class CubicDockMetric:
             flexible_jump.set_translation(xyzVector_double_t(*trans))
             pose.set_jump(jumpid, flexible_jump)
         # fixme: THIS NEEDS TO BE HERE!
-        pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
+        # pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
+        pose.conformation().detect_disulfides()
 
     # def __set_inteface_atoms(self, input_pose):
     #     """Sets which atoms are determined to be in the interface in the native structure."""

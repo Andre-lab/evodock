@@ -33,7 +33,7 @@ class DifferentialEvolutionAlgorithm:
         self.ind_size = fitness_function.size()
         self.bounds = [(-1, 1)] * self.ind_size
         self.file_time_name = self.config.out_path + "/time.csv"
-        self.max_translation = config.get_max_translation(fitness_function.dock_pose)
+        self.max_translation = config.get_max_translation(fitness_function.initial_pose)
         self.scfxn = fitness_function
         self.mutation_strategy = MutationStrategyBuilder(config).build(self.scfxn.size())
         self.flexbb_swap_operator = FlexbbSwapOperatorBuilder(
@@ -48,6 +48,7 @@ class DifferentialEvolutionAlgorithm:
             self.optimal_solution = None
         self.popul_calculator = ScorePopulation(config, fitness_function)
         self.init_file()
+        self.all_docks = {"ind": [], "genotype": [], "i_sc": [], "score": []}
 
     def init_population(self):
         self.population = InitializePopulation(self.config, self.logger, self.popul_calculator, self.scfxn).init_population()
@@ -82,8 +83,6 @@ class DifferentialEvolutionAlgorithm:
             # --- SCORE KEEPING --------------------------------+
             self.score_keeping()
 
-        return self.best_pdb
-
     def generate_trial_population(self):
         trials = []
         trial_generator = TrialGenerator(
@@ -109,21 +108,26 @@ class DifferentialEvolutionAlgorithm:
             self.trial_scores,
         ) = GreedySelection().apply(trial_inds, self.population, self.config.selection)
 
+    def map_all_docks(self, population):
+        for ind in population:
+            self.all_docks["ind"].append(ind)
+            self.all_docks["genotype"].append(ind.genotype)
+            self.all_docks["i_sc"].append(ind.i_sc)
+            self.all_docks["score"].append(ind.score)
+
     def score_keeping(self):
         self.gen_avg = sum(self.gen_scores) / self.popsize
         self.gen_best = min(self.gen_scores)
         self.trial_avg = sum(self.trial_scores) / self.popsize
         self.trial_best = min(self.trial_scores)
-        gen_sol = self.population[self.gen_scores.index(min(self.gen_scores))]
+        best_ind_solution = self.population[self.gen_scores.index(min(self.gen_scores))]
         self.logger.info(f"   > GENERATION AVERAGE: {self.gen_avg:.2f}")
         self.logger.info(f"   > GENERATION BEST: {self.gen_best:.2f}")
         self.logger.info(f"   > TRIAL INFO: {self.trial_best:.2f} {self.trial_avg:.2f}")
 
-        (
-            self.best_pdb,
-            best_SixD_vector,
-            best_rmsd,
-        ) = self.popul_calculator.render_best(self.generation, gen_sol, self.population)
+        best_SixD_vector, best_rmsd = self.popul_calculator.render_best(self.generation, best_ind_solution, self.population)
+
+        self.map_all_docks(self.population)
 
         self.popul_calculator.print_genotype_values(self.population, self.generation)
 
@@ -137,7 +141,7 @@ class DifferentialEvolutionAlgorithm:
             f" improved {len(improved)} individuals with average {avg_improved:.2f}"
         )
 
-        self.logger.info(f"   > BEST SOL: {best_sol_str}")
+        self.logger.info(f"   > BEST SOLUTION: {best_sol_str}")
         self.popul_calculator.print_information(self.population, self.generation)
 
         # print ensemble names
@@ -145,12 +149,16 @@ class DifferentialEvolutionAlgorithm:
 
         # self.popul_calculator.pymol_visualization(self.population)
 
-        if self.config.out_pdb:
-            name = self.config.out_path + "/evolved.pdb"
-            self.best_pdb.dump_pdb(name)
-        if self.config.output_pdb_per_generation:
-            name = self.config.out_path + f"/evolved_{self.generation}.pdb"
-            self.best_pdb.dump_pdb(name)
+        if self.config.out_pdb or self.config.output_pdb_per_generation:
+            if self.config.out_pdb:
+                name = self.config.out_path + "/evolved.pdb"
+            elif self.config.output_pdb_per_generation:
+                name = self.config.out_path + f"/evolved_{self.generation}.pdb"
+            if self.config.flexbb:
+                best_pose, _, _, _ = self.scfxn.local_search.local_search_strategy.get_pose(best_ind_solution)
+            else:
+                best_pose = self.scfxn.local_search.local_search_strategy.get_pose(best_ind_solution)
+            best_pose.dump_pdb(name)
 
         if self.optimal_solution is not None:
             fdc = fitness_distance_correlation(
@@ -175,6 +183,8 @@ class DifferentialEvolutionAlgorithm:
 
 
 class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
+
+
     def generate_trial_population(self):
         trials = []
         trial_generator = FlexbbTrialGenerator(
@@ -212,12 +222,10 @@ class FlexbbDifferentialEvolution(DifferentialEvolutionAlgorithm):
             self.selection(trials)
 
             # --- Apply Flexbb search ---- #
-            self.best_pdb, self.population = self.flexbb_swap_operator.apply(self.population, self.generation)
+            self.population = self.flexbb_swap_operator.apply(self.population, self.generation)
 
             # --- SCORE KEEPING --------------------------------+
             self.score_keeping()
-
-        return self.best_pdb
 
 
 class TriangularDE(DifferentialEvolutionAlgorithm):
@@ -257,30 +265,8 @@ class TriangularDE(DifferentialEvolutionAlgorithm):
             # --- RESTART ---- #
             self.restart_mechanism()
 
-#             best_SixD_vector, best_rmsd = self.popul_calculator.cost_func.render_best(
-#                 i, gen_sol, population
-#             )
-#             best_sol_str = self.popul_calculator.cost_func.get_sol_string(
-#                 best_SixD_vector
-#             )
-#             self.logger.info("   > BEST SOL: {} ".format(best_sol_str))
-#             self.popul_calculator.cost_func.print_information(population)
-#             if self.pymol_on:
-#                 self.popul_calculator.cost_func.pymol_popul_visualization(population, self.pymol_history)
-#
-#             file_object.write("%f \t" % gen_avg)
-#             file_object.write("%f \t" % gen_best)
-#             file_object.write("%f \n" % best_rmsd)
-#             file_object.close()
-#             end = time.time()
-#             file_time.write("%f \n" % (end - start))
-#             file_time.close()
-#
-#         return population
             # --- SCORE KEEPING --------------------------------+
             self.score_keeping()
-
-        return self.best_pdb
 
     def restart_mechanism(self):
         self.gen_best = min(self.gen_scores)

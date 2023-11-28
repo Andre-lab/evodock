@@ -56,9 +56,7 @@ class ScorePopulation:
             vector_str = ",".join(["{}".format(i) for i in DoFs_vector])
             file_object.write(str(gen) + "," + "{}\n".format(vector_str))
 
-        # best_pdb = self.scfxn.apply_genotype_to_pose(best_solution.genotype)
-        best_pdb = self.local_search.best_pose
-        return best_pdb, DoFs_vector, rmsd
+        return DoFs_vector, rmsd
 
     def print_genotype_values(self, population, gen):
         with open(self.log_all_geno, "a") as file_object:
@@ -111,16 +109,6 @@ class ScorePopulation:
         convert_pop = popul
         result_pop = []
         for ind in convert_pop:
-            if init_population:
-                (
-                    scored_ind,
-                    before,
-                    after,
-                ) = self.local_search.process_individual(ind)
-                if (self.config.lower_diversity_limit is not None and self.config.lower_diversity_limit > 0):
-                    while scored_ind.rmsd < self.config.lower_diversity_limit:
-                        (scored_ind, before, after) = self.randomize_ind(scored_ind)
-            else:
-                scored_ind, _, _ = self.local_search.process_individual(ind)
+            scored_ind = self.local_search.process_individual(ind)
             result_pop.append(scored_ind)
         return result_pop

@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 
+import pandas as pd
 from pyrosetta import init
 from src.config_reader import EvodockConfig
 from src.differential_evolution import DifferentialEvolutionAlgorithm as DE
@@ -13,6 +14,7 @@ from src.options import build_rosetta_flags
 from src.scfxn_fullatom import FAFitnessFunction
 from src.utils import get_position_info, initialize_starting_poses
 from src.dock_metric import DockMetric, CubicDockMetric
+from sklearn.cluster import KMeans
 
 MAIN_PATH = os.getcwd()
 
@@ -32,7 +34,7 @@ def print_init_information(logger, scfxn, native_pose, input_pose, dockmetric, s
         input_vs_native_rmsd = dockmetric.ca_rmsd(input_pose)
 
     logger.info("==============================")
-    logger.info(" input information ")
+    logger.info(" Input information ")
     logger.info(f" Input position: {position_str}{' (is symmetrical)' if syminfo else ''}")
     logger.info(f" Input pose score {input_score}")
     if native_pose is not None:
@@ -51,10 +53,31 @@ def initialize_dock_metric(config, native, input_pose):
             trans_mags.append(c)
         ###
         return CubicDockMetric(native, input_pose, config.syminfo.native_symdef, config.syminfo.input_symdef,
-                               jump_ids=jump_ids, dof_ids=dof_ids, trans_mags=trans_mags)
+                               jump_ids=jump_ids, dof_ids=dof_ids, trans_mags=trans_mags, use_map=config.rmsd_map)
     else:
         return DockMetric(native)
 
+def output_best_clusters(alg, config, logger):
+    # do kmeans clustering and output the final results.
+    vals = alg.all_docks["genotype"]
+    kmeans = KMeans(n_clusters=5, random_state=0).fit(vals)
+    alg.all_docks["cluster"] = kmeans.labels_
+    df = pd.DataFrame(alg.all_docks)
+    if config.selection == "total":
+        df = df.sort_values("score").groupby("cluster").first()
+    else:
+        df = df.sort_values("i_sc").groupby("cluster").first()
+    logger.info("==============================")
+    logger.info(" Clustering and outputting the following models:")
+    for n, ind in enumerate(df["ind"].values, 1):
+        if config.flexbb:
+            pose, _, _, _ = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
+        else:
+            pose = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
+        name = config.out_path + f"/final_evodock_unrelaxed_ranked_{n}.pdb"
+        logger.info(f" {name}")
+        pose.dump_pdb(name)
+    logger.info("==============================")
 
 def main():
     config = EvodockConfig(sys.argv[-1])
@@ -87,14 +110,16 @@ def main():
     # --- RUN ALGORITHM -------------------------------------
     logger.info("==============================")
     logger.info(" starts EvoDOCK : evolutionary docking process")
-    best_pdb = alg.main()
+    alg.main()
+
 
     # ---- OUTPUT -------------------------------------------
+    output_best_clusters(alg, config, logger)
+
     logger.info(" end EvoDOCK")
     logger.info("==============================")
-    if config.out_pdb:
-        name = config.out_path + "/final_docked_evo.pdb"
-        best_pdb.dump_pdb(name)
+
+
 
 if __name__ == "__main__":
     main()

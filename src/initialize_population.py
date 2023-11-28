@@ -29,8 +29,8 @@ class InitializePopulation:
             if self.config.docking_type_option == "Global":
                 raise NotImplementedError
             elif self.config.docking_type_option == "GlobalFromMultimer":
-                self.init_slider = InitCubicSymmetrySlider(scfxn.dock_pose, self.config.syminfo.input_symdef, self.config.syminfo.ccsc,
-                                                            pymolmover=self.config.pmm)
+                self.init_slider = InitCubicSymmetrySlider(scfxn.initial_pose, self.config.syminfo.input_symdef, self.config.syminfo.ccsc,
+                                                           pymolmover=self.config.pmm)
 
     def popul_is_within_bounds(self, popul):
         """Checks that the individuals, if symmetric, are wihtin bounds."""
@@ -50,13 +50,13 @@ class InitializePopulation:
 
 
     def set_genotype_from_init_bounds(self):
-        starting_dofs = self.config.syminfo.get_position_info(self.scfxn.dock_pose)
+        starting_dofs = self.config.syminfo.get_position_info(self.scfxn.initial_pose)
         init_bounds = self.config.syminfo.init_bounds
         fixed = False
         # fix x trans and the center of mass rotations (4 dofs in total) if self.config.init_input_fix_percent
         if self.config.init_input_fix_percent is not None and random.uniform(0, 1) < self.config.init_input_fix_percent:
             fixed = True
-            jid = get_jumpidentifier(self.scfxn.dock_pose)
+            jid = get_jumpidentifier(self.scfxn.initial_pose)
             jumps_to_fix = [f'JUMP{jid}fold111', f'JUMP{jid}fold111_x', f'JUMP{jid}fold111_y', f'JUMP{jid}fold111_z']
             jump_order = self.config.syminfo.dof_spec.jump_str
             positions = [random.uniform(*pertubation) + dof if jumpname not in jumps_to_fix else dof for jumpname, pertubation, dof in zip(jump_order, init_bounds, starting_dofs)]
@@ -85,7 +85,7 @@ class InitializePopulation:
         """Makes a random uniformly distributed genotype around its bounds or init_bounds if set.
         If the docking_type is set to Global or GlobalFromMultimer, a sliding step will be carried out."""
         flipped, fixed = False, False
-        if is_symmetric(self.scfxn.dock_pose):
+        if is_symmetric(self.scfxn.initial_pose):
             # if init bounds are set we need to construct it from those bounds, else we use the regular bounds.
             if self.config.syminfo.init_bounds is not None:
                 genotype, fixed = self.set_genotype_from_init_bounds()
@@ -117,19 +117,19 @@ class InitializePopulation:
         max_slide_hit = self.init_slider.apply(pose)
         # merge the genotype with the new z, x values
         positions = get_position_info(pose, self.config.syminfo)
-        self.logger.info(f" docked staring position: {', '.join(['{:.2f}'.format(p) for p in positions])}{' (MAXIMUM AMOUNT OF SLIDES HIT!)' if max_slide_hit else ''}")
+        self.logger.info(f" Docked staring position: {', '.join(['{:.2f}'.format(p) for p in positions])}{' (MAXIMUM AMOUNT OF SLIDES HIT!)' if max_slide_hit else ''}")
         slided_genotype = self.scfxn.convert_positions_to_genotype(positions)
         return slided_genotype
 
 
     def init_population(self):
         """Initialize a population of individuals."""
-        self.logger.info(" init population")
+        self.logger.info(" Init population")
         popul = []
         for i in range(0, self.popsize):
             idx_receptor, idx_ligand, idx_subunit, flipped, fixed = None, None, None, None, None
             # symmetric genotype creation
-            if is_symmetric(self.scfxn.dock_pose):
+            if is_symmetric(self.scfxn.initial_pose):
                 if self.config.flexbb:
                     idx_subunit = random.randint(0, self.config.subunit_library_size - 1)
                 genotype, flipped, fixed = self.make_symmetric_genotype(idx_subunit)
@@ -146,7 +146,7 @@ class InitializePopulation:
         self.popul_is_within_bounds(popul)
         self.attach_names_to_popul(popul)
         end = time.time()
-        self.logger.info(f" population init in {end - start:.2f} seconds")
+        self.logger.info(f" Population init in {end - start:.2f} seconds")
         return popul
 
 # class InitializePopulationLocal(InitializePopulation):

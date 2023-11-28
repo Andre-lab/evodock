@@ -60,7 +60,7 @@ class FlexbbTrialGenerator(TrialGenerator):
         flipped, fixed = population[j].flipped, population[j].fixed
         ind = make_trial(j, v_trial, idx_ligand, idx_receptor, idx_subunit,  receptor_name, ligand_name, subunit_name, flipped, fixed)
         individual_is_within_bounds(self.local_search.config, self.local_search.scfxn, ind)
-        trial, _, _ = self.local_search.process_individual(ind)
+        trial = self.local_search.process_individual(ind)
         return trial
 
 class pBestGenerator(TrialGenerator):
