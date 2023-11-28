@@ -6,6 +6,7 @@ Aligns the alphafold predictions
 @Date: 5/25/22
 """
 import random
+from pyrosetta.rosetta.core.pose import residue_center_of_mass, center_of_mass
 import numpy as np
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from pathlib import Path
@@ -28,11 +29,13 @@ from cubicsym.actors.cubicsymmetryslider import InitCubicSymmetrySlider
 from cloudcontactscore.cloudcontactscorecontainer import CloudContactScoreContainer
 from symmetryhandler.reference_kinematics import set_jumpdof_str_str
 from cubicsym.alignment import tmalign, contactmap_with_mapped_resi
+from distutils.util import strtobool
 
 class AF2EvoDOCK:
 
     def __init__(self, symmetry, af_output_path, out_dir, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
-                 ensemble, max_monomers=None, max_multimers=None, total_max_models=None, modify_rmsd_to_reach_min_models=None, direction=False):
+                 ensemble, max_monomers=None, max_multimers=None, total_max_models=None, modify_rmsd_to_reach_min_models=None, direction=False, model_type="ranked",
+                 use_only_symmetric=True):
         self.symmetry = symmetry
         self.af_output_path = af_output_path
         self.out_dir = out_dir
@@ -49,6 +52,8 @@ class AF2EvoDOCK:
         self.prepack = True
         self.modify_rmsd_to_reach_min_models = modify_rmsd_to_reach_min_models
         self.direction = direction
+        self.model_type = model_type
+        self.use_only_symmetric = use_only_symmetric
 
     def cut_all_but_chain(self, pose, chain):
         """Cut all chains from the pose except the chain parsed."""
@@ -159,9 +164,12 @@ class AF2EvoDOCK:
         model_1_*_0, model_2_*_0 ... then model_1_*_1, model_2_*_0 ... then model_1_*_n, model_2_*_n
         """
         # 1 first but each model type into its own container
-        model_ns = {k:[] for k in map(str, range(1, 6))}
+        if self.model_type == "ranked":
+            model_ns = {k:[] for k in map(str, range(0, 5))}
+        else:
+            model_ns = {k:[] for k in map(str, range(1, 6))}
         for p in models:
-            model_ns[p.name.split("_")[2]].append(p)
+            model_ns[p.name.split("_")[2].split(".pdb")[0]].append(p)
         # 2 now sort each container based on the output number
         fs = lambda p: int(p.name.split("_")[-1].split(".")[0])
         model_ns = {k: sorted(v, key=fs) for k, v in model_ns.items()}
@@ -170,6 +178,13 @@ class AF2EvoDOCK:
             for v in vv:
                 out_models.append(v)
         return out_models
+
+    def get_model_types(self, prediction, orders):
+        """Get the paths to the models to be used."""
+        model_paths = list(prediction.glob(f"{self.model_type}*"))
+        if len(model_paths) == 0:
+            raise ValueError(f"No {self.model_type} models found in {prediction}!")
+        return model_paths
 
     def get_multimer_predictions(self, pdbid, pdb_info):
         """Gets the multimer predictions for the pdbid and fills it in into the pdb_info object."""
@@ -186,7 +201,9 @@ class AF2EvoDOCK:
                 # find the number of predictions
                 # num_models = len(list(prediction.glob(f"relaxed_model_1_multimer_v2_pred_*.pdb")))
                 # models = [prediction.joinpath(f"relaxed_model_{i}_multimer_v2_pred_{j}.pdb") for i in range(1, 6) for j in range(num_models)]
-                models = self.sort_multimer_models([prediction.joinpath(f"relaxed_{m}.pdb") for m in orders])
+                # get relaxed models if we have them, else take the unrelaxed
+                model_paths = self.get_model_types(prediction, orders)
+                models = self.sort_multimer_models(model_paths)
                 # reduce the models if max_models is set
                 models_accepted = 0
                 for model, iptm_plus_ptm, order in zip(models, iptm_plus_ptms, orders):
@@ -210,15 +227,20 @@ class AF2EvoDOCK:
                             pdb_info["model_n"].append(order.split("model_")[1].split("_")[0])
                             pdb_info["resi_plddt"].append(resi_plddt.tolist())
                             pdb_info["ranking"].append(orders.index(order) + 1)
-                            mer = prediction.name.split("_")[-1]
+                            # TODO: fix the options in this script. have a cn option that sets what the oligomer type it is we are trying to extract
+                            if prediction.name.count("_") > 1:
+                                mer = prediction.name.split("_")[-2]
+                            else:
+                                mer = prediction.name.split("_")[-1]
                             pdb_info["mer"].append(mer)
-                            pdb_info["prediction_n"].append(np.nan)
+                            prediction_n = model.parent.name.split("_")[-1]
+                            pdb_info["prediction_n"].append(prediction_n)
                             pdb_info["chain"].append(chain)
                             pdb_info["iptm+ptm"].append(iptm_plus_ptm)
                             pdb_info["iptm"].append(iptm)
                             pdb_info["ptm"].append(ptm)
                             pdb_info["multimer"].append(True)
-                            pdb_info["unique_id"].append(f"{model.stem}_{chain}_{mer}_multi")
+                            pdb_info["unique_id"].append(f"{model.stem}_{chain}_{mer}_{prediction_n}_multi")
                     if a_chain_was_accepted:
                         models_accepted += 1
                     if self.max_multimers is not None and models_accepted == self.max_multimers:
@@ -341,21 +363,62 @@ class AF2EvoDOCK:
                 multimeric_pose_cut.append_pose_by_jump(pose_cut, multimeric_pose_cut.chain_end(multimeric_pose_cut.num_chains()))
         return multimeric_pose_cut
 
+    def construct_if_not_symmetric(self, pose, chains_allowed, avg_plddt, cn):
+        fold, _ = SymmetryMapper.get_fold_and_vrt_id(self.symmetry, cn)
+        cs = CubicSetup()
+        cs.load_norm_symdef(self.symmetry, fold)
+
+        # get distance between the CA atoms
+        com_subunits = []
+        for i in range(1, pose.num_chains() + 1):
+            com_subunits.append(pose.residue(residue_center_of_mass(pose, pose.chain_begin(i), pose.chain_end(i))).atom("CA").xyz())
+        com_complex = np.array(center_of_mass(pose, 1, pose.size()))
+        com_subunits = np.array(com_subunits)
+        dst = []
+        for com_subunit in com_subunits:
+            dst.append(np.linalg.norm(com_subunit - com_complex))
+        x_trans = np.array(dst).mean()
+
+        # get the best chain
+        best_chain = chains_allowed[np.argmax(avg_plddt)]
+
+        # center pose
+        best_pose = None
+        for p in pose.split_by_chain():
+            chain = p.pdb_info().chain(1)
+            if chain == best_chain:
+                best_pose = p
+                break
+        assert best_pose is not None
+        best_pose.center()
+        return cs, best_pose, x_trans, best_chain
+
+        # flip it
+
+
     def globalfrommultimer(self, pdb_info, cn, n_resi, c_resi):
         # pdb_info_new = {k:[] for k in pdb_info.keys()}
         pdb_info_new = {"model_name": [], "x_trans": [], "chain": [], "input": [], "input_flip": []}
         models = set(pdb_info["model_name"])
+        avg_plddts = [[c for c, m in zip(pdb_info["avg_plddt"], pdb_info["model_name"]) if model == m] for model in models]
         allowed_chains = [[c for c, m in zip(pdb_info["chain"], pdb_info["model_name"]) if model == m] for model in models]
         sm = SymmetryMapper()
         # align
-        for model, chains_allowed in zip(models, allowed_chains):
+        for model, chains_allowed, avg_plddt in zip(models, allowed_chains, avg_plddts):
             multimeric_pose_cut = self.cut_multimer_poses(pose_from_file(str(model)), n_resi, c_resi)
             cs, input_pose, input_pose_flip, input_pose_asym, input_pose_flip_asym, x_trans, chain_used = sm.run(model=multimeric_pose_cut, cn=cn,
                                                                                                                  symmetry=self.symmetry,
                                                                                                                  chains_allowed=chains_allowed,
                                                                                                                  T3F=False)  # fixme: remove T3F for public code
             if cs is None:
-                continue
+                if self.use_only_symmetric:
+                    continue
+                else:
+                    # create symmetry
+                    cs, input_pose_asym, x_trans, chain_used = self.construct_if_not_symmetric(multimeric_pose_cut, chains_allowed, avg_plddt, cn)
+                    input_pose_flip_asym = input_pose_asym.clone()
+                    sm.do_a_180_around_axis(input_pose_flip_asym, [1,0,0])
+                    # cs, input_pose, input_pose_flip, input_pose_asym, input_pose_flip_asym, x_trans = \
             pdb_info_new["model_name"].append(model)
             pdb_info_new["x_trans"].append(x_trans)
             pdb_info_new["chain"].append(chain_used)
@@ -402,7 +465,10 @@ class AF2EvoDOCK:
 
         # Checks if we have found accepted predictions. Returns an Error if not.
         if not pdb_info['model_name']:  # empty
-            raise ValueError("No AlphaFold predictions have been accepted. Consider lowering the conditions or running more predictions.")
+            # --avg_plddt_threshold', help="The minimum value of the average pLDDT needed for the structure to be included in the"
+            #                           "ensemble.", type=float, default=90)
+            #     parser.add_argument('--iptm_plus_ptm_threshold'
+            raise ValueError("No AlphaFold predictions have been accepted. Consider lowering --avg_plddt_threshold and --iptm_plus_ptm_threshold or run more AlphaFold predictions.")
 
         # Use the information in the pdb_info object obtain the N and C termini cut pointS
         n_resi, c_resi = self.get_cut_points(pdb_info)
@@ -584,7 +650,7 @@ def has_all_files(prediction):
     files = [p.name for p in Path(prediction).glob(f"*")]
     if not "ranking_debug.json" in files:
         return False
-    if not fnmatch.filter(files, "*pred*pkl"):
+    if not [f for f in fnmatch.filter(files, "*pkl") if f != "features.pkl"]:
         return False
     # if not any([not "pred" in s for s in fnmatch.filter(files, "result_model*.pkl")]):
     #     return False
@@ -615,12 +681,12 @@ def check_correct_format(path, ensemble):
 
 def main(path, symmetry, out_dir, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
          ensemble, max_monomers, max_multimers, align_structure, total_max_models, modify_rmsd_to_reach_min_models,
-         direction):
+         direction, model_type, use_only_symmetric):
     model_name, cn = check_correct_format(path, ensemble)
     init()
     out_dir.mkdir(exist_ok=True)
     af2evo = AF2EvoDOCK(symmetry, path, out_dir, plddt_confidence, ss_confidence, disconnect_confidence, avg_plddt_threshold, iptm_plus_ptm_threshold, rmsd_threshold,
-                        ensemble, max_monomers, max_multimers, total_max_models, modify_rmsd_to_reach_min_models, direction)
+                        ensemble, max_monomers, max_multimers, total_max_models, modify_rmsd_to_reach_min_models, direction, model_type, use_only_symmetric)
     # get all predicted pdb ids
     print(f"Analysing {model_name}")
     af2evo.apply(model_name, align_structure=align_structure, cn=cn)
@@ -637,6 +703,7 @@ if __name__ == "__main__":
                                        "what the oligomeric state is. When running --ensemble=GlobalFromMultimer all of the folders must be of the same oligomeric type.", type=str, required=True)
     parser.add_argument('--symmetry', help="Symmetry to model", type=str, choices=("T", "O", "I"), required=True)
     parser.add_argument('--out_dir', help="Output directory in which to store the output ensemble. Directory will be created if it does not exists.", type=str, required=True)
+    parser.add_argument('--model_type', help="Which output models from Alphafold to use.", type=str,  default="ranked", choices=["ranked", "relaxed", "unrelaxed"])
     # parsing options
     parser.add_argument('--ensemble', help="Ensemble type to create. "
                           "Local: Creates an ensemble used for Reassembly docking with EvoDOCK. The whole ensemble will be aligned onto"
@@ -676,6 +743,11 @@ if __name__ == "__main__":
                           "terminis", type=float, default=70)
     parser.add_argument('--disconnect_confidence', help="The percentage of predictions that must be designated 'disconnected' in order to "
                           "continue the cutting if a residue is designated 'L'", type=float, default=70)
+    parser.add_argument('--use_only_symmetric', help="If --ensemble='GlobalFromMultimer', will only use AFM predictions that Rosetta predicts "
+                                                     "to be symmetric. In that case the values for the symmetric paramters are "
+                                                     "set based on the predictions. If set to to False, a generic symmetry will be used and "
+                                                     "the symmetric parameters will not be based on the predictions. Setting it to False"
+                                                     "can be usefull if the AFM interface predictions are bad.", type=strtobool, default=True)
     # plddt_confidence, ss_confidence, disconnect_confidence
     args = parser.parse_args()
 
@@ -685,4 +757,4 @@ if __name__ == "__main__":
     main(args.path, args.symmetry, Path(args.out_dir), args.plddt_confidence, args.ss_confidence, args.disconnect_confidence,
          args.avg_plddt_threshold, args.iptm_plus_ptm_threshold, args.rmsd_threshold, args.ensemble,
          args.max_monomers, args.max_multimers, args.align_structure, args.max_total_models, args.modify_rmsd_to_reach_min_models,
-         args.direction)
+         args.direction, args.model_type, args.use_only_symmetric)

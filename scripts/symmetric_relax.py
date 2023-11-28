@@ -1,28 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Run relax with symmetry and allows one to output the final symmetry file and the input file centered
+"""Run relax with symmetry and allows one to output the final symmetry file and the input file centered
 @Author: Mads Jeppesen
 @Date: 6/15/22
 """
 import argparse
-from pyrosetta.rosetta.core.scoring import ScoreFunctionFactory
 from pyrosetta import init, pose_from_file, standard_task_factory, Pose
-from pyrosetta.rosetta.core.pack.task.operation import RestrictToRepacking, IncludeCurrent, InitializeFromCommandline
 from pyrosetta.rosetta.core.scoring import ScoreFunctionFactory
 from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.protocols.symmetry import SetupForSymmetryMover
 from symmetryhandler.symmetrysetup import SymmetrySetup
 from pathlib import Path
 import pandas as pd
-from src.dock_metric import CubicDockMetric
+from src.dock_metric import CubicDockMetric, SymmetricDockMetric
 from pyrosetta.rosetta.core.pose.symmetry import sym_dof_jump_num
 from cubicsym.cubicsetup import CubicSetup
-from pyrosetta.rosetta.core.scoring import CA_rmsd
-from pyrosetta.rosetta.core.pose.symmetry import extract_asymmetric_unit
-
-# fixme it does not like this relative import so will just add this here (copy from it!)
-# from ..scripts.prepacking import PosePackRotamers
+import numpy as np
 from pyrosetta.rosetta.core.pack.task import TaskFactory
 from pyrosetta.rosetta.core.pack.task.operation import (
     IncludeCurrent,
@@ -45,17 +38,6 @@ class PosePacker:
         self.mode = mode
         self.scorefxn = get_fa_scorefxn()
 
-    # def run(self):
-    #     pack_pdb = self.pack()
-    #     pack_pdb.dump_pdb(self.output_name)
-    #     return pack_pdb
-    #
-    # def pack(self):
-    #     if self.mode == "standard":
-    #         return PoseStandardPacker(self.pose, self.output_name).pack()
-    #     if self.mode == "custom":
-    #         return PosePackRotamers(self.pose, self.output_name).pack()
-
 class PosePackRotamers(PosePacker):
     def pack(self):
         pack_pose = Pose()
@@ -72,7 +54,6 @@ class PosePackRotamers(PosePacker):
         return pack_pose
 
 
-import numpy as np
 
 # FIXME: delete this
 dof_map = {
@@ -89,38 +70,33 @@ dof_map = {
     ################
 }
 
-
-# def get_score_terms(pose):
-#     # buf = ostringstream()
-#     # # THESE ARE UNWEIGHTHED:
-#     # # from https://graylab.jhu.edu/pyrosetta/downloads/documentation/pyrosetta4_online_format/PyRosetta4_Workshop3_Scoring.pdf
-#     # # Unweighted, individual component energies of each residue in a structure are stored in the Pose object and can be accessed by its energies() object.
-#     # # For example, to break the energy down into each residue’s contribution use:
-#     # # print ras.energies().show(<n>)
-#     # pose.energies().show(buf)
-#     #return {i.split()[0]: i.split()[1] for i in [l.replace("total_energy", "") for l in buf.str().split("\n") if "total_energy" in l]}
-#     return {(pose.scores.keys())}
-
-def calculate_metrics(pose, native, input_pose, native_symdef, input_symdef):
+def calculate_metrics(pose, native, input_pose, native_symdef, input_symdef, use_rmsd_map=None):
     # get the translational dfo
-    jumpints, dofints, trans_mags = [], [], []
-    foldid =CubicSetup.get_jumpidentifier_from_pose(pose)
-    for jump, dof, trans in zip([f"JUMP{foldid}fold1", f"JUMP{foldid}fold111"], [ "z", "x"], [2000, 1000]):
-        jumpints.append(sym_dof_jump_num(pose, jump))
-        dofints.append(dof_map[dof])
-        trans_mags.append(trans)
-    info = dict(pose.scores.items()) # all score terms
-    dockmetric = CubicDockMetric(native, input_pose, native_symdef=native_symdef, input_symdef=input_symdef,
-                                 jump_ids=jumpints, dof_ids=dofints, trans_mags=trans_mags)
+    info = dict(pose.scores.items())  # all score terms
+    if CubicSetup(input_symdef).is_cubic():
+        jumpints, dofints, trans_mags = [], [], []
+        foldid =CubicSetup.get_jumpidentifier_from_pose(pose)
+        for jump, dof, trans in zip([f"JUMP{foldid}fold1", f"JUMP{foldid}fold111"], ["z", "x"], [2000, 1000]):
+            jumpints.append(sym_dof_jump_num(pose, jump))
+            dofints.append(dof_map[dof])
+            trans_mags.append(trans)
+        dockmetric = CubicDockMetric(native, input_pose, native_symdef=native_symdef, input_symdef=input_symdef,
+                                     jump_ids=jumpints, dof_ids=dofints, trans_mags=trans_mags, use_map=use_rmsd_map)
+    else:
+        dockmetric = SymmetricDockMetric(native)
     info["energy"] = info.pop("total_score")
     info["rmsd"] = dockmetric.ca_rmsd(pose)
-    info["Irmsd"] = dockmetric.interface_rmsd(pose)
+    # fixme: interaction energy only works for cubic symmetry
+    if CubicSetup(input_symdef).is_cubic():
+        info["Irmsd"] = dockmetric.interface_rmsd(pose)
+    else:
+        info["Irmsd"] = None
     info["Ienergy"] = dockmetric.interaction_energy(pose)
     return info
 
-def outpout_info(pose, native, input_pose ,outpath, native_symdef, input_symdef, relaxes_done, use_old_data = None):
+def output_info(pose, native, input_pose, outpath, native_symdef, input_symdef, relaxes_done, use_old_data = None, use_rmsd_map=None):
     # get the translational dfos
-    info = calculate_metrics(pose, native, input_pose, native_symdef, input_symdef)
+    info = calculate_metrics(pose, native, input_pose, native_symdef, input_symdef, use_rmsd_map)
     if use_old_data is not None:
         # owverwrite
         info = {k: np.NaN for k, v in info.items()}
@@ -130,8 +106,6 @@ def outpout_info(pose, native, input_pose ,outpath, native_symdef, input_symdef,
         info["Ienergy"] = use_old_data["Iscore"].values[0]
     for k, v in relaxes_done.items():
         info[k] = v
-    if Path(outpath).is_dir():
-        outpath = f"{outpath}/info.csv"
     pd.DataFrame(info, index=[0]).to_csv(Path(outpath), index=False)
 
 def make_fastrelax(pose_file, cycles=5, jumps=True, bb=True, sc=True, constrain_coords=False, ex1=True, ex2aro=True, ex2=True):
@@ -180,8 +154,11 @@ def init_rosetta(pose_file, constrain_coords=False, ex1=False, ex2aro=False, ex2
         opts.append('-ex2')
     init(extra_options=" ".join(opts))
 
-def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, rosetta_out=".", input_out=".", symm_out=".",
-                    info_out=None, native_file=None, suffix=None):
+def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, input_out=".", symm_out=".", full_out=None, rosetta_out=None,
+                    info_out=None, native_file=None, constrain_coords=False, cycles=5, rmsd_map=None):
+    # check rmsd_map if parsed
+    if rmsd_map is not None:
+         rmsd_map = tuple([int(i) if i != "-" else None for i in rmsd_map])
 
     # score function and read in symmetric pose
     init_rosetta(pose_file)
@@ -193,7 +170,7 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, rosetta_o
         native = pose_from_file(native_file)
     SetupForSymmetryMover(symmetry_file).apply(pose)
     # fixme: since master merge this does not work with symmetry
-    #pose.conformation().detect_disulfides()
+    pose.conformation().detect_disulfides()
     sfxn = ScoreFunctionFactory.create_score_function("ref2015")
     sfxn.score(pose)
     packer = PosePackRotamers(pose, pose_file, "custom")
@@ -201,106 +178,89 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, rosetta_o
     init_pose = pose.clone()
     if native_symdef_file is None:
         native_symdef_file = symmetry_file
-    init_metrics = calculate_metrics(init_pose, native, init_pose, native_symdef_file, symmetry_file)
-
-    # todo: if this does not work.
-    # could do expensive and might not work, do interface refinement.
-    # Check the interface energy, and if not below the current value,
-    # what didnt work:
-        # extensive constrained relax (15 cycles)
-        # constrained relax followed by
+    init_metrics = calculate_metrics(init_pose, native, init_pose, native_symdef_file, symmetry_file, rmsd_map)
 
     # It can happen that the structure explodes because the output of AF/AFM for
     # instance have bad full structure Rosetta energies.
     # If it is the case we apply constrained relax
     relaxes_done = {"1": False, "2": False, "3": False, "4": False}
+    use_old_data = None
 
-    if sfxn.score(pose) > 0:
-        fastrelax = make_fastrelax(pose_file, constrain_coords=True)
+    # if constraining to the starting coordinates, only do that and continue
+    if constrain_coords:
+        fastrelax = make_fastrelax(pose_file, constrain_coords=True, cycles=cycles)
         fastrelax.apply(pose)
         relaxes_done["1"] = True
-    # if the energy has improved below 0 we are more confident that the structure will not explode now
-    # and we will therefor relax normally
-    if sfxn.score(pose) < 0:
-        fastrelax = make_fastrelax(pose_file)
-        fastrelax.apply(pose)
-        relaxes_done["2"] = True
-    # if the energy has not gone below 0 the pose is turned into the initial pose and then we only optimize sc and jumps
+    # else do a more elaborate relax approach
     else:
-        pose = init_pose.clone()
-        fastrelax = make_fastrelax(pose_file, bb=False)
-        fastrelax.apply(pose)
-        relaxes_done["3"] = True
+        # start out by relaxing the structure according to the input structure if the energy is bad. We dont
+        # want to start out just relaxing on the initial structure as it might explode if it has bad energies
+        if sfxn.score(pose) > 0:
+            fastrelax = make_fastrelax(pose_file, constrain_coords=True, cycles=cycles)
+            fastrelax.apply(pose)
+            relaxes_done["1"] = True
 
-    # if the interface energy has not improved, then revert back to the initial structure
-    use_old_data = None
-    if init_metrics["Ienergy"] <= calculate_metrics(pose, native, pose, native_symdef_file, symmetry_file)["Ienergy"] + 0.1: #0.1 for float precision
-        pose = init_pose.clone()
-        relaxes_done["4"] = True
-        # FIXME: this is a hack - remove it for END USER!
-        d = pd.read_csv(Path(info_out).parent.parent.parent.joinpath("top_100.csv"))
-        pop, ind, gen = Path(info_out).stem.split(".prepack_")[-1].split("_") # {pop}_{ind}_{gen}
-        use_old_data = d[( (d["pop"] == str(pop)) | (d["pop"] == int(pop)) ) &
-                         ( (d["ind"] == str(ind)) | (d["ind"] == int(ind))) &
-                         ( (d["gen"] == str(gen)) | (d["gen"] == int(gen)) ) ]
-        assert len(use_old_data) == 1, "should have 1 unique match!!!!!"
+        # if the energy has improved below 0 we are more confident that the structure will not explode now
+        # and we will therefor relax normally
+        if sfxn.score(pose) < 0:
+            fastrelax = make_fastrelax(pose_file, cycles=cycles)
+            fastrelax.apply(pose)
+            relaxes_done["2"] = True
+        # if the energy has not gone below 0 the pose is turned into the initial pose and then we only optimize sc and jumps
+        else:
+            pose = init_pose.clone()
+            fastrelax = make_fastrelax(pose_file, bb=False, cycles=cycles)
+            fastrelax.apply(pose)
+            relaxes_done["3"] = True
 
-    # Sometimes structures can explode from relax. Therefore we run 1 cycle and check the RMSD before moving on
-    # pose_init = pose.clone()
-    # init_score = sfxn.score(pose)
-    # fastrelax_init = make_fastrelax(1, jumps, bb, sc)
-    # fastrelax_init.apply(pose_init)
-    # pose_init_asym = Pose()
-    # pose_asym = Pose()
-    # extract_asymmetric_unit(pose, pose_asym, False)
-    # extract_asymmetric_unit(pose_init, pose_init_asym, False)
-    # if CA_rmsd(pose_init, pose_asym) > 10:
-    #     after_score = sfxn.score(pose_init)
-    #     print(f"The structure is about to explode!")
-    #     print(f"Energy was initally {init_score} and now the current RMSD to the input structure is {CA_rmsd(pose_init, pose_asym)}")
-    #     print(f"A single cycle with constrained relax will be carried out without moving the interface")
-    #     init_rosetta(True, ex1, ex2aro, ex2)
-    #     pose_init = pose.clone()
-    #     fastrelax_constrain = make_fastrelax(1, False, bb, sc)
-    #     fastrelax_constrain.apply(pose_init)
-    #     pose_asym = Pose()
-    #     extract_asymmetric_unit(pose.clone(), pose_asym, False)
-    #     # try again with really hard constraints with 2 cycles if the RMSD is more than 5 Å!
-    #     if CA_rmsd(pose_init, pose_asym) > 5:
-    #         init_rosetta(True, ex1, ex2aro, ex2, really_hard_constraints=True)
-    #         pose_init = pose.clone()
-    #         fastrelax_constrain = make_fastrelax(2, False, bb, sc)
-    #         fastrelax_constrain.apply(pose)
-    #         assert CA_rmsd(pose_init,pose_asym) < 5, "Constrained relax could not save it. Relax does not give meaningfull results on this structure!"
-    #     after_score = sfxn.score(pose_init)
-    #     pose.assign(pose_init)
-    #     print(f"With constrained relax the energy is now: {after_score} with RMSD to the input structure {CA_rmsd(pose_init, pose_asym)}")
-    #     init_rosetta(constrain_coords, ex1, ex2aro, ex2)
+        # if the interface energy has not improved, then revert back to the initial structure
+        if init_metrics["Ienergy"] <= calculate_metrics(pose, native, pose, native_symdef_file, symmetry_file, rmsd_map)["Ienergy"] + 0.1: #0.1 for float precision
+            pose = init_pose.clone()
+            relaxes_done["4"] = True
+            # # FIXME: this is a hack - remove it for END USER!
+            # d = pd.read_csv(Path(info_out).parent.parent.parent.joinpath("top_100.csv"))
+            # pop, ind, gen = Path(info_out).stem.split(".prepack_")[-1].split("_") # {pop}_{ind}_{gen}
+            # use_old_data = d[( (d["pop"] == str(pop)) | (d["pop"] == int(pop)) ) &
+            #                  ( (d["ind"] == str(ind)) | (d["ind"] == int(ind))) &
+            #                  ( (d["gen"] == str(gen)) | (d["gen"] == int(gen)) ) ]
+            # assert len(use_old_data) == 1, "should have 1 unique match!!!!!"
 
-    # Now output the final symmetry file
+    ####################
+    # Now output stuff #
+    ####################
+
+    # output the information file
     sfxn.score(pose)
     symmetrysetup = SymmetrySetup()
     symmetrysetup.read_from_file(symmetry_file)
-    name = Path(pose_file).stem + (suffix if suffix else "")
-    outpout_info(pose, native, pose, info_out, native_symdef=native_symdef_file, input_symdef=symmetry_file, relaxes_done=relaxes_done,
-                 use_old_data= use_old_data)
-    pose.dump_pdb(rosetta_out + f"/rosetta_{name}.pdb") # full out
+    # name = Path(pose_file).stem + (suffix if suffix else "")
+    output_info(pose, native, pose, info_out, native_symdef=native_symdef_file, input_symdef=symmetry_file, relaxes_done=relaxes_done,
+                use_old_data= use_old_data, use_rmsd_map=rmsd_map)
+
+    # output the input file and symmetry file
     symmetrysetup.update_dofs_from_pose(pose)
-    # FIXME: dont_rest is a HACK FOR CUBIC FOR NOW
-    # symmetrysetup.make_asymmetric_pose(pose, reset_dofs=True, dont_reset=["JUMPHFfold1111_subunit"]).dump_pdb(input_out + f"/input_{name}.pdb") # input out
-    symmetrysetup.make_asymmetric_pose(pose, reset_dofs=True).dump_pdb(input_out + f"/input_{name}.pdb") # input out
-    symmetrysetup.output(symm_out + f"/{name}.symm") # sym out
-    # make a symmetric pose again with the outputs
-    # open the symmetryfile again and remove this line:  JUMPHFfold1111_subunit
-    # with open(symm_out + f"/{name}.symm", "r") as f:
-    #     lines = f.readlines()
-    # with open(symm_out + f"/{name}.symm", "w") as f:
-    #     for line in lines:
-    #         if not "set_dof JUMPHFfold1111_subunit" in line:
-    #             f.write(line)
-    pose = pose_from_file(input_out + f"/input_{name}.pdb")
-    SetupForSymmetryMover(symm_out + f"/{name}.symm").apply(pose)
-    pose.dump_pdb(rosetta_out + f"/rosetta_recreated_from_input_and_symm_file_{name}.pdb")
+    if CubicSetup(symmetry_file).is_cubic():
+        symmetrysetup.make_asymmetric_pose(pose, reset_dofs=True).dump_pdb(input_out)
+    else:
+        # jumpname from make_symdef_file.pl
+        if "JUMP0_to_subunit" in symmetrysetup._dofs.keys():
+            symmetrysetup.make_asymmetric_pose(pose, reset_dofs=False).dump_pdb(input_out)
+            for i in range(3):
+                symmetrysetup._dofs["JUMP0_to_subunit"][i][-1] = None
+        else:
+            symmetrysetup.make_asymmetric_pose(pose, reset_dofs=True).dump_pdb(input_out)
+    symmetrysetup.output(symm_out)
+
+    # output the Rosetta structure
+    if rosetta_out is not None:
+        pose.dump_pdb(rosetta_out)
+
+    # output the full symmetrical structure
+    if full_out is not None:
+        pose = pose_from_file(input_out)
+        SetupForSymmetryMover(symm_out).apply(pose)
+        # output the full rosetta structure
+        pose.dump_pdb(full_out)
 
 def main():
     description = "Wrapper script for the relax protocol in Rosetta/PyRosetta. In addition to regular relax it finetunes the relax to protect against the structure" \
@@ -313,33 +273,26 @@ def main():
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--file", help="Input structure to relax", type=str, required=True)
     parser.add_argument("--symmetry_file", help="Symmetry definition file", type=str, required=True)
+    parser.add_argument("--constrain_coords", help="constrain coordinates only", type=bool, choices=[True, False])
+    parser.add_argument("--cycles", help="Cycles to use", type=int, default=5)
     parser.add_argument("--native_file", help="Native file. If not set it will use --file instead.", type=str)
     parser.add_argument("--native_symmetry_file", help="The native symmetry file. If not set it will use --symmetry_file", type=str)
-    parser.add_argument("--rosetta_out", help="Output of the full symmetric structure", type=str, default=".")
-    parser.add_argument("--input_out", help="Output of the input structure", type=str, default=".")
-    parser.add_argument("--sym_out", help="Output of the symmetry file", type=str, default=".")
-    parser.add_argument("--info_out", help="Output of the csv file containing score terms and RMSD", type=str, default=".")
-    parser.add_argument("--suffix", help="Suffix given to all output structures", type=str)
-    # parser.add_argument("--move_jumpdofs", help="When calculating the interaction energy move these jumpdofs with a certain amount. "
-    #                                             "A jumpdof and is pertubation is specified by its jump name, dof name and an amount as follows: "
-    #                                             "<jumpname>:<dofname>:<amount>. Example: Jump1:z:1000.", nargs="+", required=True)
-    # minization options
-    # parser.add_argument("--bb", help="minimize backbone.", action="store_true")
-    # parser.add_argument("--sc", help="minimize sidecahins.", action="store_true")
-    # parser.add_argument("--jumps", help="minimize jumps.", action="store_true")
-    # # direct relax optionsoptions
-    # parser.add_argument("--cycles", help="cycles to use.", type=int, default=15)
-    # parser.add_argument("--ex1", help="Do ex1 rotamer sampling", action="store_true")
-    # parser.add_argument("--ex2aro", help="Do ex2aro rotamer sampling", action="store_true")
-    # parser.add_argument("--ex2", help="Do ex2 rotamer sampling", action="store_true")
+    parser.add_argument("--input_out", help="Output path to the input structure", type=str, default=".")
+    parser.add_argument("--sym_out", help="Output path to the symmetry file", type=str, default=".")
+    parser.add_argument("--rosetta_out", help="Output the Rosetta symmetric structure at this path. "
+                                           "If path is not specified it will not output it.", type=str)
+    parser.add_argument("--full_out", help="Output the full symmetric structure at this path. "
+                                              "If path is not specified it will not output it.", type=str)
+    parser.add_argument("--info_out", help="Output an information file (csv) containing score terms and RMSD at this path. "
+                                           "If path is not specified it will not output it.", type=str)
+    parser.add_argument("--rmsd_map", help="Use an alternative RMSD map", nargs="+")
     args = parser.parse_args()
 
     symmetric_relax(pose_file=args.file, symmetry_file=args.symmetry_file, native_symdef_file=args.native_symmetry_file,
-                    rosetta_out=args.rosetta_out, input_out=args.input_out, symm_out=args.sym_out, info_out=args.info_out,
-                    native_file=args.native_file, suffix=args.suffix)
-
+                    full_out=args.full_out, rosetta_out=args.rosetta_out, input_out=args.input_out, symm_out=args.sym_out, info_out=args.info_out,
+                    native_file=args.native_file, constrain_coords=args.constrain_coords,
+                    cycles=args.cycles, rmsd_map=args.rmsd_map)
 
 if __name__ == "__main__":
-
     main()
 
