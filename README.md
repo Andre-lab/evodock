@@ -73,7 +73,7 @@ python ./scripts/prepacking.py --file <input_file>
 `scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
-Below, 2 examples of running the script for creating an ensemble for Local docking or Global assembly docking is given. You need to download `af_data.tar.gz` [here](10.5281/zenodo.8047513). Unzip it with 
+Below, 2 examples of running the script for creating an ensemble for Local docking or Global assembly docking is given. You need to download `af_data.tar.gz` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
 
 ```console
 tar -xf af_data.tar.gz
