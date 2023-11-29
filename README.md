@@ -56,6 +56,7 @@ git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
 pip install .
 ```
+Remember to include the packages under **Package requirements**!
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
