@@ -19,7 +19,7 @@ EvoDOCK only requires a standard computer with linux installed (MacOS will be su
 
 ### OS Requirements
 
-This package is supported for Linux (macOS will soon be added). The package has been tested on the following systems:
+This package is supported for Linux/macOS. The package has been tested on the following systems:
 
 Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
