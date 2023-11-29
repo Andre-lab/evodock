@@ -22,6 +22,7 @@ class TrialGenerator:
         self.recombination = config.recombination
         self.mutation_strategy = MutationStrategyBuilder(config).build(size=local_search.scfxn.converter.size)
         self.local_search = local_search
+        self.config = config
 
     def mutate(self, j, population, gen_scores):
         return self.mutation_strategy.create_donor(j, population, gen_scores)
@@ -41,7 +42,10 @@ class TrialGenerator:
         v_donor = self.mutate(j, population, gen_scores)
         v_trial = self.recombine(j, population, v_donor)
         ind = make_trial(j, v_trial, 0, 0, 0)
-        trial, _, _ = self.local_search.process_individual(ind)
+        if self.config.flexbb:
+            trial, _, _ = self.local_search.process_individual(ind)
+        else:
+            trial = self.local_search.process_individual(ind)
         return trial
 
 class FlexbbTrialGenerator(TrialGenerator):
