@@ -17,7 +17,10 @@ from src.trial_generator import (
 from src.initialize_population import InitializePopulation
 from src.utils import make_trial, get_position_info
 from src.landscape_metrics import fitness_distance_correlation
-
+from copy import deepcopy
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from cubicsym.cubicsetup import CubicSetup
+from cubicsym.assembly.cubicassembly import CubicSymmetricAssembly
 
 class DifferentialEvolutionAlgorithm:
     def __init__(self, config, fitness_function):
@@ -110,10 +113,10 @@ class DifferentialEvolutionAlgorithm:
 
     def map_all_docks(self, population):
         for ind in population:
-            self.all_docks["ind"].append(ind)
-            self.all_docks["genotype"].append(ind.genotype)
-            self.all_docks["i_sc"].append(ind.i_sc)
-            self.all_docks["score"].append(ind.score)
+            self.all_docks["ind"].append(deepcopy(ind))
+            self.all_docks["genotype"].append(deepcopy(ind.genotype))
+            self.all_docks["i_sc"].append(deepcopy(ind.i_sc))
+            self.all_docks["score"].append(deepcopy(ind.score))
 
     def score_keeping(self):
         self.gen_avg = sum(self.gen_scores) / self.popsize
@@ -158,7 +161,13 @@ class DifferentialEvolutionAlgorithm:
                 best_pose, _, _, _ = self.scfxn.local_search.local_search_strategy.get_pose(best_ind_solution)
             else:
                 best_pose = self.scfxn.local_search.local_search_strategy.get_pose(best_ind_solution)
-            best_pose.dump_pdb(name)
+            if is_symmetric(best_pose):
+                cs = CubicSetup(self.config.syminfo.input_symdef)
+                if cs.is_cubic():
+                    # output full symmetric structure
+                    CubicSymmetricAssembly.from_pose_input(best_pose, cs).output(filename=name, format="cif")
+            else:
+                best_pose.dump_pdb(name)
 
         if self.optimal_solution is not None:
             fdc = fitness_distance_correlation(

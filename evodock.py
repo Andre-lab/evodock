@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 import logging
 import os
 import sys
-
 import pandas as pd
 from pyrosetta import init
 from src.config_reader import EvodockConfig
@@ -15,6 +13,9 @@ from src.scfxn_fullatom import FAFitnessFunction
 from src.utils import get_position_info, initialize_starting_poses
 from src.dock_metric import DockMetric, CubicDockMetric
 from sklearn.cluster import KMeans
+from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
+from cubicsym.cubicsetup import CubicSetup
+from cubicsym.assembly.cubicassembly import CubicSymmetricAssembly
 
 MAIN_PATH = os.getcwd()
 
@@ -57,26 +58,53 @@ def initialize_dock_metric(config, native, input_pose):
     else:
         return DockMetric(native)
 
-def output_best_clusters(alg, config, logger):
-    # do kmeans clustering and output the final results.
+def output_models(alg, config, logger):
+    """Output the models. Does KMeans clustering if set to True."""
     vals = alg.all_docks["genotype"]
-    kmeans = KMeans(n_clusters=5, random_state=0).fit(vals)
-    alg.all_docks["cluster"] = kmeans.labels_
+    n_models = config.n_models
+    # check that the individuals are all different
+    # assert not sum([v is vv for v in vals for vv in vals]) - 1 < len(vals)
+    # Cluster or not and make into a dataframe
     df = pd.DataFrame(alg.all_docks)
-    if config.selection == "total":
-        df = df.sort_values("score").groupby("cluster").first()
+    if config.cluster:
+        # do kmeans clustering
+        kmeans = KMeans(n_clusters=n_models).fit(vals)
+        df["cluster"] = kmeans.labels_
+        if config.selection == "total":
+            df = df.sort_values("score").groupby("cluster").first()
+        else:
+            df = df.sort_values("i_sc").groupby("cluster").first()
     else:
-        df = df.sort_values("i_sc").groupby("cluster").first()
+        if config.selection == "total":
+            df = df.sort_values("score")[0:n_models]
+        else:
+            df = df.sort_values("i_sc")[0:n_models]
+    # output the models
     logger.info("==============================")
-    logger.info(" Clustering and outputting the following models:")
+    logger.info(" Outputting the following models:")
     for n, ind in enumerate(df["ind"].values, 1):
         if config.flexbb:
             pose, _, _, _ = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
         else:
             pose = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
-        name = config.out_path + f"/final_evodock_unrelaxed_ranked_{n}.pdb"
-        logger.info(f" {name}")
-        pose.dump_pdb(name)
+        name = config.out_path + f"/final_evodock_unrelaxed_ranked_{n}{{}}"
+        if is_symmetric(pose):
+            cs = CubicSetup(config.syminfo.input_symdef)
+            if cs.is_cubic():
+                # output full symmetric structure
+                name_full = name.format(f"_full.cif")
+                logger.info(f" {name_full}")
+                CubicSymmetricAssembly.from_pose_input(pose, cs).output(filename=name_full, format="cif")
+                # output symmetry file
+                name_symm = name.format(f".symm")
+                logger.info(f" {name_symm}")
+                cs.output(name_symm)
+                # output input pdb
+                name_input = name.format(f"_INPUT.pdb")
+                logger.info(f" {name_input}")
+                cs.make_asymmetric_pose(pose).dump_pdb(name_input)
+            else:
+                raise NotImplementedError("Only Cubic symmetry allowed")
     logger.info("==============================")
 
 def main():
@@ -112,9 +140,8 @@ def main():
     logger.info(" starts EvoDOCK : evolutionary docking process")
     alg.main()
 
-
     # ---- OUTPUT -------------------------------------------
-    output_best_clusters(alg, config, logger)
+    output_models(alg, config, logger)
 
     logger.info(" end EvoDOCK")
     logger.info("==============================")

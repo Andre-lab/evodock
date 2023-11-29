@@ -43,6 +43,7 @@ class EvodockConfig:
         self.load_seed(config)
         self.config = config
 
+
     def load_docking(self, config):
         """Load the docking_type."""
         self.docking_type_option = config["Docking"].get("type")
@@ -150,6 +151,8 @@ class EvodockConfig:
         self.out_pdb = config["Outputs"].get("output_pdb", fallback=True)
         self.out_pdb = ast.literal_eval(self.out_pdb)
         self.output_pdb_per_generation = config["Outputs"].getboolean("output_pdb_per_generation", fallback=False)
+        self.n_models = config["Outputs"].getint("n_models", fallback=5)
+        self.cluster = config["Outputs"].getboolean("cluster", fallback=True)
 
     def load_rosetta_options(self, config):
         """Loads in Rosetta options"""
