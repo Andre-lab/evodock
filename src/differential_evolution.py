@@ -141,7 +141,7 @@ class DifferentialEvolutionAlgorithm:
 
         avg_improved = np.average(improved) if len(improved) > 0 else 0
         self.logger.info(
-            f" improved {len(improved)} individuals with average {avg_improved:.2f}"
+            f" Improved {len(improved)} individuals with average {avg_improved:.2f}"
         )
 
         self.logger.info(f"   > BEST SOLUTION: {best_sol_str}")
@@ -183,7 +183,7 @@ class DifferentialEvolutionAlgorithm:
         gen_end = time.time()
 
         file_time = open(self.file_time_name, "a")
-        self.logger.info(f"selection stage in {gen_end - self.gen_start:.2f} s.")
+        self.logger.info(f" Selection stage in {gen_end - self.gen_start:.2f} s.")
         file_time.write(f"{self.generation},{gen_end - self.gen_start:.2f}\n")
         file_time.close()
 

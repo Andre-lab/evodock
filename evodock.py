@@ -112,6 +112,11 @@ def output_models(alg, config, logger):
     logger.info("==============================")
 
 def main():
+    #========
+    print("="*43)
+    print(" "*18, "EvoDOCK", " "*18)
+    print("="*43)
+
     config = EvodockConfig(sys.argv[-1])
 
     init(extra_options=build_rosetta_flags(config))
@@ -141,13 +146,13 @@ def main():
 
     # --- RUN ALGORITHM -------------------------------------
     logger.info("==============================")
-    logger.info(" starts EvoDOCK : evolutionary docking process")
+    logger.info(" Starts EvoDOCK")
     alg.main()
 
     # ---- OUTPUT -------------------------------------------
     output_models(alg, config, logger)
 
-    logger.info(" end EvoDOCK")
+    logger.info(" End EvoDOCK")
     logger.info("==============================")
 
 
