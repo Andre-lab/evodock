@@ -263,11 +263,11 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, input_out
         pose.dump_pdb(full_out)
 
 def main():
-    description = "Wrapper script for the relax protocol in Rosetta/PyRosetta. In addition to regular relax it finetunes the relax to protect against the structure" \
+    description = "Wrapper script for the relax protocol in Rosetta/PyRosetta. In addition to regular relax it fine-tunes the relax to protect against the structure" \
                   " blowing up. This can happen if the structures produced by AF/AFM are energetically unfavorable when parsed into Rosetta. " \
-                  "In addition to regular relax output, this  " \
-                  "also outputs an input structure (to be made symmetric in Rosetta) and the symmetry file which dofs values (in set_dofs) " \
-                  "are set to the end point of the relax protocol as well as a csv file of the final unweighted score terms, total score and RMSD." \
+                  "In addition to regular relax output, it  " \
+                  "also outputs an input structure (to be made symmetric in Rosetta) and the symmetry file in which the DOFS (set_dofs lines in the symmetry file) " \
+                  "are set to the end point of the relax protocol, as well as a csv file of the final unweighted score terms, total score and RMSD." \
                   "A recreated file using the output input file and symmetry file is also created."
 
     parser = argparse.ArgumentParser(description=description)
@@ -275,8 +275,8 @@ def main():
     parser.add_argument("--symmetry_file", help="Symmetry definition file", type=str, required=True)
     parser.add_argument("--constrain_coords", help="constrain coordinates only", type=bool, choices=[True, False])
     parser.add_argument("--cycles", help="Cycles to use", type=int, default=5)
-    parser.add_argument("--native_file", help="Native file. If not set it will use --file instead.", type=str)
-    parser.add_argument("--native_symmetry_file", help="The native symmetry file. If not set it will use --symmetry_file", type=str)
+    parser.add_argument("--native_file", help="Native file. If not set it will use --file instead (For RMSD calculations).", type=str)
+    parser.add_argument("--native_symmetry_file", help="The native symmetry file. If not set it will use --symmetry_file (For RMSD calculations)", type=str)
     parser.add_argument("--input_out", help="Output path to the input structure", type=str, default=".")
     parser.add_argument("--sym_out", help="Output path to the symmetry file", type=str, default=".")
     parser.add_argument("--rosetta_out", help="Output the Rosetta symmetric structure at this path. "
@@ -285,7 +285,7 @@ def main():
                                               "If path is not specified it will not output it.", type=str)
     parser.add_argument("--info_out", help="Output an information file (csv) containing score terms and RMSD at this path. "
                                            "If path is not specified it will not output it.", type=str)
-    parser.add_argument("--rmsd_map", help="Use an alternative RMSD map", nargs="+")
+    parser.add_argument("--rmsd_map", help="Use an alternative RMSD map than the default", nargs="+")
     args = parser.parse_args()
 
     symmetric_relax(pose_file=args.file, symmetry_file=args.symmetry_file, native_symdef_file=args.native_symmetry_file,
