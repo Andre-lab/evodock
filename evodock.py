@@ -16,6 +16,7 @@ from sklearn.cluster import KMeans
 from pyrosetta.rosetta.core.pose.symmetry import is_symmetric
 from cubicsym.cubicsetup import CubicSetup
 from cubicsym.assembly.cubicassembly import CubicSymmetricAssembly
+from pathlib import Path
 
 MAIN_PATH = os.getcwd()
 
@@ -82,12 +83,15 @@ def output_models(alg, config, logger):
     # output the models
     logger.info("==============================")
     logger.info(" Outputting the following models:")
+    # make a subfolder
+    output_folder = config.out_path + "/structures"
+    Path(output_folder).mkdir(exist_ok=True)
     for n, ind in enumerate(df["ind"].values, 1):
         if config.flexbb:
             pose, _, _, _ = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
         else:
             pose = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
-        name = config.out_path + f"/final_evodock_unrelaxed_ranked_{n}{{}}"
+        name = output_folder + f"/final_evodock_unrelaxed_ranked_{n}{{}}"
         if is_symmetric(pose):
             cs = CubicSetup(config.syminfo.input_symdef)
             if cs.is_cubic():
