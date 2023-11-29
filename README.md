@@ -73,7 +73,7 @@ python ./scripts/prepacking.py --file <input_file>
 `scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
-Below, 2 examples of running the script for creating an ensemble for Reassembly docking or Complete assembly docking is given. You need to download `af_data.tar.gz` [here](https://zenodo.org/record/8047514). Unzip it with 
+Below, 2 examples of running the script for creating an ensemble for Local docking or Global assembly docking is given. You need to download `af_data.tar.gz` [here](https://zenodo.org/record/8047514). Unzip it with 
 
 ```console
 tar -xf af_data.tar.gz
@@ -81,12 +81,12 @@ tar -xf af_data.tar.gz
 
 Put the AF_data in `evodock/inputs` before running the tests below. 
 
-Preparing an ensemble for Reassembly docking (takes a few minutes):
+Preparing an ensemble for Local docking (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
-Preparing an ensemble for Complete assembly docking (takes a few minutes):
+Preparing an ensemble for Global assembly docking (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
@@ -113,15 +113,15 @@ Examples of config files for different EvoDOCK configurations are found in the `
 
 1. Heteromeric docking with single ligand and receptor backone (takes a few minutes): `configs/heterodimeric/sample_dock_single.ini` 
 2. Heteromeric docking with flexible backbones (takes a few minutes): `configs/heterodimeric/sample_dock_flexbb.ini` 
-3. Reassembly docking with a single backbone (takes a few minutes): `configs/symmetric/reassembly_single.ini` 
-4. Reassembly docking with flexible backbones (takes a few minutes): `configs/symmetric/reassembly_flexbb.ini` 
-5. Complete assembly docking with flexible backbones (takes a few minutes): `configs/symmetric/complete_assembly.ini`  
+3. Local recapitulation with a single backbone (takes a few minutes): `configs/symmetric/local_recapitulation.ini` 
+4. Local docking with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
+5. Global assembly docking with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
-1. `Local` For heterodimeric local docking AND symmetric Reassembly docking
+1. `Local` For heterodimeric local docking AND symmetric Local docking
 3. `Global` For heterodimeric global docking 
-4. `GlobalFromMultimer` For symmetric Complete assembly docking
+4. `GlobalFromMultimer` For symmetric Global assembly docking
 ```dosini
 [Docking]
 type=<Local/Global/GlobalFromMultimer>
@@ -167,14 +167,18 @@ symdef_file=<path to the symdef file>
 
 Output options for the results:
 1. `output_path` Directory in which to output all files.
-2. `output_pdb` Output pdb
-3. `output_pdb_per_generation` Output the best pdb for each generation
+2. `output_pdb` Output pdb.
+3. `output_pdb_per_generation` Output the best pdb for each generation.
+4. `n_models` How many models to output in the end.
+5. `clutser` To cluster the results before outputting.
 
 ```dosini
 [Outputs]
 output_path=<path to the output directory>
 output_pdb=<boolean>
 output_pdb_per_generation=<boolean>
+n_models=<int>
+cluster=<boolean>
 ```
 
 #### 4. [DE]
