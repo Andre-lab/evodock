@@ -56,7 +56,8 @@ git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
 pip install .
 ```
-Remember to include the packages under **Package requirements**!
+
+Then additionally install the packages under **Package requirements**!
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
@@ -305,17 +306,19 @@ EvoDOCK produces several different log files:
 
 9. `ensemble.csv` contains, for each generation (gen), the name of file that is used as the current backbone for each individual.
 
-EvoDOCK also outputs a pdb file of the final optimized model (`final_docked_evo.pdb`) as well as the lowest energy structure for each geneation (`evolved.pdb`)
+EvoDOCK also outputs structure files at the in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
 
 # Symmetric relax of EvoDOCK output structures
 
-The script `scripts/symmetric_relax.py` can be used to relax structures from the EvoDOCK output. The script is well documented. Use `python scripts/symmetric_relax.py -h` to see more.
-It is advisable to use this script when parsing AlphaFold models as compared to Rosettas relax protocol as it guards against the structures blowing up if the AlphaFold structures have bad energies. It does however require more user interference as explained below.
+The script `scripts/symmetric_relax.py` can be used to relax structures from the EvoDOCK output. The script is well documented: use `python scripts/symmetric_relax.py -h` to see more.
+It is advisable to use this script when using AlphaFold ensemble models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
-Use the `ensemble.csv` and `all_individual.csv` to get the backbone and genotype ([z, λ, x, ψ, ϴ, φ]) for any model you want for any generation. If you want the lowest energy one parse this into a pandas 
-DataFrame and fish it out. Use the genotype to modify the symmetry file you parsed to EvoDOCK (see https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry for more information about the symmetry files in Rosetta). 
-You have to modify the set_dof lines to match the genotype. 
-Then to the script parse the backbone (pdb file) to --file and the modified symmetry file to --symmetry_file.
+When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs: 
+1. The full structure (suffix: _full.cif)
+2. A symmetry file (suffix: .symm)
+3. Input file (suffix: _INPUT.pdb). 
+
+Use the symmetry file and the input file with `symmetric_relax.py`.
 
 A test can be run with (can take up to an hour or more):
 
