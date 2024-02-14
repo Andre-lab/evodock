@@ -6,7 +6,7 @@ Metric Calculator class
 @Date: 8/1/22
 """
 import random
-
+from pyrosetta.rosetta.utility import vector1_std_pair_unsigned_long_unsigned_long_t
 from pyrosetta.rosetta.protocols.symmetric_docking import SymDockProtocol
 import numpy as np
 from pyrosetta.rosetta.numeric import xyzVector_double_t
@@ -209,7 +209,7 @@ class CubicDockMetric:
         # And I can't seem to resolve it. I believe it has to do with disulfide bonds but even with disulfide bond
         # detection through pose.conformation().detect_disulfides() it still happens. Therefore I work on a
         # clone pose. Test cases are 1JH5 and 1X36.
-        pose.conformation().detect_disulfides()
+        pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
         multimeric_score = self.score_func.score(pose)
         pose_clone = pose.clone()
         init_trans_mags = deepcopy(self.trans_mags)
