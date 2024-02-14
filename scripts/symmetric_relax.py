@@ -5,6 +5,7 @@
 @Date: 6/15/22
 """
 import argparse
+from pyrosetta.rosetta.utility import vector1_std_pair_unsigned_long_unsigned_long_t
 from pyrosetta import init, pose_from_file, standard_task_factory, Pose
 from pyrosetta.rosetta.core.scoring import ScoreFunctionFactory
 from pyrosetta.rosetta.protocols.relax import FastRelax
@@ -163,14 +164,14 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, input_out
     # score function and read in symmetric pose
     init_rosetta(pose_file)
     pose = pose_from_file(pose_file)
-    pose.conformation().detect_disulfides()
+    pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
     if native_file is None:
         native = pose.clone()
     else:
         native = pose_from_file(native_file)
     SetupForSymmetryMover(symmetry_file).apply(pose)
     # fixme: since master merge this does not work with symmetry
-    pose.conformation().detect_disulfides()
+    pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
     sfxn = ScoreFunctionFactory.create_score_function("ref2015")
     sfxn.score(pose)
     packer = PosePackRotamers(pose, pose_file, "custom")
