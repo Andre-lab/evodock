@@ -253,7 +253,7 @@ class CubicDockMetric:
             pose.set_jump(jumpid, flexible_jump)
         # fixme: THIS NEEDS TO BE HERE!
         # pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
-        pose.conformation().detect_disulfides()
+        pose.conformation().detect_disulfides(vector1_std_pair_unsigned_long_unsigned_long_t())
 
     # def __set_inteface_atoms(self, input_pose):
     #     """Sets which atoms are determined to be in the interface in the native structure."""
