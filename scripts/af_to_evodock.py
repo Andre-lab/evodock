@@ -165,11 +165,11 @@ class AF2EvoDOCK:
         """
         # 1 first but each model type into its own container
         if self.model_type == "ranked":
-            model_ns = {k:[] for k in map(str, range(0, 5))}
+            model_ns = {k:[] for k in map(str, range(0, len(models)))}
         else:
-            model_ns = {k:[] for k in map(str, range(1, 6))}
+            model_ns = {k:[] for k in map(str, range(1, len(models) + 1))}
         for p in models:
-            model_ns[p.name.split("_")[2].split(".pdb")[0]].append(p)
+            model_ns[p.name.split("_")[-1].split(".pdb")[0]].append(p)
         # 2 now sort each container based on the output number
         fs = lambda p: int(p.name.split("_")[-1].split(".")[0])
         model_ns = {k: sorted(v, key=fs) for k, v in model_ns.items()}
@@ -326,7 +326,7 @@ class AF2EvoDOCK:
         new_pdb_info = {k: [v for n, v in enumerate(vv) if n not in indices_to_delete] for k, vv in pdb_info.items()}
         assert len(new_pdb_info["monomeric_poses_cut"]) == models_left
         assert len(new_pdb_info["avg_plddt"]) == models_left
-        print(f"{len(indices_to_delete)}/{len(poses)} poses where removed!")
+        print(f"{len(indices_to_delete)}/{len(poses)} poses were removed!")
         return new_pdb_info, rmsd_threshold
 
     def get_aligned_info(self, align_structure, pdb_info, n_resi, c_resi):

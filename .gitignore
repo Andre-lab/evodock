@@ -8,6 +8,8 @@
 !*.py
 !src/
 !src/**.py
+!tests/
+!tests/outputs/
 flycheck*py
 
 !configs/
