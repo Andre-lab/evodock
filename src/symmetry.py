@@ -311,7 +311,7 @@ class SymInfo:
         self.dof_spec.set_symmetrical_bounds(self.bounds)
         self.genotype_size = self.dof_spec.dofsize
         assert self.bound_penalty is not None
-        self.cubicboundary = CubicBoundary(CubicSetup(symdef=self.input_symdef), pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
+        self.cubicboundary = CubicBoundary(symdef=self.input_symdef, pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
         self.initial_placement = self.dof_spec.get_positions_as_list(pose)
         self._map_normalize_trans_to_jumpdofs()
 
