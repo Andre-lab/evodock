@@ -109,11 +109,30 @@ The following sections describe how to configure EvoDOCK through the config file
 
 Examples of config files for different EvoDOCK configurations are found in the `config` folder with the following behavior: 
 
-1. Heteromeric docking with single ligand and receptor backone (takes a few minutes): `configs/heterodimeric/sample_dock_single.ini` 
-2. Heteromeric docking with flexible backbones (takes a few minutes): `configs/heterodimeric/sample_dock_flexbb.ini` 
-3. Local recapitulation with a single backbone (takes a few minutes): `configs/symmetric/local_recapitulation.ini` 
-4. Local assembly with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
-5. Global assembly with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
+1. Heteromeric docking with single ligand and receptor backone (takes a few minutes):
+```console
+python evodock.py configs/heterodimeric/sample_dock_single.ini`
+```
+
+2. Heteromeric docking with flexible backbones (takes a few minutes):
+```console
+python evodock.py configs/heterodimeric/sample_dock_flexbb.ini`
+```
+
+3. Local recapitulation with a single backbone (takes a few minutes): 
+```console
+python evodock.py configs/symmetric/local_recapitulation.ini`
+```
+
+4. Local assembly with flexible backbones (takes a few minutes): 
+```console
+python evodock.py configs/symmetric/local_assembly.ini`
+```
+
+5. Global assembly with flexible backbones (takes a few minutes): 
+```console
+python evodock.py configs/symmetric/global_assembly.ini
+```
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
