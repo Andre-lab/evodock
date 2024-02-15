@@ -7,7 +7,7 @@ Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.cell.com/structure/fulltext/S0969-2126(22)00372-0?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0969212622003720%3Fshowall%3Dtrue)
 
 Symmetric docking has been published (as preprint) at:
-[Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.biorxiv.org/content/10.1101/2023.06.22.546069v1)
+[Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.nature.com/articles/s41467-023-43681-6)
 
 # System Requirements
 
@@ -71,7 +71,7 @@ If generating en ensemble using ```scripts/af_to_evodock.py``` the structures wi
 `scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
-Below, 2 examples of running the script for creating an ensemble for Local docking or Global assembly docking is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
+Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
 
 ```console
 tar -xf af_data.tar
@@ -79,12 +79,12 @@ tar -xf af_data.tar
 
 Put the AF_data in `evodock/inputs` before running the tests below. 
 
-Preparing an ensemble for Local docking (takes a few minutes):
+Preparing an ensemble for Local assembly (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
-Preparing an ensemble for Global assembly docking (takes a few minutes):
+Preparing an ensemble for Global assembly (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
@@ -112,8 +112,8 @@ Examples of config files for different EvoDOCK configurations are found in the `
 1. Heteromeric docking with single ligand and receptor backone (takes a few minutes): `configs/heterodimeric/sample_dock_single.ini` 
 2. Heteromeric docking with flexible backbones (takes a few minutes): `configs/heterodimeric/sample_dock_flexbb.ini` 
 3. Local recapitulation with a single backbone (takes a few minutes): `configs/symmetric/local_recapitulation.ini` 
-4. Local docking with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
-5. Global assembly docking with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
+4. Local assembly with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
+5. Global assembly with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
