@@ -68,7 +68,7 @@ If generating en ensemble using ```scripts/af_to_evodock.py``` the structures wi
 
 ## Converting AlphaFold predictions to a symmetric EvoDOCK ensemble
  
-`scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
+`scripts/af_to_evodock.py` converts AlphaFold2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
 Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
@@ -321,7 +321,7 @@ A test can be run with (should take several minutes):
 python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
 
-The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK.
+The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recomended. 
 
 # Differential Evolution Algorithm
 
