@@ -317,7 +317,7 @@ When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs:
 
 Use the symmetry file and the input file with `symmetric_relax.py`.
 
-A test can be run with (can take up to an hour or more):
+A test can be run with (should take several minutes):
 
 ```console
 python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --input_out tests/outputs/ --full_out tests/outputs/ --info_out tests/outputs/  
