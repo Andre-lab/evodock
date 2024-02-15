@@ -146,37 +146,38 @@ type=<Local/Global/GlobalFromMultimer>
 
 ### 2. [Input]
 
-Specifies the input type. For heteromeric docking you need to specify the either
-single or `ligands` AND `receptors` for docking either 2 single backbones or 2 sets of multiple backbones. For heterodimeric
+Specifies the input type. 
+
+For heteromeric docking you need to specify either `single` or `ligands` AND `receptors` for docking either 2 single backbones or 2 sets of multiple backbones. For heterodimeric
 docking a `template` can be supplied. This is used to extact rotamers and to initially align the receptor and ligand onto.
 ```dosini
 [Input]
-single=<path to a pdb file containing containg the heterodimer (2 chains)>
+single=<path to a pdb file containing containg the heterodimer (receptor and ligand)>
 ```
 or
 ```dosini
 [Input]
-ligands=<path to ligands>
-receptors=<path to receptors>
+ligands=<path to a directory containing ligands (1 ligand per pdb)>
+receptors=<path to a directoy containing receptors (1 receptor per pdb)>
 ```
 or
 ```dosini
 [Input]
 template=<path to a pdb file to serve as a template>
-ligands=<path to ligands>
-receptors=<path to receptors>
+ligands=<path to a directory containing ligands (1 ligand per pdb)>
+receptors=<path to a directoy containing receptors (1 receptor per pdb)>
 ```
 
 For symmetric docking you need to specify the `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones
 ```dosini
 [Input]
-single=<path to single pdb file>
-symdef_file=<path to the symdef file>
+single=<path to a single pdb file>
+symdef_file=<path to a symdef file>
 ```
 or 
 ```dosini
 [Input]
-subunits=<path to a directory containing all of the subunits>
+subunits=<path to a directory containing all subunits (1 subunit per file)>
 symdef_file=<path to the symdef file>
 ```
 
@@ -184,10 +185,10 @@ symdef_file=<path to the symdef file>
 
 Output options for the results:
 1. `output_path` Directory in which to output all files.
-2. `output_pdb` Output pdb.
+2. `output_pdb` Output pdbs or not.
 3. `output_pdb_per_generation` Output the best pdb for each generation.
 4. `n_models` How many models to output in the end.
-5. `clutser` To cluster the results before outputting.
+5. `clutser` To cluster the results before outputting or not.
 
 ```dosini
 [Outputs]
@@ -200,14 +201,14 @@ cluster=<boolean>
 
 #### 4. [DE]
 Differential Evolution options:
-1. `scheme`: The selection strategy for the base vector at mutation operation. 1. Selection randomly (=RANDOM, default), 2. Select the best (=BEST)
+1. `scheme`: The selection strategy for the base vector at mutation operation. Options are: 1. Selection randomly (=RANDOM, default), 2. Select the best (=BEST).
 2. `popsize`: The size of the population. Default is 100.
 3. `mutate`: mutation rate (weight factor F). Must be between 0 and 1.0. Default is 0.1.
 4. `recombination`: crossover probability (CR). Must be between 0 and 1.0. Default is 0.7.
-5. `maxiter`: Generations to perform. Default is 50
+5. `maxiter`: Generations to perform. Default is 50.
 6. `local_search`: The local search docking scheme. For heteromeric docking use [None, only_slide, mcm_rosetta] for symmetryic docking use symshapedock. Default for heterodimeric docking is mcm_rosetta and for symmetryic docking symshapedock.
 7. `slide`: Use sliding or not. Default is True.
-8. `selection`: The energy type for use when selecting. 1. Select by interface (=interface, default for symmetric docking), 2. select by total energy (=total, default for heterodimeric docking)
+8. `selection`: The energy type to use in the selection stage. Options are: 1. Select by interface (=interface, default for symmetric docking), 2. select by total energy (=total, default for heterodimeric docking).
 
 ```dosini
 [DE]
@@ -224,8 +225,8 @@ selection=<interface/total>
 ### 5. [Flexbb]
 
 If this section is present EvoDOCK will do flexible backbone docking. 2 options can be set:
-1. `swap_prob` The probability of doing a backbone trial. Must be in the interval: [0, 1.0] 
-2. `low_memory_mode` Will save memory by only loading in 1 backbone at the time at the cost of some computional time. Is only available for symmetrical docking and is highly recommend when using symmetrical docking. 
+1. `swap_prob` The probability of doing a backbone trial. Must be in the interval: [0, 1.0]. Default is 0.3
+2. `low_memory_mode` Will save memory by only loading in 1 backbone at the time at the cost of some computional time. Is only available for symmetrical docking and is highly recommend when using symmetrical docking. The defualt is true.
 
 ```dosini
 [Flexbb]
@@ -255,8 +256,8 @@ EvoDOCK can be run with PyMOL as described in https://www.rosettacommons.org/doc
 This sets options for PyMOL:
 1. `on`: Use PyMOL.
 2. `history`: Turn history on.
-3. `show_local_search`: Show the processes in during local search.
-4. `ipaddress`: The IP address to use.  
+3. `show_local_search`: Show the local search process.
+4. `ipaddress`: The ip address to use.  
 
 ```
 [Pymol]
@@ -267,7 +268,7 @@ ipaddress=<IP address>
 ```
 
 ### 8. [RosettaOptions]
-Rosetta flags to use. Any can be specified. 
+Rosetta flags to use. Any can be specified. When doing symmetrical docking initialize_rigid_body_dofs must be set to true.
 
 ```dosini
 [RosettaOptions]
@@ -292,7 +293,15 @@ symdef_file=<path to the input file>
 lower_diversity_limit=<float>
 ```
 
-# Interpretation of the EvoDOCK output:
+# EvoDOCK output:
+
+## EvoDOCK structure files
+
+EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
+
+[Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry)
+
+## EvoDOCK log files
 
 EvoDOCK produces several different log files:
 
@@ -321,12 +330,10 @@ EvoDOCK produces several different log files:
 
 9. `ensemble.csv` contains, for each generation (gen), the name of file that is used as the current backbone for each individual.
 
-EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
-
 # Symmetric relax of EvoDOCK output structures
 
 The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python scripts/symmetric_relax.py -h` to see more.
-It is advisable to use this script when using AlphaFold ensemble models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
+It is advisable to use this script when predictions are based on AlphaFold models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
 When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs: 
 1. Input file (suffix: _INPUT.pdb).
@@ -345,6 +352,7 @@ The input for --file has to be the the monomeric input file generated from EvoDO
 # Differential Evolution Algorithm
 
 Differential Evolution [Price97] is a population-based search method. DE creates new candidate solutions by combining existing ones according to a simple formula of vector crossover and mutation, and then keeping whichever candidate solution has the best score or fitness on the optimization problem at hand.
+
 
 # Bibliography
 
