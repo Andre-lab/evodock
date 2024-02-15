@@ -19,11 +19,11 @@ Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
 ## Package requirements
 
-If using heterodimeric only the following packages must be installed: 
+For heterodimeric only the following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
 * PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need to obtain a license before use (see the link) 
 
-If using Symmetric Protein-Protein docking these additional packages must be installed:
+For symmetric Protein-Protein docking these **additional** packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
   
@@ -55,21 +55,21 @@ Then additionally install the packages under **Package requirements**!
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
-# Usage
+# Preprocessing structures
 
-## Preprocessing a complex with prepacking
-Before running EvoDOCK it is important to prepack the input files as so (takes several seconds): 
+The following describes how to prepare input structures or ensembles from AlphaFold to EvoDOCK
+
+## Prepacking structures
+Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
 
 ```console
 python ./scripts/prepacking.py --file <input_file>
 ```
-If generating en ensemble using ```scripts/af_to_evodock.py``` the structures will automatically be prepacked.
 
-
-## Converting AlphaFold predictions to a symmetric EvoDOCK ensemble
+## Converting AlphaFold predictions to an EvoDOCK ensemble
  
-`scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
-The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
+`scripts/af_to_evodock.py` converts AlphaFold2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
+The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py```.
 
 Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
 
@@ -81,19 +81,19 @@ Put the AF_data in `evodock/inputs` before running the tests below.
 
 Preparing an ensemble for Local assembly (takes a few minutes):
 ```console
-scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
+./scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
 Preparing an ensemble for Global assembly (takes a few minutes):
 ```console
-scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
+./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
 ## EvoDOCK 
 EvoDOCK can be run with different configurations given a specifc config.ini input file as so: 
 
 ```console
-python evodock.py configs.ini
+python ./evodock.py configs.ini
 ```
 
 The following sections describe how to configure EvoDOCK through the config file. These options are available: 
@@ -109,11 +109,30 @@ The following sections describe how to configure EvoDOCK through the config file
 
 Examples of config files for different EvoDOCK configurations are found in the `config` folder with the following behavior: 
 
-1. Heteromeric docking with single ligand and receptor backone (takes a few minutes): `configs/heterodimeric/sample_dock_single.ini` 
-2. Heteromeric docking with flexible backbones (takes a few minutes): `configs/heterodimeric/sample_dock_flexbb.ini` 
-3. Local recapitulation with a single backbone (takes a few minutes): `configs/symmetric/local_recapitulation.ini` 
-4. Local assembly with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
-5. Global assembly with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
+1. Heteromeric docking with single ligand and receptor backone (takes a few minutes):
+```console
+python ./evodock.py configs/heterodimeric/sample_dock_single.ini
+```
+
+2. Heteromeric docking with flexible backbones (takes a few minutes):
+```console
+python ./evodock.py configs/heterodimeric/sample_dock_flexbb.ini
+```
+
+3. Local recapitulation with a single backbone (takes a few minutes): 
+```console
+python ./evodock.py configs/symmetric/local_recapitulation.ini
+```
+
+4. Local assembly with flexible backbones (takes a few minutes): 
+```console
+python ./evodock.py configs/symmetric/local_assembly.ini
+```
+
+5. Global assembly with flexible backbones (takes a few minutes): 
+```console
+python ./evodock.py configs/symmetric/global_assembly.ini
+```
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
@@ -321,7 +340,7 @@ A test can be run with (should take several minutes):
 python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
 
-The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK.
+The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recomended. 
 
 # Differential Evolution Algorithm
 
