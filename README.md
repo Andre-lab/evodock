@@ -6,18 +6,12 @@ EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 Heterodimeric docking has been published at:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.cell.com/structure/fulltext/S0969-2126(22)00372-0?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0969212622003720%3Fshowall%3Dtrue)
 
-Symmetric docking has been published (as preprint) at:
-[Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.biorxiv.org/content/10.1101/2023.06.22.546069v1)
+Symmetric docking has been published at:
+[Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.nature.com/articles/s41467-023-43681-6)
 
 # System Requirements
 
-## Hardware requirements
-
-EvoDOCK only requires a standard computer with linux installed (MacOS will be supported soon). High RAM is needed for large populations (>= 100). 
-
-## Software requirements
-
-### OS Requirements
+## OS Requirements
 
 This package is supported for Linux/macOS. The package has been tested on the following systems:
 
@@ -46,6 +40,7 @@ seaborn>=0.11.2
 setuptools>=44.0.0
 imageio>=2.10.1
 matplotlib>=3.4.3
+scikit-learn>=1.0.2
 ```
 
 # Installation Guide
@@ -56,7 +51,6 @@ git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
 pip install .
 ```
-
 Then additionally install the packages under **Package requirements**!
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
@@ -69,26 +63,28 @@ Before running EvoDOCK it is important to prepack the input files as so (takes s
 ```console
 python ./scripts/prepacking.py --file <input_file>
 ```
+If generating en ensemble using ```scripts/af_to_evodock.py``` the structures will automatically be prepacked.
+
 
 ## Converting AlphaFold predictions to a symmetric EvoDOCK ensemble
  
 `scripts/af_to_evodock.py` converts AlphaFold 2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
 The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The output will already be prepacked.
 
-Below, 2 examples of running the script for creating an ensemble for Local docking or Global assembly docking is given. You need to download `af_data.tar.gz` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
+Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
 
 ```console
-tar -xf af_data.tar.gz
+tar -xf af_data.tar
 ```
 
 Put the AF_data in `evodock/inputs` before running the tests below. 
 
-Preparing an ensemble for Local docking (takes a few minutes):
+Preparing an ensemble for Local assembly (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
-Preparing an ensemble for Global assembly docking (takes a few minutes):
+Preparing an ensemble for Global assembly (takes a few minutes):
 ```console
 scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
@@ -116,8 +112,8 @@ Examples of config files for different EvoDOCK configurations are found in the `
 1. Heteromeric docking with single ligand and receptor backone (takes a few minutes): `configs/heterodimeric/sample_dock_single.ini` 
 2. Heteromeric docking with flexible backbones (takes a few minutes): `configs/heterodimeric/sample_dock_flexbb.ini` 
 3. Local recapitulation with a single backbone (takes a few minutes): `configs/symmetric/local_recapitulation.ini` 
-4. Local docking with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
-5. Global assembly docking with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
+4. Local assembly with flexible backbones (takes a few minutes): `configs/symmetric/local_assembly.ini` 
+5. Global assembly with flexible backbones (takes a few minutes): `configs/symmetric/global_assembly.ini`  
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
@@ -298,7 +294,7 @@ EvoDOCK produces several different log files:
 
 5. `all_individual.csv` contains, for each generation (gen), the best genotype (rigid body degrees of freedom) of all individuals. 
 
-6. `best_individual.csv` contains, for each generation (gen), the best genotype (rigid body degrees of freedom) of the individual with lowest energy value.
+6. `best_individual.csv` contains, for each generation (gen), the best genotype (rigid body degrees of freedom) of the individual with the lowest energy value.
 
 7. `population_swap.csv` contains, for each generation (gen), the backbone swap success. 
 
@@ -306,24 +302,25 @@ EvoDOCK produces several different log files:
 
 9. `ensemble.csv` contains, for each generation (gen), the name of file that is used as the current backbone for each individual.
 
-EvoDOCK also outputs structure files at the in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
+EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
 
 # Symmetric relax of EvoDOCK output structures
 
-The script `scripts/symmetric_relax.py` can be used to relax structures from the EvoDOCK output. The script is well documented: use `python scripts/symmetric_relax.py -h` to see more.
+The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python scripts/symmetric_relax.py -h` to see more.
 It is advisable to use this script when using AlphaFold ensemble models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
 When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs: 
 1. The full structure (suffix: _full.cif)
 2. A symmetry file (suffix: .symm)
-3. Input file (suffix: _INPUT.pdb). 
+3. Input file (suffix: _INPUT.pdb).
+4. A CSV file of the 
 
 Use the symmetry file and the input file with `symmetric_relax.py`.
 
 A test can be run with (can take up to an hour or more):
 
 ```console
-python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --rosetta_out tests/outputs/ --input_out tests/outputs/ 
+python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --input_out tests/outputs/ --full_out tests/outputs/ --info_out tests/outputs/  
 ```
 
 # Differential Evolution Algorithm
