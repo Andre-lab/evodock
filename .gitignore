@@ -9,7 +9,8 @@
 !src/
 !src/**.py
 !tests/
-!tests/outputs/
+!tests/outputs
+!tests/outputs/symmetric_relax
 flycheck*py
 
 !configs/
@@ -25,6 +26,9 @@ flycheck*py
 
 !scripts/
 !scripts/prepacking.py
+!scripts/af_to_evodock.py
+!scripts/symmetric_relax.py
+!scripts/make_symmdef_file.pl
 
 !images/
 !images/*png

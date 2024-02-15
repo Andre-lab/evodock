@@ -162,6 +162,10 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, output_di
     if rmsd_map is not None:
          rmsd_map = tuple([int(i) if i != "-" else None for i in rmsd_map])
 
+    # assert output directory does exists
+    if not Path(output_dir).is_dir():
+        raise NotADirectoryError(f"{output_dir} does not exists")
+
     # set names:
     input_out = str(Path(output_dir).joinpath(Path(pose_file).stem + "_INPUT.pdb"))
     symm_out = str(Path(output_dir).joinpath(Path(pose_file).stem + ".symm"))
