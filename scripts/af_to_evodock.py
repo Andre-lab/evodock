@@ -692,46 +692,45 @@ def main(path, symmetry, out_dir, plddt_confidence, ss_confidence, disconnect_co
     af2evo.apply(model_name, align_structure=align_structure, cn=cn)
 
 if __name__ == "__main__":
-    description = """Turns AlphaFold predictions into an ensemble for EvoDOCK."""
+    description = """Turns AlphaFold 2.2.2 predictions into an ensemble for EvoDOCK."""
 
     import argparse
     parser = argparse.ArgumentParser()
     # parsing general options
-    parser.add_argument('--path', help="Path to the predictions. It should point to a directory which contains output folders of AlphaFold 2 and/or AlphaFold-Multimer predictions."
-                                       "It expects a particular name format for the folders. They should look like:'<name of model>_<number of subunits>_*' where * can be anything. It must not contain "
+    parser.add_argument('--path', help="Path to the predictions. It should point to a directory which contains output folders of AlphaFold2 and/or AlphaFold-Multimer predictions."
+                                       "It expects a particular name format for the folders. They should look like the following:'<name of model>_<number of subunits>_*' where * can be anything. It must not contain "
                                        "'_' other than the two '_' specified as it's used as the seperator. For example 1STM_1_ or 1STM_5_whatever. The _X_ is used to identify"
                                        "what the oligomeric state is. When running --ensemble=GlobalFromMultimer all of the folders must be of the same oligomeric type.", type=str, required=True)
     parser.add_argument('--symmetry', help="Symmetry to model", type=str, choices=("T", "O", "I"), required=True)
-    parser.add_argument('--out_dir', help="Output directory in which to store the output ensemble. Directory will be created if it does not exists.", type=str, required=True)
-    parser.add_argument('--model_type', help="Which output models from Alphafold to use.", type=str,  default="ranked", choices=["ranked", "relaxed", "unrelaxed"])
+    parser.add_argument('--out_dir', help="Output directory in which to store the output ensemble and the processed data directory. If the directory does not exists, it will be created.", type=str, required=True)
+    parser.add_argument('--model_type', help="Which output models from Alphafold to use.", type=str, default="ranked", choices=["ranked", "relaxed", "unrelaxed"])
     # parsing options
     parser.add_argument('--ensemble', help="Ensemble type to create. "
-                          "Local: Creates an ensemble used for Reassembly docking with EvoDOCK. The whole ensemble will be aligned onto"
-                          "a structure specified with --align_structure. The --align_structure option must be set with this option."
-                          "GlobalFromMultimer: Creates an ensemble used for Complete assembly docking with EvoDOCK based on AlphaFold Multimer predicitions.",
+                          "Local: Creates an ensemble used for Local assembly docking with EvoDOCK. The whole ensemble will be aligned ontoi "
+                          "a structure specified with --align_structure. The --align_structure option must be set with this option. "
+                          "GlobalFromMultimer: Creates an ensemble used for Global assembly docking with EvoDOCK based on AlphaFold Multimer predicitions. ",
                         type=str, choices=["Local", "GlobalFromMultimer"], required=True)
     parser.add_argument('--align_structure', help="When running --ensemble=Local this has point to the structure one wants to align to. It should be the input " \
-                          "that has been produced by the symmetrization script: 'cubic_to_rosetta.py'.", type=str)
+                          "that has been produced by the symmetrization script: 'cubic_to_rosetta.py'. See https://github.com/Andre-lab/cubicsym.", type=str)
     parser.add_argument('--max_monomers', help="The maximum number of monomer prediction models to include in the ensemble.", type=int)
     parser.add_argument('--max_multimers', help="The maximum number of multimer prediction models to include in the ensemble. Notice that, "
-                          "since a multimer model consists of multiple chains more than one chain can be included in "
-                          "the ensemble from the same prediction model without"
-                          " counting as more than one towards the maximum.", type=int)
-    parser.add_argument('--max_total_models', help="The maximum number of models (monomer and multimer) to include in the final ensemble. This will"
-                           "be the final maximum output ensemble size. However, this will not nescesarily be the final"
+                          "since a multimer model consists of multiple chains, more than one chain can be included in "
+                          "the ensemble from the same prediction model, without counting as more than one towards the maximum.", type=int)
+    parser.add_argument('--max_total_models', help="The maximum number of models (monomer and multimer) to include in the final ensemble. This will "
+                           "be the final maximum output ensemble size. However, this will not nescesarily be the final "
                            "ensemble size because this depends on the --rmsd_threshold value and the input models "
                            "pLDDT and iptm+ptm values. If more models are accepted than allowed with --max_total_models, "
-                           "the script will filter the models based on their avg_plddt and output the ones with the"
+                           "the script will filter the models based on their avg_plddt and output the ones with the "
                            "best avg_plddt.", type=int)
-    parser.add_argument('--modify_rmsd_to_reach_min_models', help="Will iteratively lower the rmsd_threshold until the minimum number of models"
-                           " (given by the value passed to the flag) are included in the ensemble. However, this will"
-                           " not nescesarilly be the final ensemble size because this depends on input models "
-                           " pLDDT and iptm+ptm values. To reach this minimum", type=int)
-    parser.add_argument("--direction", help="Chose which directions of the prediction to output. Options are 'up', 'down' and 'both'. The"
-                           " former 2 options outputs either the up or down predictions and both outputs both of them.",
+    parser.add_argument('--modify_rmsd_to_reach_min_models', help="Will iteratively lower the rmsd_threshold until the minimum number of models "
+                           " (given by the value passed to the flag) are included in the ensemble. However, this will "
+                           " not necessarily be the final ensemble size because this depends on input models "
+                           " pLDDT and iptm+ptm values.", type=int)
+    parser.add_argument("--direction", help="Chose which directions of the prediction to output. Options are 'up', 'down' and 'both'. The "
+                           " former 2 options outputs either the up or down predictions and both outputs both of them. ",
                            choices=('up', 'down', 'both'), default="both")
     # threshold options for ensemble inclusion
-    parser.add_argument('--avg_plddt_threshold', help="The minimum value of the average pLDDT needed for the structure to be included in the"
+    parser.add_argument('--avg_plddt_threshold', help="The minimum value of the average pLDDT needed for the structure to be included in the "
                           "ensemble.", type=float, default=90)
     parser.add_argument('--iptm_plus_ptm_threshold', help="The minimum value of average iptm+ptm needed for the multimeric structure to be "
                           "included in the ensemble.", type=float, default=0.90)
@@ -746,8 +745,8 @@ if __name__ == "__main__":
     parser.add_argument('--use_only_symmetric', help="If --ensemble='GlobalFromMultimer', will only use AFM predictions that Rosetta predicts "
                                                      "to be symmetric. In that case the values for the symmetric paramters are "
                                                      "set based on the predictions. If set to to False, a generic symmetry will be used and "
-                                                     "the symmetric parameters will not be based on the predictions. Setting it to False"
-                                                     "can be usefull if the AFM interface predictions are bad.", type=strtobool, default=True)
+                                                     "the symmetric parameters will not be based on the predictions. Setting it to False "
+                                                     "can be useful if the AFM interface predictions are bad.", type=strtobool, default=True)
     # plddt_confidence, ss_confidence, disconnect_confidence
     args = parser.parse_args()
 
