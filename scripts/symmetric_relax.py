@@ -276,16 +276,15 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, output_di
     if isinstance(rosetta_out, str):
         pose.dump_pdb(rosetta_out)
 
-
 def main():
     description = ("Wrapper script for the relax protocol in Rosetta. \n" 
                    "In addition to regular relax it fine-tunes the relax protocol to protect it against the input structure blowing up.\n" 
                    "This can happen if the structures produced by AF/AFM are energetically unfavorable when parsed into Rosetta.\n" 
                    "In addition to regular relax outputs it also outputs:\n" 
-                   "    1. Monomeric input structure (to be made symmetric in Rosetta with the symmetry file that is also output (see 2.)). Extension is _INPUT.pdb\n"
-                   "    2. The symmetry file in which the DOFS (set_dofs lines in the symmetry file) are set to final dofs found in the relax protocol. Extension is .symm\n" 
-                   "    3. A fully symmetric structure corresponding to the biological assembly. Extension is _full.cif\n" 
-                   "    4. A CSV file containing Iscore/score (and all score terms) and Irmsd/rmsd outputs Extension is _data.csv")
+                   "    1. Monomeric input structure (to be made symmetric in Rosetta with the symmetry file that is also output (see 2.)). Extension is _INPUT.pdb.\n"
+                   "    2. The symmetry file in which the DOFS (set_dofs lines in the symmetry file) are set to final dofs found in the relax protocol. Extension is .symm.\n" 
+                   "    3. A fully symmetric structure corresponding to the biological assembly. Extension is _full.cif.\n" 
+                   "    4. A CSV file containing Iscore/score (and all score terms) and Irmsd/rmsd outputs Extension is _data.csv.")
 
     parser = argparse.ArgumentParser(description=description,  formatter_class=RawTextHelpFormatter)
     parser.add_argument("--file", help="Input structure to relax", type=str, required=True)

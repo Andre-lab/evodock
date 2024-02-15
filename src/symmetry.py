@@ -45,7 +45,7 @@ from pyrosetta.rosetta.core.pose.datacache import CacheableDataType
 def individual_is_within_bounds(config, fitnessfunc, ind):
     if config.syminfo is not None:
         pose = fitnessfunc.apply_genotype_to_pose(ind.genotype)
-        return config.syminfo.cubicboundary.all_dofs_within_bounds(pose, raise_warning=True)
+        return config.syminfo.cubicboundary.all_dofs_within_bounds(pose, raise_warning=False)
     else:
         pass
 

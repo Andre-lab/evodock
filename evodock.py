@@ -82,7 +82,6 @@ def output_models(alg, config, logger):
             df = df.sort_values("i_sc")[0:n_models]
     # output the models
     logger.info("==============================")
-    logger.info(" Outputting the following models:")
     # make a subfolder
     output_folder = config.out_path + "/structures"
     Path(output_folder).mkdir(exist_ok=True)
@@ -93,6 +92,7 @@ def output_models(alg, config, logger):
             pose = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
         name = output_folder + f"/final_evodock_unrelaxed_ranked_{n}{{}}"
         if is_symmetric(pose):
+            logger.info(" Outputting the following models:")
             cs = CubicSetup(config.syminfo.input_symdef)
             if cs.is_cubic():
                 # output full symmetric structure
@@ -154,7 +154,6 @@ def main():
 
     logger.info(" End EvoDOCK")
     logger.info("==============================")
-
 
 
 if __name__ == "__main__":
