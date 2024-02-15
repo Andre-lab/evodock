@@ -130,14 +130,14 @@ or
 ```dosini
 [Input]
 ligands=<path to a directory containing ligands (1 ligand per pdb)>
-receptors=<path to a directoy containing receptors (1 receptor per pdb)>
+receptors=<path to a directory containing receptors (1 receptor per pdb)>
 ```
 or
 ```dosini
 [Input]
 template=<path to a pdb file to serve as a template>
 ligands=<path to a directory containing ligands (1 ligand per pdb)>
-receptors=<path to a directoy containing receptors (1 receptor per pdb)>
+receptors=<path to a directory containing receptors (1 receptor per pdb)>
 ```
 
 For symmetric docking you need to specify the `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones.
@@ -312,7 +312,7 @@ Preparing an ensemble for Global assembly (takes a few minutes):
 
 ## EvoDOCK outputs
 
-EvoDOCK outputs everything in the directoy passed to the `output_path` option in the config file (see [Outputs] in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
+EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file (see [Outputs] in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
 
 ### EvoDOCK structure files
 
@@ -349,7 +349,7 @@ EvoDOCK produces several different log files during runtime to log the evolution
 
 ## Symmetric relax of EvoDOCK output structures
 
-The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python scripts/symmetric_relax.py -h` to see more.
+The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python ./scripts/symmetric_relax.py -h` to see more.
 It is advisable to use this script when predictions are based on AlphaFold models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
 When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs: 
@@ -361,7 +361,7 @@ When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs:
 A test can be run with (should take several minutes):
 
 ```console
-python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
+python ./scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
 
 The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recommended. 
