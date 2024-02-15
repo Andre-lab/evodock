@@ -697,9 +697,9 @@ if __name__ == "__main__":
     description = """Turns AlphaFold 2.2.2 predictions into an ensemble for EvoDOCK."""
     parser = argparse.ArgumentParser(description=description)
     # parsing general options
-    parser.add_argument('--path', help="Path to the predictions. It should point to a directory which contains output folders of AlphaFold2 and/or AlphaFold-Multimer predictions."
+    parser.add_argument('--path', help="Path to the predictions. It should point to a directory which contains output folders of AlphaFold2 and/or AlphaFold-Multimer predictions. "
                                        "It expects a particular name format for the folders. They should look like the following:'<name of model>_<number of subunits>_*' where * can be anything. It must not contain "
-                                       "'_' other than the two '_' specified as it's used as the seperator. For example 1STM_1_ or 1STM_5_whatever. The _X_ is used to identify"
+                                       "'_' other than the two '_' specified as it's used as the seperator. For example 1STM_1_ or 1STM_5_whatever. The _X_ is used to identify "
                                        "what the oligomeric state is. When running --ensemble=GlobalFromMultimer all of the folders must be of the same oligomeric type.", type=str, required=True)
     parser.add_argument('--symmetry', help="Symmetry to model", type=str, choices=("T", "O", "I"), required=True)
     parser.add_argument('--out_dir', help="Output directory in which to store the output ensemble and the processed data directory. If the directory does not exists, it will be created.", type=str, required=True)
