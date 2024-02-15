@@ -310,18 +310,18 @@ The script `scripts/symmetric_relax.py` can be used to relax symmetrical structu
 It is advisable to use this script when using AlphaFold ensemble models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
 When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs: 
-1. The full structure (suffix: _full.cif)
-2. A symmetry file (suffix: .symm)
-3. Input file (suffix: _INPUT.pdb).
+1. Input file (suffix: _INPUT.pdb).
+2. A symmetry file (suffix: .symm).
+3. The full structure (suffix: _full.cif)
 4. A CSV file containing Iscore/score and Irmsd/rmsd information (if using --native_file)
-
-Use the symmetry file and the input file with `symmetric_relax.py`.
 
 A test can be run with (should take several minutes):
 
 ```console
 python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
+
+The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK.
 
 # Differential Evolution Algorithm
 
