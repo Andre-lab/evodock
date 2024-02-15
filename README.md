@@ -76,7 +76,7 @@ The script is well documented. Use `python scripts/af_to_evodock.py -h` to see m
 
 Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
 
-Unzip it wit:
+Unzip it witj:
 
 ```console
 tar -xf af_data.tar
@@ -141,9 +141,9 @@ python ./evodock.py configs/symmetric/global_assembly.ini
 
 ### 1. [Docking]
 Specifies the type of docking protocol used of which there are 3 options:
-1. `Local` For heterodimeric local docking AND symmetric Local docking
-3. `Global` For heterodimeric global docking 
-4. `GlobalFromMultimer` For symmetric Global assembly docking
+1. `Local` For heterodimeric local docking AND symmetric Local docking.
+3. `Global` For heterodimeric global docking.
+4. `GlobalFromMultimer` For symmetric Global assembly docking.
 ```dosini
 [Docking]
 type=<Local/Global/GlobalFromMultimer>
@@ -173,7 +173,7 @@ ligands=<path to a directory containing ligands (1 ligand per pdb)>
 receptors=<path to a directoy containing receptors (1 receptor per pdb)>
 ```
 
-For symmetric docking you need to specify the `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones
+For symmetric docking you need to specify the `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones.
 ```dosini
 [Input]
 single=<path to a single pdb file>
@@ -211,7 +211,7 @@ Differential Evolution options:
 3. `mutate`: mutation rate (weight factor F). Must be between 0 and 1.0. Default is 0.1.
 4. `recombination`: crossover probability (CR). Must be between 0 and 1.0. Default is 0.7.
 5. `maxiter`: Generations to perform. Default is 50.
-6. `local_search`: The local search docking scheme. For heteromeric docking use [None, only_slide, mcm_rosetta] for symmetryic docking use symshapedock. Default for heterodimeric docking is mcm_rosetta and for symmetryic docking symshapedock.
+6. `local_search`: The local search docking scheme. For heteromeric docking use [None, only_slide, mcm_rosetta] for symmetryic docking use symshapedock. Default for heterodimeric docking is mcm_rosetta and for symmetric docking symshapedock.
 7. `slide`: Use sliding or not. Default is True.
 8. `selection`: The energy type to use in the selection stage. Options are: 1. Select by interface (=interface, default for symmetric docking), 2. select by total energy (=total, default for heterodimeric docking).
 
@@ -300,7 +300,7 @@ lower_diversity_limit=<float>
 
 ## EvoDOCK outputs
 
-EvoDOCK outputs everything
+EvoDOCK outputs everything in the directoy passed to `output_path` option in the config file. The following describes the outputs. For understanding some of the outputs of the symmetrical protocols it is advisable to read this: [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry)
 
 ### EvoDOCK structure files
 
