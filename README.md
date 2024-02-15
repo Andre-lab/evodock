@@ -300,24 +300,19 @@ lower_diversity_limit=<float>
 
 ## EvoDOCK outputs
 
-EvoDOCK outputs everything in the directoy passed to `output_path` option in the config file. The following describes the outputs. For understanding some of the outputs of the symmetrical protocols it is advisable to read this: [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry)
+EvoDOCK outputs everything in the directoy passed to the `output_path` option in the config file (see [Outputs] in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
-
-
-EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
-
-[Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry)
+EvoDOCK also outputs the final predictions in the a folder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [Outputs] for more information).
 
 ### EvoDOCK log files
 
-EvoDOCK produces several different log files:
+EvoDOCK produces several different log files during runtime to log the evolutionary process:
 
 1. `evolution.csv` is a general summary of the evolutionary process across the entire population. Per generation (gen) it logs:
     - The average energy of the population (avg)
-    - The lowest energy of population (best)
+    - The lowest energy of the population (best)
     - The RMSD of the best individual with the lowest energy (rmsd_from_best) if running with a native structure.
 
 2. `popul.csv` is a general summary of the evolutionary process for each individual in the population. Per generation (gen) it logs:
