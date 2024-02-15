@@ -2,6 +2,7 @@
 *
 
 !.gitignore
+!images/EvoDOCK.png
 !requirements.txt
 !setup.py
 !environment.yml
