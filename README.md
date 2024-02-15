@@ -313,7 +313,7 @@ When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs:
 1. The full structure (suffix: _full.cif)
 2. A symmetry file (suffix: .symm)
 3. Input file (suffix: _INPUT.pdb).
-4. A CSV file of the 
+4. A CSV file containing Iscore/score and Irmsd/rmsd information (if using --native_file)
 
 Use the symmetry file and the input file with `symmetric_relax.py`.
 
