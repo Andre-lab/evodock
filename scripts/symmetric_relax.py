@@ -269,7 +269,7 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, output_di
     CubicSymmetricAssembly.from_pose_input(pose, cs).output(full_out)
 
     # output the Rosetta structure (IF set)
-    if isinstance(rosetta_out, str)
+    if isinstance(rosetta_out, str):
         pose.dump_pdb(rosetta_out)
 
 
