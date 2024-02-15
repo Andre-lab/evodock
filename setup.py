@@ -21,6 +21,7 @@ setup(
         "setuptools>=44.0.0",
         "imageio>=2.10.1",
         "matplotlib>=3.4.3",
+        "scikit-learn>=1.0.2",
     ],
     scripts=[
         "scripts/make_evolution_plot.py",
