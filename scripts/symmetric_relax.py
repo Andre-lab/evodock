@@ -87,14 +87,14 @@ def calculate_metrics(pose, native, input_pose, native_symdef, input_symdef, use
                                      jump_ids=jumpints, dof_ids=dofints, trans_mags=trans_mags, use_map=use_rmsd_map)
     else:
         dockmetric = SymmetricDockMetric(native)
-    info["energy"] = info.pop("total_score")
+    info["score"] = info.pop("total_score")
     info["rmsd"] = dockmetric.ca_rmsd(pose)
     # fixme: interaction energy only works for cubic symmetry
     if CubicSetup(input_symdef).is_cubic():
         info["Irmsd"] = dockmetric.interface_rmsd(pose)
     else:
         info["Irmsd"] = None
-    info["Ienergy"] = dockmetric.interaction_energy(pose)
+    info["Iscore"] = dockmetric.interaction_energy(pose)
     return info
 
 def output_info(pose, native, input_pose, info_out, native_symdef, input_symdef, relaxes_done, use_old_data = None, use_rmsd_map=None):
@@ -105,8 +105,8 @@ def output_info(pose, native, input_pose, info_out, native_symdef, input_symdef,
         info = {k: np.NaN for k, v in info.items()}
         info["rmsd"] = use_old_data["rmsd"].values[0]
         info["Irmsd"] = use_old_data["Irmsd"].values[0]
-        info["energy"] = use_old_data["score"].values[0]
-        info["Ienergy"] = use_old_data["Iscore"].values[0]
+        info["score"] = use_old_data["score"].values[0]
+        info["Iscore"] = use_old_data["Iscore"].values[0]
     for k, v in relaxes_done.items():
         info[k] = v
     pd.DataFrame(info, index=[0]).to_csv(Path(info_out), index=False)
@@ -228,7 +228,7 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, output_di
             relaxes_done["3"] = True
 
         # if the interface energy has not improved, then revert back to the initial structure
-        if init_metrics["Ienergy"] <= calculate_metrics(pose, native, pose, native_symdef_file, symmetry_file, rmsd_map)["Ienergy"] + 0.1: #0.1 for float precision
+        if init_metrics["Iscore"] <= calculate_metrics(pose, native, pose, native_symdef_file, symmetry_file, rmsd_map)["Iscore"] + 0.1: #0.1 for float precision
             pose = init_pose.clone()
             relaxes_done["4"] = True
             # # FIXME: this is a hack - remove it for END USER!
@@ -285,7 +285,7 @@ def main():
                    "    1. Monomeric input structure (to be made symmetric in Rosetta with the symmetry file that is also output (see 2.)). Extension is _INPUT.pdb\n"
                    "    2. The symmetry file in which the DOFS (set_dofs lines in the symmetry file) are set to final dofs found in the relax protocol. Extension is .symm\n" 
                    "    3. A fully symmetric structure corresponding to the biological assembly. Extension is _full.cif\n" 
-                   "    4. A CSV file containing Iscore/score and Irmsd/rmsd outputs if a --native_file has been parsed. Extension is _data.csv")
+                   "    4. A CSV file containing Iscore/score (and all score terms) and Irmsd/rmsd outputs Extension is _data.csv")
 
     parser = argparse.ArgumentParser(description=description,  formatter_class=RawTextHelpFormatter)
     parser.add_argument("--file", help="Input structure to relax", type=str, required=True)
