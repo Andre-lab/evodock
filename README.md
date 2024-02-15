@@ -1,4 +1,4 @@
-# EvoDOCK 
+f# EvoDOCK 
 
 EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
@@ -58,42 +58,6 @@ Then additionally install the packages under **Package requirements**
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
-## Preparing inputs for EvoDOCK
-
-The following describes how to prepare input structures and creating ensembles from AlphaFold as inputs to EvoDOCK
-
-### Prepacking structures
-Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
-
-```console
-python ./scripts/prepacking.py --file <input_file>
-```
-
-### Converting AlphaFold predictions to an EvoDOCK ensemble
- 
-`scripts/af_to_evodock.py` converts AlphaFold2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
-The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py``` is not nescesarry.
-
-Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
-
-Unzip it witj:
-
-```console
-tar -xf af_data.tar
-```
-
-Put the AF_data in `evodock/inputs` before running the tests below. 
-
-Preparing an ensemble for Local assembly (takes a few minutes):
-```console
-./scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
-```
-
-Preparing an ensemble for Global assembly (takes a few minutes):
-```console
-./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
-```
-
 ## Running EvoDOCK 
 EvoDOCK can be run with different configurations given a specifc config.ini input file as so: 
 
@@ -101,7 +65,9 @@ EvoDOCK can be run with different configurations given a specifc config.ini inpu
 python ./evodock.py configs.ini
 ```
 
-The following sections describe how to configure EvoDOCK through the config file. These options are available: 
+To prepare input structures for EvoDOCK it is advisable to read the **Preparing inputs for EvoDOCK** section further below.
+
+The following section describe how to configure EvoDOCK through the config file. These options can be set in the config file: 
 1. [Docking]
 2. [Input]
 3. [Outputs]
@@ -140,6 +106,7 @@ python ./evodock.py configs/symmetric/global_assembly.ini
 ```
 
 ### 1. [Docking]
+
 Specifies the type of docking protocol used of which there are 3 options:
 1. `Local` For heterodimeric local docking AND symmetric Local docking.
 3. `Global` For heterodimeric global docking.
@@ -193,7 +160,7 @@ Output options for the results:
 2. `output_pdb` Output pdbs or not.
 3. `output_pdb_per_generation` Output the best pdb for each generation.
 4. `n_models` How many models to output in the end.
-5. `clutser` To cluster the results before outputting or not.
+5. `cluster` To cluster the results before outputting or not.
 
 ```dosini
 [Outputs]
@@ -205,6 +172,7 @@ cluster=<boolean>
 ```
 
 ### 4. [DE]
+
 Differential Evolution options:
 1. `scheme`: The selection strategy for the base vector at mutation operation. Options are: 1. Selection randomly (=RANDOM, default), 2. Select the best (=BEST).
 2. `popsize`: The size of the population. Default is 100.
@@ -240,6 +208,7 @@ low_memory_mode=<boolean>
 ```
 
 ### 6. [Bounds]
+
 Set options for the bounds of the rigid body parameters when doing symmetrical docking:
 1. `init`: The initial bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking.
 2. `bounds:`:  The maximum bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking.
@@ -257,6 +226,7 @@ xtrans_file=<path to the xtrans_file>
 ```
 
 ### 7. [Pymol]
+
 EvoDOCK can be run with PyMOL as described in https://www.rosettacommons.org/docs/latest/rosetta_basics/PyMOL.
 This sets options for PyMOL:
 1. `on`: Use PyMOL.
@@ -273,6 +243,7 @@ ipaddress=<IP address>
 ```
 
 ### 8. [RosettaOptions]
+
 Rosetta flags to use. Any can be specified. When doing symmetrical docking initialize_rigid_body_dofs must be set to true.
 
 ```dosini
@@ -298,13 +269,54 @@ symdef_file=<path to the input file>
 lower_diversity_limit=<float>
 ```
 
+## Preparing inputs for EvoDOCK
+
+The following describes how to prepare input structures and creating ensembles from AlphaFold as inputs to EvoDOCK
+
+### Prepacking structures
+Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
+
+```console
+python ./scripts/prepacking.py --file <input_file>
+```
+
+### Setting up an EvoDOCK ensemble from AlphaFold outputs
+
+This section is only important if running EvoDOCK for Local or Global Assembly
+ 
+The script `scripts/af_to_evodock.py` converts AlphaFold2 (AF2) and AlphaFold-Multimer (AFM) predictions to an EvoDOCK ensemble.
+It is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py``` is not nescesarry.
+
+Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
+
+Unzip it with:
+
+```console
+tar -xf af_data.tar
+```
+
+Put the AF_data in `evodock/inputs` before running the tests below. 
+
+Preparing an ensemble for Local assembly (takes a few minutes):
+```console
+./scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
+```
+
+Preparing an ensemble for Global assembly (takes a few minutes):
+```console
+./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
+```
+
+2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 3 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The `pdbs` folder contains the ensemble structures as single pdb files. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds] in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter).
+
+
 ## EvoDOCK outputs
 
 EvoDOCK outputs everything in the directoy passed to the `output_path` option in the config file (see [Outputs] in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs the final predictions in the a folder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [Outputs] for more information).
+EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [Outputs] for more information).
 
 ### EvoDOCK log files
 
@@ -352,7 +364,8 @@ A test can be run with (should take several minutes):
 python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
 
-The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recomended. 
+The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recommended. 
+
 
 ## Differential Evolution Algorithm
 
