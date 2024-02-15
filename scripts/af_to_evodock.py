@@ -692,10 +692,10 @@ def main(path, symmetry, out_dir, plddt_confidence, ss_confidence, disconnect_co
     af2evo.apply(model_name, align_structure=align_structure, cn=cn)
 
 if __name__ == "__main__":
-    description = """Turns AlphaFold 2.2.2 predictions into an ensemble for EvoDOCK."""
-
     import argparse
-    parser = argparse.ArgumentParser()
+
+    description = """Turns AlphaFold 2.2.2 predictions into an ensemble for EvoDOCK."""
+    parser = argparse.ArgumentParser(description=description)
     # parsing general options
     parser.add_argument('--path', help="Path to the predictions. It should point to a directory which contains output folders of AlphaFold2 and/or AlphaFold-Multimer predictions."
                                        "It expects a particular name format for the folders. They should look like the following:'<name of model>_<number of subunits>_*' where * can be anything. It must not contain "
