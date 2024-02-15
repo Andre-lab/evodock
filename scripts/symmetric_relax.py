@@ -157,23 +157,18 @@ def init_rosetta(pose_file, constrain_coords=False, ex1=False, ex2aro=False, ex2
         opts.append('-ex2')
     init(extra_options=" ".join(opts))
 
-def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, input_out=".", symm_out=".", full_out=".",
-                    info_out=".", rosetta_out=None, native_file=None, constrain_coords=False, cycles=5, rmsd_map=None):
+def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, output_dir=".", rosetta_out=None, native_file=None, constrain_coords=False, cycles=5, rmsd_map=None):
     # check rmsd_map if parsed
     if rmsd_map is not None:
          rmsd_map = tuple([int(i) if i != "-" else None for i in rmsd_map])
 
     # set names:
-    if Path(input_out).is_dir():
-        input_out = str(Path(input_out).joinpath(Path(pose_file).stem + ".pdb"))
-    if Path(symm_out).is_dir():
-        symm_out = str(Path(symm_out).joinpath(Path(pose_file).stem + ".symm"))
-    if Path(full_out).is_dir():
-        full_out = str(Path(full_out).joinpath(Path(pose_file).stem + ".cif"))
-    if Path(info_out).is_dir():
-        info_out = str(Path(info_out).joinpath(Path(pose_file).stem + ".csv"))
-    if isinstance(rosetta_out, str) and  Path(rosetta_out).is_dir():
-        rosetta_out = str(Path(rosetta_out).joinpath(Path(pose_file).stem + ".csv"))
+    input_out = str(Path(output_dir).joinpath(Path(pose_file).stem + "_INPUT.pdb"))
+    symm_out = str(Path(output_dir).joinpath(Path(pose_file).stem + ".symm"))
+    full_out = str(Path(output_dir).joinpath(Path(pose_file).stem + "_full.cif"))
+    info_out = str(Path(output_dir).joinpath(Path(pose_file).stem + "_data.csv"))
+    if rosetta_out:
+        rosetta_out = str(Path(rosetta_out).joinpath(Path(pose_file).stem + ".pdb"))
 
     # score function and read in symmetric pose
     init_rosetta(pose_file)
@@ -274,7 +269,7 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, input_out
     CubicSymmetricAssembly.from_pose_input(pose, cs).output(full_out)
 
     # output the Rosetta structure (IF set)
-    if rosetta_out is not None:
+    if isinstance(rosetta_out, str)
         pose.dump_pdb(rosetta_out)
 
 
@@ -283,10 +278,10 @@ def main():
                    "In addition to regular relax it fine-tunes the relax protocol to protect it against the input structure blowing up.\n" 
                    "This can happen if the structures produced by AF/AFM are energetically unfavorable when parsed into Rosetta.\n" 
                    "In addition to regular relax outputs it also outputs:\n" 
-                   "    1. Monomeric input structure (to be made symmetric in Rosetta with the symmetry file that is also output (see 2.)).\n"
-                   "    2. The symmetry file in which the DOFS (set_dofs lines in the symmetry file) are set to final dofs found in the relax protocol.\n" 
-                   "    3. A fully symmetric structure corresponding to the biological assembly.\n" 
-                   "    4. A CSV file containing Iscore/score and Irmsd/rmsd outputs if a --native_file has been parsed.")
+                   "    1. Monomeric input structure (to be made symmetric in Rosetta with the symmetry file that is also output (see 2.)). Extension is _INPUT.pdb\n"
+                   "    2. The symmetry file in which the DOFS (set_dofs lines in the symmetry file) are set to final dofs found in the relax protocol. Extension is .symm\n" 
+                   "    3. A fully symmetric structure corresponding to the biological assembly. Extension is _full.cif\n" 
+                   "    4. A CSV file containing Iscore/score and Irmsd/rmsd outputs if a --native_file has been parsed. Extension is _data.csv")
 
     parser = argparse.ArgumentParser(description=description,  formatter_class=RawTextHelpFormatter)
     parser.add_argument("--file", help="Input structure to relax", type=str, required=True)
@@ -295,16 +290,13 @@ def main():
     parser.add_argument("--cycles", help="Relax cycles to perform", type=int, default=5)
     parser.add_argument("--native_file", help="Native file. If not set it will use --file instead (For RMSD calculations).", type=str)
     parser.add_argument("--native_symmetry_file", help="The native symmetry file. If not set it will use --symmetry_file (For RMSD calculations)", type=str)
-    parser.add_argument("--input_out", help="Output path to the input structure", type=str, default=".")
-    parser.add_argument("--sym_out", help="Output path to the symmetry file", type=str, default=".")
-    parser.add_argument("--full_out", help="Output the full symmetric structure at this path", type=str, default=".")
-    parser.add_argument("--info_out", help="Output an information file (csv) containing score terms and RMSD at this path.", type=str, default=".")
-    parser.add_argument("--rosetta_out", help="Output the Rosetta symmetric structure at this path. If not set this will not be output.", type=str)
+    parser.add_argument("--output_dir", help="Output directory for all outputs.", type=str, default=".")
+    parser.add_argument("--rosetta_out", help="Output the Rosetta symmetric structure.", action="store_true")
     parser.add_argument("--rmsd_map", help="Use an alternative RMSD map than the default", nargs="+")
     args = parser.parse_args()
 
     symmetric_relax(pose_file=args.file, symmetry_file=args.symmetry_file, native_symdef_file=args.native_symmetry_file,
-                    full_out=args.full_out, rosetta_out=args.rosetta_out, input_out=args.input_out, symm_out=args.sym_out, info_out=args.info_out,
+                    output_dir=args.output_dir,
                     native_file=args.native_file, constrain_coords=args.constrain_coords,
                     cycles=args.cycles, rmsd_map=args.rmsd_map)
 
