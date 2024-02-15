@@ -1,4 +1,4 @@
-f# EvoDOCK 
+# EvoDOCK 
 
 EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
