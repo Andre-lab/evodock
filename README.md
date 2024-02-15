@@ -320,7 +320,7 @@ Use the symmetry file and the input file with `symmetric_relax.py`.
 A test can be run with (should take several minutes):
 
 ```console
-python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --input_out tests/outputs/ --full_out tests/outputs/ --info_out tests/outputs/  
+python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
 
 # Differential Evolution Algorithm
