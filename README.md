@@ -1,8 +1,9 @@
+# EvoDOCK 
+
 <p align="center">
   <img src="images/EvoDOCK.png" width="1000">
 </p>
 
-# EvoDOCK 
 
 EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
