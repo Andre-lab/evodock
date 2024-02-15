@@ -270,6 +270,7 @@ def symmetric_relax(pose_file, symmetry_file, native_symdef_file=None, input_out
     pose = pose_from_file(input_out)
     from cubicsym.assembly.cubicassembly import CubicSymmetricAssembly
     cs = CubicSetup(symdef=symm_out)
+    cs.make_symmetric_pose(pose)
     CubicSymmetricAssembly.from_pose_input(pose, cs).output(full_out)
 
     # output the Rosetta structure (IF set)
