@@ -54,13 +54,13 @@ git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
 pip install .
 ```
-Then additionally install the packages under **Package requirements**!
+Then additionally install the packages under **Package requirements**
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
 ## Preparing inputs for EvoDOCK
 
-The following describes how to prepare input structures and creating ensembles from AlphaFold to EvoDOCK
+The following describes how to prepare input structures and creating ensembles from AlphaFold as inputs to EvoDOCK
 
 ### Prepacking structures
 Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
