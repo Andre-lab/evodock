@@ -9,15 +9,15 @@ Heterodimeric docking has been published at:
 Symmetric docking has been published at:
 [Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.nature.com/articles/s41467-023-43681-6)
 
-# System Requirements
+## System Requirements
 
-## OS Requirements
+### OS Requirements
 
 This package is supported for Linux/macOS. The package has been tested on the following systems:
 
 Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
-## Package requirements
+### Package requirements
 
 For heterodimeric only the following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
@@ -43,7 +43,7 @@ matplotlib>=3.4.3
 scikit-learn>=1.0.2
 ```
 
-# Installation Guide
+## Installation Guide
 
 Clone the cubicsym repository and `cd` into it. Then run the install script.
 ```console
@@ -55,23 +55,25 @@ Then additionally install the packages under **Package requirements**!
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
-# Preprocessing structures
+## Preprocessing structures
 
-The following describes how to prepare input structures or ensembles from AlphaFold to EvoDOCK
+The following describes how to prepare input structures and creating ensembles from AlphaFold to EvoDOCK
 
-## Prepacking structures
+### Prepacking structures
 Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
 
 ```console
 python ./scripts/prepacking.py --file <input_file>
 ```
 
-## Converting AlphaFold predictions to an EvoDOCK ensemble
+### Converting AlphaFold predictions to an EvoDOCK ensemble
  
 `scripts/af_to_evodock.py` converts AlphaFold2 and AlphaFold-Multimer predictions to an EvoDOCK ensemble.
-The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py```.
+The script is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py``` is not nescesarry.
 
-Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). Unzip it with 
+Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
+
+Unzip it wit:
 
 ```console
 tar -xf af_data.tar
@@ -89,7 +91,7 @@ Preparing an ensemble for Global assembly (takes a few minutes):
 ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
-## EvoDOCK 
+## Running EvoDOCK 
 EvoDOCK can be run with different configurations given a specifc config.ini input file as so: 
 
 ```console
@@ -199,7 +201,7 @@ n_models=<int>
 cluster=<boolean>
 ```
 
-#### 4. [DE]
+### 4. [DE]
 Differential Evolution options:
 1. `scheme`: The selection strategy for the base vector at mutation operation. Options are: 1. Selection randomly (=RANDOM, default), 2. Select the best (=BEST).
 2. `popsize`: The size of the population. Default is 100.
@@ -293,15 +295,20 @@ symdef_file=<path to the input file>
 lower_diversity_limit=<float>
 ```
 
-# EvoDOCK output:
+## EvoDOCK outputs
 
-## EvoDOCK structure files
+EvoDOCK outputs everything
+
+### EvoDOCK structure files
+
+EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
+
 
 EvoDOCK also outputs structure files in a folder called `structures` (see [Outputs] for more options). An option can also be set (see [Outputs]) to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime.
 
 [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry)
 
-## EvoDOCK log files
+### EvoDOCK log files
 
 EvoDOCK produces several different log files:
 
@@ -330,7 +337,7 @@ EvoDOCK produces several different log files:
 
 9. `ensemble.csv` contains, for each generation (gen), the name of file that is used as the current backbone for each individual.
 
-# Symmetric relax of EvoDOCK output structures
+## Symmetric relax of EvoDOCK output structures
 
 The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python scripts/symmetric_relax.py -h` to see more.
 It is advisable to use this script when predictions are based on AlphaFold models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
@@ -349,11 +356,11 @@ python scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed
 
 The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recomended. 
 
-# Differential Evolution Algorithm
+## Differential Evolution Algorithm
 
 Differential Evolution [Price97] is a population-based search method. DE creates new candidate solutions by combining existing ones according to a simple formula of vector crossover and mutation, and then keeping whichever candidate solution has the best score or fitness on the optimization problem at hand.
 
 
-# Bibliography
+## Bibliography
 
 * Storn, R., Price, K. Differential Evolution – A Simple and Efficient Heuristic for global Optimization over Continuous Spaces. Journal of Global Optimization 11, 341–359 (1997). https://doi.org/10.1023/A:1008202821328 
