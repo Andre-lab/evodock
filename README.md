@@ -1,4 +1,6 @@
-![](/images/EvoDOCK.png)
+<p align="center">
+  <img src="/images/EvoDOCK.png" width="500" alt="Image Description">
+</p>
 
 # EvoDOCK 
 
