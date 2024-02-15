@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/images/EvoDOCK.png" width="1+00">
+  <img src="/images/EvoDOCK.png" width="800">
 </p>
 
 # EvoDOCK 
