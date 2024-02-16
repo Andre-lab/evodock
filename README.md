@@ -354,7 +354,7 @@ python ./scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relax
 
 The input for --file has to be the the monomeric input file generated from EvoDOCK (file with '_INPUT.pdb' extension) and the input for --symmetry_file has to be the output symmetry file from EvoDOCK (file with '.symm' extenions). 5 cycles are recommended. 
 
-## Example Workflows for different docking scenarios
+# Example Workflows for different docking scenarios
 
 ### Global assembly docking
 
