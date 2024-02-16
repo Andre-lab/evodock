@@ -1,4 +1,3 @@
-
 <p align="center">
   <img src="images/EvoDOCK.png" width="1000">
 </p>
@@ -413,7 +412,7 @@ type=GlobalFromMultimer
 
 [Inputs]
 subunits= < choose the 'pdbs' folder produced by af_to_evodock.py script >
-symdef_file= < path to the symmetry file chosen from table >
+symdef_file= < path to the symmetry file chosen from the table >
 
 [Outputs]
 output_path= < output directory for the EvoDOCK results >
@@ -445,7 +444,7 @@ max_slide_attempts=100
 initialize_rigid_body_dofs=true
 ```
 
-The `popsize` and maxiter options can be lowered as `popsize=100` and `maxiter=50` is likely to oversample the results.
+The `popsize` and `maxiter` options can be lowered as `popsize=100` and `maxiter=50` is likely to oversample.
 
 4. **Run EvoDOCK with the config file**. 
 
@@ -454,7 +453,7 @@ python ./evodock.py < created config file >
 ```
 
 5 **(Optional) Refine results with Rosetta relax**
-The output EvoDOCK can be refined by running the `scripts/symmetric_relax.py` on them. See [Symmetric relax](#symmetric-relax-of-evodock-output-structures) for more information
+The output EvoDOCK can be refined by running the `scripts/symmetric_relax.py` on them. See [Symmetric relax](#symmetric-relax-of-evodock-output-structures) for more information. 
 
 
 ## Differential Evolution Algorithm
