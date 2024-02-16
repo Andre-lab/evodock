@@ -389,7 +389,7 @@ This will create a `data` and `pdbs` folder (see the **Setting up an EvoDOCK ens
 
 For running global assembly you need the `data/*_x_trans.csv` file and the `pdbs/up` or `pdbs/down` directories produced by `af_to_evodock.py `. The `data/*_x_trans.csv` file must be parsed to the `xtrans_file` option in the config file. If predicting the assembly with knowledge of the correct orientation (up or down) one can use the corresponding `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=false`. If predicting the assembly wihtout this knowledge, use either `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=true`. With `allow_flip=true` it does not matter which directory is chosen. 
 
-9 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type. Refer to the table below and and parse the correct symmetry file to `symdef_file` option in the config file.
+9 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type you wish to model. Refer to the table below and and parse the correct symmetry file to `symdef_file` option in the config file.
 
 | Symmetry to model | AFM oligomer prediction | Symmetry file |
 |---|---|---|
@@ -403,7 +403,7 @@ For running global assembly you need the `data/*_x_trans.csv` file and the `pdbs
 | T | 3 | T_3F_norm.symm  |
 | T | 2 | T_2F_norm.symm  |
 
-T_HF_norm.symm and T_3F_norm.symm are equvialent symmetry files but models different parts of the trimeric interface at the center. The structural representation should be identical.   
+T_HF_norm.symm and T_3F_norm.symm are equvialent symmetry files but models different parts of the trimeric interface internally in the code. The structural representations should be identical.   
 
 The full config file should look something like this: 
 
@@ -413,10 +413,10 @@ type=GlobalFromMultimer
 
 [Inputs]
 subunits= < choose the 'pdbs' folder produced by af_to_evodock.py script >
-symdef_file= < use correct symmetry file >
+symdef_file= < path to the symmetry file chosen from table >
 
 [Outputs]
-output_path=tests/outputs/global_from_multimer_1X36
+output_path= < output directory for the EvoDOCK results >
 output_pdb=True
 
 [Flexbb]
@@ -427,8 +427,8 @@ low_memory_mode=true
 bounds=1000,36,5,40,40,40
 init=0,36,5,40,40,40
 init_input_fix_percent=0.0
-allow_flip=true
-xtrans_file= < x_trans.csv produced from af_to_evodock.py >
+allow_flip=< true if you want to model both directions, false if not >
+xtrans_file= < path to the x_trans.csv produced from af_to_evodock.py script >
 
 [DE]
 scheme=RANDOM
@@ -445,10 +445,21 @@ max_slide_attempts=100
 initialize_rigid_body_dofs=true
 ```
 
+The `popsize` and maxiter options can be lowered as `popsize=100` and `maxiter=50` is likely to oversample the results.
+
+4. **Run EvoDOCK with the config file**. 
+
+```console
+python ./evodock.py < created config file >
+```
+
+5 **(Optional) Refine results with Rosetta relax**
+The output EvoDOCK can be refined by running the `scripts/symmetric_relax.py` on them. See [Symmetric relax](#symmetric-relax-of-evodock-output-structures) for more information
+
+
 ## Differential Evolution Algorithm
 
 Differential Evolution [Price97] is a population-based search method. DE creates new candidate solutions by combining existing ones according to a simple formula of vector crossover and mutation, and then keeping whichever candidate solution has the best score or fitness on the optimization problem at hand.
-
 
 ## Bibliography
 
