@@ -32,7 +32,7 @@ For symmetric Protein-Protein docking these **additional** packages must be inst
   
 ### Installation
 
-Clone the cubicsym repository and `cd` into it. Then run the install script.
+Clone the evodock repository and `cd` into it. Then run the install script.
 ```console
 git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
