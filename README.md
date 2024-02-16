@@ -16,7 +16,7 @@ Symmetric docking:
 
 ### OS Requirements
 
-This package is supported for Linux/macOS. The package has been tested on the following systems: Ubuntu 20.04.5-6 and CentOS Linux 7
+This package is supported for Linux/macOS. The package has been tested on the following systems: Ubuntu 20.04.5-6 and CentOS Linux 7.
 
 ### Package requirements
 
@@ -45,43 +45,49 @@ EvoDOCK can be run with different configurations given a specifc `config.ini` in
 python ./evodock.py config.ini
 ```
 
-In general there are 5 different modes EvoDOCK can be run in and are given here with examples:
+In general there are 5 different modes EvoDOCK can be run in and are given here with examples. 
 
 ### Heteromic docking modes
 
-1. Heteromeric docking with a single ligand and a single receptor backone (takes a few minutes):
+EvoDOCK can predict a protein complex consisting of 2 chains.
+
+1. Heteromeric docking with a single ligand and a single receptor backone:
 ```console
 python ./evodock.py configs/heterodimeric/sample_dock_single.ini
 ```
 
-2. Heteromeric docking with multiple backbones (takes a few minutes):
+2. Heteromeric docking with multiple ligand backbones and multiple receptor backbones:
 ```console
 python ./evodock.py configs/heterodimeric/sample_dock_flexbb.ini
 ```
 
 ### Symmetrical docking modes
 
-3. Local recapitulation with a single backbone (takes a few minutes): 
+EvoDOCK can predict cubic symmetrical structures with Icosahedral, Octahedral or Tetrahedral symmetry. 
+
+3. Local recapitulation - Predicting assembly structure from a single backbone and starting positions: 
 ```console
 python ./evodock.py configs/symmetric/local_recapitulation.ini
 ```
 
-4. Local assembly with flexible backbones (takes a few minutes): 
+4. Local assembly - Predicting assembly structure from multiple backbones and starting positions:
 ```console
 python ./evodock.py configs/symmetric/local_assembly.ini
 ```
 
-5. Global assembly with flexible backbones (takes a few minutes): 
+5. Global assembly - Predicting assembly structure from multiple backbones only: 
 ```console
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
 
-
-
-
 To prepare input structures for EvoDOCK it is advisable to read the [Preparing inputs for EvoDOCK](#preparing-inputs-for-evodock) section.
 
-The following section describe how to configure EvoDOCK through the config file. These options can be set in the config file: 
+Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios).
+
+The following section describes how to configure EvoDOCK through the config file in more detail.
+
+### Description of the config options.
+
 1. [Docking]
 2. [Input]
 3. [Outputs]
@@ -92,14 +98,12 @@ The following section describe how to configure EvoDOCK through the config file.
 8. [RosettaOptions]
 9. [Native]
 
-Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios).
-
 ### 1. [Docking]
 
 Specifies the type of docking protocol used of which there are 3 options:
-1. `Local` For heterodimeric local docking AND symmetric Local docking.
-3. `Global` For heterodimeric global docking.
-4. `GlobalFromMultimer` For symmetric Global assembly docking.
+1. `Local` For heterodimeric Local docking AND symmetric Local assembly.
+3. `Global` For heterodimeric Global docking.
+4. `GlobalFromMultimer` For symmetric Global assembly.
 ```dosini
 [Docking]
 type=<Local/Global/GlobalFromMultimer>
@@ -129,7 +133,7 @@ ligands=<path to a directory containing ligands (1 ligand per pdb)>
 receptors=<path to a directory containing receptors (1 receptor per pdb)>
 ```
 
-For symmetric docking you need to specify `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones.
+For Global and Local assembly you need to specify `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones.
 ```dosini
 [Input]
 single=<path to a single pdb file>
@@ -168,7 +172,7 @@ Differential Evolution options:
 3. `mutate`: mutation rate (weight factor F). Must be between 0 and 1.0. Default is 0.1.
 4. `recombination`: crossover probability (CR). Must be between 0 and 1.0. Default is 0.7.
 5. `maxiter`: Generations to perform. Default is 50.
-6. `local_search`: The local search docking scheme. For heteromeric docking use [None, only_slide, mcm_rosetta] for symmetryic docking use symshapedock. Default for heterodimeric docking is mcm_rosetta and for symmetric docking symshapedock.
+6. `local_search`: The local search docking scheme. For heteromeric docking use [None, only_slide, mcm_rosetta] for symmetric docking use symshapedock. Default for heterodimeric docking is mcm_rosetta and for symmetric docking symshapedock.
 7. `slide`: Use sliding or not. Default is True.
 8. `selection`: The energy type to use in the selection stage. Options are: 1. Select by interface (=interface, default for symmetric docking), 2. select by total energy (=total, default for heterodimeric docking).
 
@@ -274,7 +278,7 @@ python ./scripts/prepacking.py --file <input_file>
 The script `scripts/af_to_evodock.py` converts AlphaFold2 (AF2) and AlphaFold-Multimer (AFM) predictions to an EvoDOCK ensemble.
 It is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py``` is not nescesarry.
 
-Below are 2 examples of running the script for creating an ensemble for local assembly or global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
+Below are 2 examples of running the script for creating an ensemble for Local assembly or Global assembly. To run the example you need to download the AlphaFold data `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
 
 Unzip it with:
 
@@ -284,17 +288,17 @@ tar -xf af_data.tar
 
 Put the AF_data in `evodock/inputs` before running the tests below. 
 
-Preparing an ensemble for Local assembly (takes a few minutes):
+Preparing an ensemble for Local assembly:
 ```console
 python ./scripts/af_to_evodock.py --path inputs/AF_data/local --symmetry O --ensemble Local --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5 --align_structure inputs/input_pdb/3N1I/3N1I.cif 
 ```
 
-Preparing an ensemble for Global assembly (takes a few minutes):
+Preparing an ensemble for Global assembly:
 ```console
 python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
-2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used  with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds](#bounds) in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
+2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` in the config file, and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
 
 ## EvoDOCK outputs
 
@@ -302,7 +306,7 @@ EvoDOCK outputs everything in the directory passed to the `output_path` option i
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. 
+EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in directory passed to `output_path`. 
 
 ### EvoDOCK log files
 
@@ -338,19 +342,19 @@ EvoDOCK produces several different log files during runtime to log the evolution
 The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python ./scripts/symmetric_relax.py -h` to see more.
 It is advisable to use this script when predictions are based on AlphaFold models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
-When modelling symmetrical structures in EvoDOCK, it outputs 3 types of outputs: 
+When modelling symmetrical structures in EvoDOCK, it outputs 4 types of outputs: 
 1. Input file (suffix: _INPUT.pdb).
 2. A symmetry file (suffix: .symm).
 3. The full structure (suffix: _full.cif)
 4. A CSV file containing Iscore/score and Irmsd/rmsd information (if using --native_file)
 
-A test can be run with (should take several minutes):
+A test can be run with:
 
 ```console
 python ./scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relaxed.pdb --cycles 1 --symmetry_file inputs/test_symmetry_files/2CC9_tobe_relaxed.symm --output_dir tests/outputs/symmetric_relax
 ```
 
-The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recommended. 
+The input for --file has to be the the monomeric input file generated from EvoDOCK (file with '_INPUT.pdb' extension) and the input for --symmetry_file has to be the output symmetry file from EvoDOCK (file with '.symm' extenions). 5 cycles are recommended. 
 
 ## Example Workflows for different docking scenarios
 
