@@ -307,7 +307,7 @@ Preparing an ensemble for Global assembly (takes a few minutes):
 python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
-2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used  with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [\[Bounds\]](#bounds) in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
+2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used  with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds](#bounds) in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
 
 ## EvoDOCK outputs
 
@@ -315,7 +315,7 @@ EvoDOCK outputs everything in the directory passed to the `output_path` option i
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [\[Outputs\]](#outputs) for more information).
+EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [Outputs](#outputs) for more information).
 
 ### EvoDOCK log files
 
