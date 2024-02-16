@@ -311,11 +311,11 @@ python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --sym
 
 ## EvoDOCK outputs
 
-EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file (see [\[Outputs\]](#outputs) in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
+EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file (see [3. \[Outputs\]](#3.-outputs) in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [Outputs](#outputs) for more information).
+EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [2. Outputs](#outputs) for more information).
 
 ### EvoDOCK log files
 
