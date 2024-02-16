@@ -30,22 +30,6 @@ For symmetric Protein-Protein docking these **additional** packages must be inst
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
   
-Furthermore, the following packages are also needed, but are automatically installed by pip using the `setup.py` script (see below).
-
-```
-cubicsym @ git+https://github.com/Andre-lab/cubicsym,
-cloudcontactscore @ git+https://github.com/Andre-lab/cloudcontactscore,
-numpy>=1.21.0
-pandas>=1.3.4
-pillow>=9.1.0
-scipy>=1.7.1
-seaborn>=0.11.2
-setuptools>=44.0.0
-imageio>=2.10.1
-matplotlib>=3.4.3
-scikit-learn>=1.0.2
-```
-
 ### Installation
 
 Clone the cubicsym repository and `cd` into it. Then run the install script.
