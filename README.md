@@ -311,11 +311,11 @@ python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --sym
 
 ## EvoDOCK outputs
 
-EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file (see [3. \[Outputs\]](#3.-outputs) in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
+EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file. The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [2. Outputs](#outputs) for more information).
+EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. 
 
 ### EvoDOCK log files
 
@@ -371,7 +371,7 @@ The input for --file has to be the the monomeric input file generated from EvoDO
 
 1. **Run AFM predcitions** (Support exists at least for version 2.2.2 and 2.2.3):
 
-Make sure the output folder of the AFM prediction has the _X_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM, the outpout folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3`.
+Make sure the output folder of the AFM prediction has the \_X\_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM, the output folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3` etc..
   
 2. **Run `af_to_evodock.py`**:
 
@@ -380,13 +380,13 @@ Put all predictions inside a single folder and run `af_to_evodock.py` to create 
 python ./scripts/af_to_evodock.py --path <folder containing all AFM predictions> --symmetry <Symmetry type to model = I/O/T> --ensemble GlobalFromMultimer --out_dir < Output directory for the ensemble >
 ```
 
-This will create a `data` and `pdbs` folder (see the **Setting up an EvoDOCK ensemble from AlphaFold outputs** section). 
+This will create a `data` and `pdbs` folder (see the [Setting up an EvoDOCK ensemble from AlphaFold outputs](#setting-up-an-evodock-ensemble-from-alphafold-outputs) section). 
 
 3. **Setting up the config file**:
 
 For running global assembly you need the `data/*_x_trans.csv` file and the `pdbs/up` or `pdbs/down` directories produced by `af_to_evodock.py `. The `data/*_x_trans.csv` file must be parsed to the `xtrans_file` option in the config file. If predicting the assembly with knowledge of the correct orientation (up or down) one can use the corresponding `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=false`. If predicting the assembly wihtout this knowledge, use either `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=true`. With `allow_flip=true` it does not matter which directory is chosen. 
 
-9 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type you wish to model. Refer to the table below and and parse the correct symmetry file to `symdef_file` option in the config file.
+9 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type you wish to model. Refer to the table below and and parse the correct symmetry file to the `symdef_file` option in the config file.
 
 | Symmetry to model | AFM oligomer prediction | Symmetry file |
 |---|---|---|
