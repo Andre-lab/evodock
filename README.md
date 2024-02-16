@@ -18,9 +18,7 @@ Symmetric docking:
 
 ### OS Requirements
 
-This package is supported for Linux/macOS. The package has been tested on the following systems:
-
-Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
+This package is supported for Linux/macOS. The package has been tested on the following systems: Ubuntu 20.04.5-6 and CentOS Linux 7
 
 ### Package requirements
 
@@ -78,7 +76,7 @@ The following section describe how to configure EvoDOCK through the config file.
 8. [RosettaOptions]
 9. [Native]
 
-Examples of config files for different EvoDOCK configurations are found in the `config` folder with the following behavior: 
+Examples of config files for different EvoDOCK configurations are found in the `./config/` folder with the following behavior: 
 
 1. Heteromeric docking with single ligand and receptor backone (takes a few minutes):
 ```console
@@ -105,7 +103,7 @@ python ./evodock.py configs/symmetric/local_assembly.ini
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
 
-Full examples of running EvoDOCK with different workflows is described in the **Examples Workflows for different docking scenarios section** further below.
+Full examples of running EvoDOCK with different workflows is described in the [Examples Workflows for different docking scenarios section](#examples-workflows-for-different-docking-scenarios-section) further below.
 
 ### 1. [Docking]
 
