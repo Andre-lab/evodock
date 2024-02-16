@@ -264,10 +264,8 @@ lower_diversity_limit=<float>
 
 ## Preparing inputs for EvoDOCK
 
-The following describes how to prepare input structures and creating ensembles from AlphaFold as inputs to EvoDOCK.
-
 ### Prepacking structures
-Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
+Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures: 
 
 ```console
 python ./scripts/prepacking.py --file <input_file>
@@ -276,7 +274,7 @@ python ./scripts/prepacking.py --file <input_file>
 ### Setting up an EvoDOCK ensemble from AlphaFold outputs
 
 The script `scripts/af_to_evodock.py` converts AlphaFold2 (AF2) and AlphaFold-Multimer (AFM) predictions to an EvoDOCK ensemble.
-It is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py``` is not nescesarry.
+It is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked.
 
 Below are 2 examples of running the script for creating an ensemble for Local assembly or Global assembly. To run the example you need to download the AlphaFold data `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
 
