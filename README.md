@@ -273,8 +273,8 @@ python ./scripts/prepacking.py --file <input_file>
 
 ### Setting up an EvoDOCK ensemble from AlphaFold outputs
 
-The script `scripts/af_to_evodock.py` converts AlphaFold2 (AF2) and AlphaFold-Multimer (AFM) predictions to an EvoDOCK ensemble.
-It is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked.
+The script `./scripts/af_to_evodock.py` converts AlphaFold2 (AF2) and AlphaFold-Multimer (AFM) predictions to an EvoDOCK ensemble.
+It is well documented. Use `python ./scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked.
 
 Below are 2 examples of running the script for creating an ensemble for Local assembly or Global assembly. To run the example you need to download the AlphaFold data `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
 
@@ -337,7 +337,7 @@ EvoDOCK produces several different log files during runtime to log the evolution
 
 ## Symmetric relax of EvoDOCK output structures
 
-The script `scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python ./scripts/symmetric_relax.py -h` to see more.
+The script `./scripts/symmetric_relax.py` can be used to relax symmetrical structures from the EvoDOCK output. The script is well documented: use `python ./scripts/symmetric_relax.py -h` to see more.
 It is advisable to use this script when predictions are based on AlphaFold models, compared to the vanilla Rosettas relax protocol, as it guards against the structures blowing up if the AlphaFold structures have bad energies. 
 
 When modelling symmetrical structures in EvoDOCK, it outputs 4 types of outputs: 
@@ -454,7 +454,7 @@ python ./evodock.py < created config file >
 
 5. **(Optional) Refine results with Rosetta relax**
 
-The output EvoDOCK can be refined by running the `scripts/symmetric_relax.py` on them. See [Symmetric relax](#symmetric-relax-of-evodock-output-structures) for more information. 
+The output EvoDOCK can be refined by running the `./scripts/symmetric_relax.py` on them. See [Symmetric relax](#symmetric-relax-of-evodock-output-structures) for more information. 
 
 
 ## Differential Evolution Algorithm
