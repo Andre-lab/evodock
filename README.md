@@ -203,8 +203,8 @@ low_memory_mode=<boolean>
 ### 6. [Bounds]
 
 Set options for the bounds of the rigid body parameters when doing symmetrical docking:
-1. `init`: The initial bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking.
-2. `bounds:`:  The maximum bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking.
+1. `init`: The initial bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking (See article for a description of the parameters).
+2. `bounds:`:  The maximum bounds the rigid body parameters are sampled in; [z, λ, x, ψ, ϴ, φ] for cubic symmetric docking (See article for a description of the parameters).
 3. `init_input_fix_percent`: The percent chance of keeping an individual to its exact input values and not randomizing inside the init bounds. Should be between 0 and 100. 
 4. `allow_flip`: allow the individual to flip 180 degrees. 
 5. `xtrans_file`: The path to the file containing the x translations for each subunit. This file is output from af_to_evodock.py when running with --ensemble=GlobalFromMultimer
@@ -410,9 +410,8 @@ swap_prob=0.3
 low_memory_mode=true
 
 [Bounds]
-bounds=1000,36,5,40,40,40
-init=0,36,5,40,40,40
-init_input_fix_percent=0.0
+bounds=< bounds options - see recommendations below >
+init=< init options - see recommendations below >
 allow_flip=< true if you want to model both directions, false if not >
 xtrans_file= < path to the x_trans.csv produced from af_to_evodock.py script >
 
@@ -432,6 +431,20 @@ initialize_rigid_body_dofs=true
 ```
 
 The `popsize` and `maxiter` options can be lowered as `popsize=100` and `maxiter=50` is likely to oversample.
+
+Below are some recommendations for well predicted AFM structures of the `bounds` and `init` options.
+
+| Symmetry to model | AFM oligomer prediction | bounds | init
+|---|---|---|---|
+| I | 5 | 1000,36,5,40,40,40 | 0,36,5,40,40,40 |
+| I | 3 | 1000,60,5,40,40,40 | 0,60,5,40,40,40 |
+| I | 2 | 1000,90,5,40,40,40 | 0,90,5,40,40,40 |
+| O | 4 | 1000,45,5,40,40,40 | 0,45,5,40,40,40 |
+| O | 3 | 1000,60,5,40,40,40 | 0,60,5,40,40,40 |
+| O | 2 | 1000,90,5,40,40,40 | 0,90,5,40,40,40 |
+| T | 3 | 1000,60,5,40,40,40 | 0,60,5,40,40,40 |
+| T | 3 | 1000,60,5,40,40,40 | 0,60,5,40,40,40 |
+| T | 2 | 1000,90,5,40,40,40 | 0,90,5,40,40,40 |
 
 4. **Run EvoDOCK with the config file**. 
 
