@@ -368,8 +368,51 @@ The input for --file has to be the the monomeric input file generated from EvoDO
 ## Examples Workflows for different docking scenarios
 
 ### Global assembly docking
-This section describes what a user needs to do to go from AFM predictions to full EvoDOCK prediction 
+This section describes what a user needs to do to go from AFM predictions to full EvoDOCK prediction. 
 
+There are X steps:
+
+1. Run AFM predcitions (Support exists at least for version 2.2.2 and 2.2.3). Make sure the output folder of the AFM prediction has the _X_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM the outpout folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3`, `2CC9_3_4`.  
+2. Run `af_to_evodock.py`
+
+
+```dosini
+[Docking]
+type=GlobalFromMultimer
+
+[Inputs]
+subunits= < choose the 'pdbs' folder produced by af_to_evodock.py >
+symdef_file= < use either  X_HF_norm.symm or  X_3F_norm.symm or X_2F_norm.symm >
+
+[Outputs]
+output_path=tests/outputs/global_from_multimer_1X36
+output_pdb=True
+
+[Flexbb]
+swap_prob=0.3
+low_memory_mode=true
+
+[Bounds]
+bounds=1000,36,5,40,40,40
+init=0,36,5,40,40,40
+init_input_fix_percent=0.0
+allow_flip=true
+xtrans_file= < x_trans.csv produced from af_to_evodock.py >
+
+[DE]
+scheme=RANDOM
+popsize=100
+mutate=0.1
+recombination=0.7
+maxiter=50
+local_search=symshapedock
+slide=True
+selection=interface
+max_slide_attempts=100
+
+[RosettaOptions]
+initialize_rigid_body_dofs=true
+```
 
 ## Differential Evolution Algorithm
 
