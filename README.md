@@ -368,13 +368,10 @@ The input for --file has to be the the monomeric input file generated from EvoDO
 ## Examples Workflows for different docking scenarios
 
 ### Global assembly docking
-This section describes what a user needs to do to go from AFM predictions to full EvoDOCK predictions. 
-
-There are X steps:
 
 1. **Run AFM predcitions** (Support exists at least for version 2.2.2 and 2.2.3):
 
-Make sure the output folder of the AFM prediction has the _X_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM, the outpout folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3`, `2CC9_3_4`.
+Make sure the output folder of the AFM prediction has the _X_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM, the outpout folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3`.
   
 2. **Run `af_to_evodock.py`**:
 
@@ -389,16 +386,31 @@ This will create a `data` and `pdbs` folder (see the **Setting up an EvoDOCK ens
 
 For running global assembly you need the `data/*_x_trans.csv` file and the `pdbs/up` or `pdbs/down` directories produced by `af_to_evodock.py `. The `data/*_x_trans.csv` file must be parsed to the `xtrans_file` option in the config file. If predicting the assembly with knowledge of the correct orientation (up or down) one can use the corresponding `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=false`. If predicting the assembly wihtout this knowledge, use either `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=true`. With `allow_flip=true` it does not matter which directory is chosen. 
 
-8 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type
+9 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type. Refer to the table below and and parse the correct symmetry file to `symdef_file` option in the config file.
 
+| Symmetry to model | AFM oligomer prediction | Symmetry file |
+|---|---|---|
+| I | 5 | I_HF_norm.symm  |
+| I | 3 | I_3F_norm.symm  |
+| I | 2 | I_2F_norm.symm  |
+| O | 4 | O_HF_norm.symm  |
+| O | 3 | O_3F_norm.symm  |
+| O | 2 | O_2F_norm.symm  |
+| T | 3 | T_HF_norm.symm  |
+| T | 3 | T_3F_norm.symm  |
+| T | 2 | T_2F_norm.symm  |
+
+T_HF_norm.symm and T_3F_norm.symm are equvialent symmetry files but models different parts of the trimeric interface at the center. The structural representation should be identical.   
+
+The full config file should look something like this: 
 
 ```dosini
 [Docking]
 type=GlobalFromMultimer
 
 [Inputs]
-subunits= < choose the 'pdbs' folder produced by af_to_evodock.py >
-symdef_file= < use either  X_HF_norm.symm or  X_3F_norm.symm or X_2F_norm.symm >
+subunits= < choose the 'pdbs' folder produced by af_to_evodock.py script >
+symdef_file= < use correct symmetry file >
 
 [Outputs]
 output_path=tests/outputs/global_from_multimer_1X36
