@@ -452,7 +452,8 @@ Below are some recommendations for well predicted AFM structures of the `bounds`
 python ./evodock.py < created config file >
 ```
 
-5 **(Optional) Refine results with Rosetta relax**
+5. **(Optional) Refine results with Rosetta relax**
+
 The output EvoDOCK can be refined by running the `scripts/symmetric_relax.py` on them. See [Symmetric relax](#symmetric-relax-of-evodock-output-structures) for more information. 
 
 
