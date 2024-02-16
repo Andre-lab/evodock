@@ -4,9 +4,7 @@
 
 # EvoDOCK 
 
-EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
-
-**Publications**: 
+EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking and is described in the following publications:
 
 Heterodimeric docking:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.cell.com/structure/fulltext/S0969-2126(22)00372-0?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0969212622003720%3Fshowall%3Dtrue)
@@ -44,33 +42,24 @@ Then additionally install the packages under [Package requirements](#package-req
 EvoDOCK can be run with different configurations given a specifc `config.ini` input file as so: 
 
 ```console
-python ./evodock.py configs.ini
+python ./evodock.py config.ini
 ```
 
-To prepare input structures for EvoDOCK it is advisable to read the [Preparing inputs for EvoDOCK](#preparing-inputs-for-evodock) section further below.
+In general there are 5 different modes EvoDOCK can be run in and are given here with examples:
 
-The following section describe how to configure EvoDOCK through the config file. These options can be set in the config file: 
-1. [Docking]
-2. [Input]
-3. [Outputs]
-4. [DE]
-5. [Flexbb] 
-6. [Bounds]
-7. [Pymol]
-8. [RosettaOptions]
-9. [Native]
+### Heteromic docking modes
 
-Examples of config files for different EvoDOCK configurations are found in the `./config/` folder with the following behavior: 
-
-1. Heteromeric docking with single ligand and receptor backone (takes a few minutes):
+1. Heteromeric docking with a single ligand and a single receptor backone (takes a few minutes):
 ```console
 python ./evodock.py configs/heterodimeric/sample_dock_single.ini
 ```
 
-2. Heteromeric docking with flexible backbones (takes a few minutes):
+2. Heteromeric docking with multiple backbones (takes a few minutes):
 ```console
 python ./evodock.py configs/heterodimeric/sample_dock_flexbb.ini
 ```
+
+### Symmetrical docking modes
 
 3. Local recapitulation with a single backbone (takes a few minutes): 
 ```console
@@ -87,7 +76,23 @@ python ./evodock.py configs/symmetric/local_assembly.ini
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
 
-Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios) further below.
+
+
+
+To prepare input structures for EvoDOCK it is advisable to read the [Preparing inputs for EvoDOCK](#preparing-inputs-for-evodock) section.
+
+The following section describe how to configure EvoDOCK through the config file. These options can be set in the config file: 
+1. [Docking]
+2. [Input]
+3. [Outputs]
+4. [DE]
+5. [Flexbb] 
+6. [Bounds]
+7. [Pymol]
+8. [RosettaOptions]
+9. [Native]
+
+Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios).
 
 ### 1. [Docking]
 
@@ -124,7 +129,7 @@ ligands=<path to a directory containing ligands (1 ligand per pdb)>
 receptors=<path to a directory containing receptors (1 receptor per pdb)>
 ```
 
-For symmetric docking you need to specify the `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones.
+For symmetric docking you need to specify `symdef_file` and either `single` or `subunits` for docking either a single or multiple backbones.
 ```dosini
 [Input]
 single=<path to a single pdb file>
@@ -255,7 +260,7 @@ lower_diversity_limit=<float>
 
 ## Preparing inputs for EvoDOCK
 
-The following describes how to prepare input structures and creating ensembles from AlphaFold as inputs to EvoDOCK
+The following describes how to prepare input structures and creating ensembles from AlphaFold as inputs to EvoDOCK.
 
 ### Prepacking structures
 Before running EvoDOCK, it is important to pack the sidechains (prepacking) of the input structures (takes several seconds): 
@@ -266,12 +271,10 @@ python ./scripts/prepacking.py --file <input_file>
 
 ### Setting up an EvoDOCK ensemble from AlphaFold outputs
 
-This section is only important if running EvoDOCK for Local or Global Assembly
- 
 The script `scripts/af_to_evodock.py` converts AlphaFold2 (AF2) and AlphaFold-Multimer (AFM) predictions to an EvoDOCK ensemble.
 It is well documented. Use `python scripts/af_to_evodock.py -h` to see more. The structures of the output ensemble will already be prepacked and running ```prepacking.py``` is not nescesarry.
 
-Below, 2 examples of running the script for creating an ensemble for Local assembly or Global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
+Below are 2 examples of running the script for creating an ensemble for local assembly or global assembly is given. You need to download `af_data.tar` [here](https://zenodo.org/doi/10.5281/zenodo.8047513). 
 
 Unzip it with:
 
