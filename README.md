@@ -307,7 +307,7 @@ Preparing an ensemble for Global assembly (takes a few minutes):
 python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
-2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one ofthe DOFS (x translation) found in the AFM predictions and should be used  `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds] in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter).
+2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used  with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds] in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
 
 ## EvoDOCK outputs
 
@@ -368,12 +368,28 @@ The input for --file has to be the the monomeric input file generated from EvoDO
 ## Examples Workflows for different docking scenarios
 
 ### Global assembly docking
-This section describes what a user needs to do to go from AFM predictions to full EvoDOCK prediction. 
+This section describes what a user needs to do to go from AFM predictions to full EvoDOCK predictions. 
 
 There are X steps:
 
-1. Run AFM predcitions (Support exists at least for version 2.2.2 and 2.2.3). Make sure the output folder of the AFM prediction has the _X_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM the outpout folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3`, `2CC9_3_4`.  
-2. Run `af_to_evodock.py`
+1. **Run AFM predcitions** (Support exists at least for version 2.2.2 and 2.2.3):
+
+Make sure the output folder of the AFM prediction has the _X_ tag (for example 2CC9_3_) as this is used to determine the oligormeric type predicted by AFM by the `af_to_evodock.py` script. If you have multiple predictions from AFM, the outpout folders can be called  `2CC9_3_1`, `2CC9_3_2`, `2CC9_3_3`, `2CC9_3_4`.
+  
+2. **Run `af_to_evodock.py`**:
+
+Put all predictions inside a single folder and run `af_to_evodock.py` to create an ensemble:
+```console
+python ./scripts/af_to_evodock.py --path <folder containing all AFM predictions> --symmetry <Symmetry type to model = I/O/T> --ensemble GlobalFromMultimer --out_dir < Output directory for the ensemble >
+```
+
+This will create a `data` and `pdbs` folder (see the **Setting up an EvoDOCK ensemble from AlphaFold outputs** section). 
+
+3. **Setting up the config file**:
+
+For running global assembly you need the `data/*_x_trans.csv` file and the `pdbs/up` or `pdbs/down` directories produced by `af_to_evodock.py `. The `data/*_x_trans.csv` file must be parsed to the `xtrans_file` option in the config file. If predicting the assembly with knowledge of the correct orientation (up or down) one can use the corresponding `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=false`. If predicting the assembly wihtout this knowledge, use either `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=true`. With `allow_flip=true` it does not matter which directory is chosen. 
+
+8 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type
 
 
 ```dosini
