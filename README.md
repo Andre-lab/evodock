@@ -307,8 +307,7 @@ Preparing an ensemble for Global assembly (takes a few minutes):
 python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
-2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 3 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The `pdbs` folder contains the ensemble structures as single pdb files. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds] in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter).
-
+2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one ofthe DOFS (x translation) found in the AFM predictions and should be used  `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds] in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter).
 
 ## EvoDOCK outputs
 
@@ -365,6 +364,11 @@ python ./scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relax
 ```
 
 The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recommended. 
+
+## Examples Workflows for different docking scenarios
+
+### Global assembly docking
+This section describes what a user needs to do to go from AFM predictions to full EvoDOCK prediction 
 
 
 ## Differential Evolution Algorithm
