@@ -6,10 +6,12 @@
 
 EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
 
-Heterodimeric docking has been published at:
+**Publications**: 
+
+Heterodimeric docking:
 [A memetic algorithm enables global all-atom protein-protein docking with sidechain flexibility](https://www.cell.com/structure/fulltext/S0969-2126(22)00372-0?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0969212622003720%3Fshowall%3Dtrue)
 
-Symmetric docking has been published at:
+Symmetric docking:
 [Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.nature.com/articles/s41467-023-43681-6)
 
 ## Installation Guide
@@ -30,7 +32,7 @@ For symmetric Protein-Protein docking these **additional** packages must be inst
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
 * mpi4py and its requirements (https://mpi4py.readthedocs.io/en/stable/install.html) (can be install with Anaconda/pip)
   
-Furthermore the following packages are also needed but are automatically installed by pip using the setup.py script (see Installation Guide).
+Furthermore, the following packages are also needed, but are automatically installed by pip using the `setup.py` script (see below).
 
 ```
 cubicsym @ git+https://github.com/Andre-lab/cubicsym,
@@ -56,16 +58,14 @@ pip install .
 ```
 Then additionally install the packages under [Package requirements](#package-requirements)
 
-Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
-
 # Running EvoDOCK 
-EvoDOCK can be run with different configurations given a specifc config.ini input file as so: 
+EvoDOCK can be run with different configurations given a specifc `config.ini` input file as so: 
 
 ```console
 python ./evodock.py configs.ini
 ```
 
-To prepare input structures for EvoDOCK it is advisable to read the **Preparing inputs for EvoDOCK** section further below.
+To prepare input structures for EvoDOCK it is advisable to read the [Preparing inputs for EvoDOCK](#preparing-inputs-for-evodock) section further below.
 
 The following section describe how to configure EvoDOCK through the config file. These options can be set in the config file: 
 1. [Docking]
