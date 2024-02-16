@@ -103,7 +103,7 @@ python ./evodock.py configs/symmetric/local_assembly.ini
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
 
-Full examples of running EvoDOCK with different workflows is described in the [Examples Workflows for different docking scenarios section](#examples-workflows-for-different-docking-scenarios-section) further below.
+Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios) further below.
 
 ### 1. [Docking]
 
@@ -244,7 +244,7 @@ ipaddress=<IP address>
 
 ### 8. [RosettaOptions]
 
-Rosetta flags to use. Any can be specified. When doing symmetrical docking initialize_rigid_body_dofs must be set to true.
+Rosetta flags to use. Any can be specified. When doing symmetrical docking `initialize_rigid_body_dofs` must be set to true.
 
 ```dosini
 [RosettaOptions]
@@ -307,15 +307,15 @@ Preparing an ensemble for Global assembly (takes a few minutes):
 python ./scripts/af_to_evodock.py --path inputs/AF_data/globalfrommultimer --symmetry T --ensemble GlobalFromMultimer --out_dir tests/outputs/ --max_multimers 5 --max_monomers 5 --modify_rmsd_to_reach_min_models 50 --max_total_models 5
 ```
 
-2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used  with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [Bounds] in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
+2 subfolders inside the folder given to `--out_dir` is created: `data` and `pdbs`. The `data` folder contains 4 files and reports on the information extracted and performed on the AF2 and/or AFM predictions. The file with the `_xtrans.csv` extension is important as it reports on one of the DOFS (x translation) found in the AFM predictions and should be used  with the `xtrans_file` option in the config file. The `pdbs` folder contains the ensemble structures as single pdb files. This should be parsed to the `subunits` option in the config file. If `--ensemble=GlobalFromMultimer` is set both an `up` and `down` ensemble is created and 2 example files for the types of ensembles produced. The user can choose to use either but the search will be localized to the ensemble chosen. If you want to mix the directions you have to set `allow_flip=true` under [\[Bounds\]](#bounds) in the config file and then choose either the `up` or `down` as the starting point (in this case it does not matter which one you choose).
 
 ## EvoDOCK outputs
 
-EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file (see [Outputs] in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
+EvoDOCK outputs everything in the directory passed to the `output_path` option in the config file (see [\[Outputs\]](#outputs) in the previous section for more information). The following describes the outputs of EvoDOCK in detail. For understanding some of the outputs of the symmetrical protocols it is advisable to read about [Symmetry in Rosetta](https://www.rosettacommons.org/docs/latest/rosetta_basics/structural_concepts/symmetry).
 
 ### EvoDOCK structure files
 
-EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [Outputs] for more information).
+EvoDOCK also outputs the final predictions in a subfolder called `structures`. All other files are output in `output_path`. An option can also be set to output the lowest energy structure for each geneation (`evolved.pdb`) during runtime (see [\[Outputs\]](#outputs) for more information).
 
 ### EvoDOCK log files
 
@@ -365,7 +365,7 @@ python ./scripts/symmetric_relax.py --file inputs/input_pdb/2CC9/2CC9_tobe_relax
 
 The input for --file has to be the the monomeric input file generated from EvoDOCK and the input for --symmetry_file has to be the output symmetry file from EvoDOCK. 5 cycles are recommended. 
 
-## Examples Workflows for different docking scenarios
+## Example Workflows for different docking scenarios
 
 ### Global assembly docking
 
