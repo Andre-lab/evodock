@@ -1,3 +1,8 @@
+
+<p align="center">
+  <img src="images/EvoDOCK.png" width="1000">
+</p>
+
 # EvoDOCK 
 
 EvoDOCK is a software for Heterodimeric and Symmetric Protein-Protein docking.
@@ -8,11 +13,7 @@ Heterodimeric docking has been published at:
 Symmetric docking has been published at:
 [Accurate prediction of protein assembly structure by combining AlphaFold and symmetrical docking](https://www.nature.com/articles/s41467-023-43681-6)
 
-<p align="center">
-  <img src="images/EvoDOCK.png" width="1000">
-</p>
-
-## System Requirements
+## Installation Guide
 
 ### OS Requirements
 
@@ -24,7 +25,7 @@ Linux: Ubuntu 20.04.5-6 and CentOS Linux 7
 
 For heterodimeric only the following packages must be installed: 
 * Python-3.6 or later (PyRosetta dependency). 
-* PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need to obtain a license before use (see the link) 
+* PyRosetta (http://www.pyrosetta.org) (Can be installed with Anaconda). You need to obtain a license before use (see the link).
 
 For symmetric Protein-Protein docking these **additional** packages must be installed:
 * MAFFT (https://mafft.cbrc.jp/alignment/software/) (can be installed with Anaconda/brew/apt)
@@ -46,7 +47,7 @@ matplotlib>=3.4.3
 scikit-learn>=1.0.2
 ```
 
-## Installation Guide
+### Installation
 
 Clone the cubicsym repository and `cd` into it. Then run the install script.
 ```console
@@ -54,11 +55,11 @@ git clone https://github.com/Andre-lab/evodock.git
 cd ./evodock
 pip install .
 ```
-Then additionally install the packages under **Package requirements**
+Then additionally install the packages under [Package requirements](###Package-requirements)
 
 Installation time should only take a couple of seconds but downloading the required pacakges and installing them can take several minutes.
 
-## Running EvoDOCK 
+# Running EvoDOCK 
 EvoDOCK can be run with different configurations given a specifc config.ini input file as so: 
 
 ```console
@@ -104,6 +105,8 @@ python ./evodock.py configs/symmetric/local_assembly.ini
 ```console
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
+
+Full examples of running EvoDOCK with different workflows is described in the **Examples Workflows for different docking scenarios section** further below.
 
 ### 1. [Docking]
 
