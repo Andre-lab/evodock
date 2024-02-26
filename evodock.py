@@ -104,7 +104,6 @@ def output_models(alg, config, logger, scfxn):
                 name_full = name.format(f"_full.cif")
                 logger.info(f" {name_full}")
                 CubicSymmetricAssembly.from_pose_input(pose, cs).output(filename=name_full, format="cif")
-                out_data["model"].append()
                 # output symmetry file
                 name_symm = name.format(f".symm")
                 logger.info(f" {name_symm}")
