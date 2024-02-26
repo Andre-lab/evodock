@@ -117,7 +117,7 @@ def output_models(alg, config, logger, scfxn):
                 raise NotImplementedError("Only Cubic symmetry allowed")
     results_name = output_folder + "/results.csv"
     logger.info(f" Outputting Iscores/scores to {results_name}.")
-    pd.DataFrame(out_data).to_csv(results_name)
+    pd.DataFrame(out_data).to_csv(results_name, index=False)
     logger.info("==============================")
 
 def main():
