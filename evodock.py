@@ -59,7 +59,7 @@ def initialize_dock_metric(config, native, input_pose):
     else:
         return DockMetric(native)
 
-def output_models(alg, config, logger):
+def output_models(alg, config, logger, scfxn):
     """Output the models. Does KMeans clustering if set to True."""
     vals = alg.all_docks["genotype"]
     n_models = config.n_models
@@ -85,6 +85,7 @@ def output_models(alg, config, logger):
     # make a subfolder
     output_folder = config.out_path + "/structures"
     Path(output_folder).mkdir(exist_ok=True)
+    out_data = {"model": [], "Iscore":[], "score":[]}
     for n, ind in enumerate(df["ind"].values, 1):
         if config.flexbb:
             pose, _, _, _ = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
@@ -95,10 +96,15 @@ def output_models(alg, config, logger):
             logger.info(" Outputting the following models:")
             cs = CubicSetup(config.syminfo.input_symdef)
             if cs.is_cubic():
+                # score the results
+                out_data["model"].append(n)
+                out_data["Iscore"].append(scfxn.dockmetric.interaction_energy(pose))
+                out_data["score"].append(scfxn.full_score(pose))
                 # output full symmetric structure
                 name_full = name.format(f"_full.cif")
                 logger.info(f" {name_full}")
                 CubicSymmetricAssembly.from_pose_input(pose, cs).output(filename=name_full, format="cif")
+                out_data["model"].append()
                 # output symmetry file
                 name_symm = name.format(f".symm")
                 logger.info(f" {name_symm}")
@@ -110,6 +116,9 @@ def output_models(alg, config, logger):
                 cs.make_asymmetric_pose(pose).dump_pdb(name_input)
             else:
                 raise NotImplementedError("Only Cubic symmetry allowed")
+    results_name = output_folder + "/results.csv"
+    logger.info(f" Outputting Iscores/scores to {results_name}.")
+    pd.DataFrame(out_data).joinpath(results_name)
     logger.info("==============================")
 
 def main():
@@ -151,7 +160,7 @@ def main():
     alg.main()
 
     # ---- OUTPUT -------------------------------------------
-    output_models(alg, config, logger)
+    output_models(alg, config, logger, scfxn)
 
     logger.info(" End EvoDOCK")
     logger.info("==============================")
