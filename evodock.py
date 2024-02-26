@@ -102,6 +102,7 @@ def output_models(alg, config, logger):
                 # output symmetry file
                 name_symm = name.format(f".symm")
                 logger.info(f" {name_symm}")
+                cs.update_dofs_from_pose(pose)
                 cs.output(name_symm)
                 # output input pdb
                 name_input = name.format(f"_INPUT.pdb")
