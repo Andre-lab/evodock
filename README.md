@@ -377,19 +377,19 @@ This will create a `data` and `pdbs` folder (see the [Setting up an EvoDOCK ense
 
 For running global assembly you need the `data/*_x_trans.csv` file and the `pdbs/up` or `pdbs/down` directories produced by `af_to_evodock.py `. The `data/*_x_trans.csv` file must be parsed to the `xtrans_file` option in the config file. If predicting the assembly with knowledge of the correct orientation (up or down) one can use the corresponding `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=false`. If predicting the assembly wihtout this knowledge, use either `pdbs/up` or `pdbs/down` directory as the ensemble and setting `allow_flip=true`. With `allow_flip=true` it does not matter which directory is chosen. 
 
-9 different symmetry files are available depending on which AFM predictions are being done and which target symmetry type you wish to model. Refer to the table below and and parse the correct symmetry file to the `symdef_file` option in the config file.
+Different symmetry files are available depending on the symmetry modelled, the AFM oligomer prediction used and how many chains the user wish to model. Refer to the table below and and parse the correct symmetry file to the `symdef_file` option in the config file. Since EvoDOCK models a minial system of the full biological system, this can create cases where some chain interactions are not modelled correctly. Symmetry files with the *_extra suffix will model extra chains in EvoDOCK with the cost on some computational effeciency.
 
-| Symmetry to model | AFM oligomer prediction | Symmetry file |
-|---|---|---|
-| I | 5 | I_HF_norm.symm  |
-| I | 3 | I_3F_norm.symm  |
-| I | 2 | I_2F_norm.symm  |
-| O | 4 | O_HF_norm.symm  |
-| O | 3 | O_3F_norm.symm  |
-| O | 2 | O_2F_norm.symm  |
-| T | 3 | T_HF_norm.symm  |
-| T | 3 | T_3F_norm.symm  |
-| T | 2 | T_2F_norm.symm  |
+| Symmetry to model | AFM oligomer prediction | Symmetry file | Symmetry file with extra chains |
+|---|---|---|---|
+| I | 5 | I_HF_norm.symm  | I_HF_norm_extra.symm  |
+| I | 3 | I_3F_norm.symm  | I_3F_norm_extra.symm  |
+| I | 2 | I_2F_norm.symm  | I_2F_norm_extra.symm  |
+| O | 4 | O_HF_norm.symm  | NA |
+| O | 3 | O_3F_norm.symm  | NA |
+| O | 2 | O_2F_norm.symm  | NA |
+| T | 3 | T_HF_norm.symm  | NA |
+| T | 3 | T_3F_norm.symm  | NA |
+| T | 2 | T_2F_norm.symm  | NA |
 
 T_HF_norm.symm and T_3F_norm.symm are equvialent symmetry files but models different parts of the trimeric interface internally in the code. The structural representations should be identical.   
 
