@@ -45,7 +45,11 @@ EvoDOCK can be run with different configurations given a specifc `config.ini` in
 python ./evodock.py config.ini
 ```
 
-In general there are 5 different modes EvoDOCK can be run in and are given here with examples. 
+To prepare input structures for EvoDOCK please read the [Preparing inputs for EvoDOCK](#preparing-inputs-for-evodock) section.
+
+Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios).
+
+In general there are 5 different modes EvoDOCK can be run in and are given here with examples that can be run on the commandline.
 
 ### Heteromic docking modes
 
@@ -79,10 +83,6 @@ python ./evodock.py configs/symmetric/local_assembly.ini
 ```console
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
-
-To prepare input structures for EvoDOCK it is advisable to read the [Preparing inputs for EvoDOCK](#preparing-inputs-for-evodock) section.
-
-Full examples of running EvoDOCK with different workflows is described in [Examples Workflows for different docking scenarios](#example-workflows-for-different-docking-scenarios).
 
 The following section describes how to configure EvoDOCK through the config file in more detail.
 
