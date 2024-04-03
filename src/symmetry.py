@@ -41,6 +41,7 @@ from cloudcontactscore.cloudcontactscorecontainer import CloudContactScoreContai
 from pyrosetta.rosetta.basic.datacache import CacheableStringMap
 from pyrosetta.rosetta.basic.datacache import CacheableStringFloatMap
 from pyrosetta.rosetta.core.pose.datacache import CacheableDataType
+from cubicsym.actors.rigidbodycombinedmover import RigidBodyCombinedMover
 
 def individual_is_within_bounds(config, fitnessfunc, ind):
     if config.syminfo is not None:
@@ -56,53 +57,14 @@ class SymShapeDock:
         self.scfxn = fafitnessfunc.scfxn_rosetta
         self.dock_attempts = dock_attempts
         self.ccsc = self.config.syminfo.ccsc
-
-        #self.idx_to_ccs, self.idx_to_cmc = None, None
-        # # if running the same backbone all the time we only need 1 CloudContactScore/CubicMonteCarlo, else we need one for each backbone.
-        # # if using multiple backbones we construct the CloudContactScore during apply
-        # if config.flexbb:
-        #     self.ccs, self.cmc = None, None
-        #     self.idx_to_ccs, self.idx_to_cmc = {}, {}
-        # else:
-        #     self.set_ccs_and_cmc(fafitnessfunc.dock_pose)
-
         self.tf = self.create_taskfactory(fafitnessfunc.initial_pose)
         self.mc = MonteCarlo(self.scfxn, 0.8) # by NOT init pose here we have to set it later
         self.minmover = BoundedMinMover(self.config.syminfo.cubicboundary, self.scfxn)
         self.trial_minmover = TrialMover(self.minmover, self.mc)
         self.packer = self.create_packrotamers()
         self.trial_packer = TrialMover(self.packer, self.mc)
-        self.trial_pack_and_mc_min = self.construct_pack_and_mc_min(fafitnessfunc.initial_pose)
-
-    # def construct_ccs_and_cmc(self, pose):
-    #     ccs = CloudContactScore(pose=pose, symdef=self.config.syminfo.input_symdef,
-    #                                  use_atoms_beyond_CB=False, use_neighbour_ss=False)
-    #     cmc = CubicMonteCarlo(scorefunction=ccs, cubicdofs=self.config.syminfo.cubicdofs)
-    #     return ccs, cmc
-    #
-    # def set_ccs_and_cmc(self, pose):
-    #     # get idx_subunit if present in the pose
-    #     if pose.data().has(CacheableDataType.ARBITRARY_STRING_DATA):
-    #         assert self.config.flexbb is True
-    #         stringmap = pose.data().get_ptr(CacheableDataType.ARBITRARY_STRING_DATA)
-    #         idx_subunit = stringmap.map()["idx_subunit"] # Must be defined in this case!
-    #     else:
-    #         assert self.config.flexbb is False
-    #         idx_subunit = None
-    #     # if no idx_subunit is defined, then construct from new
-    #     if idx_subunit is None:
-    #         self.ccs, self.cmc = self.construct_ccs_and_cmc(pose)
-    #     else:
-    #         # if idx_subunit is defined, then check if it has already been created.
-    #         # if it has, then return them, if not, construct them and save them.
-    #         if idx_subunit in self.idx_to_ccs:
-    #             self.ccs = self.idx_to_ccs[idx_subunit]
-    #             self.cmc = self.idx_to_cmc[idx_subunit]
-    #         else:
-    #             print(f"Constructing ccs and cmc for {idx_subunit}")
-    #             self.ccs, self.cmc = self.construct_ccs_and_cmc(pose)
-    #             self.idx_to_ccs[idx_subunit] = self.ccs
-    #             self.idx_to_cmc[idx_subunit] = self.cmc
+        self.trial_pack_and_mc_min = self.construct_pack_and_mc_min()
+        self.rb_mover = self.config.syminfo.cubicboundary.construct_rigidbodycombined_mover(self.config.syminfo.cubicboundary)
 
     @staticmethod
     def create_taskfactory(pose, cb_dist_cutoff: int = 10.0, nearby_atom_cutoff: int = 5.5,
@@ -153,7 +115,7 @@ class SymShapeDock:
         # packer = RotamerTrialsMover(self.scfxn, self.tf)
         return packer
 
-    def construct_pack_and_mc_min(self, pose):
+    def construct_pack_and_mc_min(self):
         """Returns a JumpOutMover that applies a PackRotamersMover and energy dependingly a BoundedMinMover."""
         #multiplier = self.config.syminfo.cubicboundary.symmetrysetup.cubic_energy_multiplier_from_pose(pose)
         minimization_threshold = 15.0 #* multiplier
@@ -176,7 +138,6 @@ class SymShapeDock:
         self.ccsc.cmc.reset(pose) # reset cubicmontecarlo
         # self.rb_mover.reset_pose(pose)  # records the initial placement of the pose. Used to perturb the dofs.
         # self.rb_mover.reset()  # resets the params to the initial values
-        self.rb_mover = self.config.syminfo.cubicboundary.construct_rigidbody_mover(pose)
 
     # fixme: I do not understand if self.mc.mc_accepted() == 1 fully and therefore will revert to use self.scfxn directly
     def get_current_pose_score_quick(self, pose):
@@ -207,9 +168,9 @@ class SymShapeDock:
             self.trial_minmover.apply(pose)
         # calc score for later delta
         pre_score = self.get_current_pose_score_quick(pose)
-        # -- 3: docking cycle
+        # -- 3: docking cycle --
         self.inner_protocol(pose)
-        # -4: final packing
+        # -- 4: final packing --
         self.trial_packer.apply(pose)
         # 5: final min (if delta E is below 15)
         if self.get_current_pose_score_quick(pose) - pre_score < 15:
@@ -311,7 +272,7 @@ class SymInfo:
         self.dof_spec.set_symmetrical_bounds(self.bounds)
         self.genotype_size = self.dof_spec.dofsize
         assert self.bound_penalty is not None
-        self.cubicboundary = CubicBoundary(symdef=self.input_symdef, pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
+        self.cubicboundary = CubicBoundary(cubicsetup=CubicSetup(self.input_symdef), pose_at_initial_position=pose, dof_spec=self.dof_spec, sd=self.bound_penalty)
         self.initial_placement = self.dof_spec.get_positions_as_list(pose)
         self._map_normalize_trans_to_jumpdofs()
 

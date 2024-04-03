@@ -29,6 +29,7 @@ from pyrosetta.rosetta.core.pose.symmetry import extract_asymmetric_unit
 from symmetryhandler.reference_kinematics import set_all_dofs_to_zero
 from cloudcontactscore.cloudcontactscorecontainer import CloudContactScoreContainer
 from cubicsym.utilities import add_base_to_pose, add_id_to_pose_w_base
+from cubicsym.cubicsetup import CubicSetup
 
 
 class LocalSearchStrategy:
@@ -94,7 +95,7 @@ class LocalSearchStrategy:
         # slide option
         if self.config.slide:
             if is_symmetric(scfxn.initial_pose):
-                self.slide_into_contact = CubicSymmetrySlider(dock_pose, self.config.syminfo.input_symdef, ccsc=self.config.syminfo.ccsc,
+                self.slide_into_contact = CubicSymmetrySlider(dock_pose, CubicSetup(self.config.syminfo.input_symdef), ccsc=self.config.syminfo.ccsc,
                                                               trans_mag=self.config.slide_trans_mag, pymolmover=self.config.pmm,
                                                               max_slide_attempts=self.config.max_slide_attempts,
                                                               cubicboundary=self.config.syminfo.cubicboundary)

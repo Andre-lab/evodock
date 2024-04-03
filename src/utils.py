@@ -78,7 +78,8 @@ def initialize_starting_poses(config):
         if config.native_input is not None:
             native.pdb_info().name("native_pose")
         config.pmm.apply(input_pose)
-        config.pmm.apply(native)
+        if config.native_input is not None:
+            config.pmm.apply(native)
     return input_pose, native, native_symmetric
 
 def get_pose_from_file(pose_input):

@@ -93,7 +93,7 @@ def output_models(alg, config, logger, scfxn):
             pose = alg.scfxn.local_search.local_search_strategy.get_pose(ind)
         name = output_folder + f"/final_evodock_unrelaxed_ranked_{n}{{}}"
         if is_symmetric(pose):
-            logger.info(" Outputting the following models:")
+            logger.info(f" Outputting the #{n} ranked cluster model to:")
             cs = CubicSetup(config.syminfo.input_symdef)
             if cs.is_cubic():
                 # score the results
@@ -128,7 +128,7 @@ def main():
 
     config = EvodockConfig(sys.argv[-1])
 
-    init(extra_options=build_rosetta_flags(config))
+    init(extra_options=build_rosetta_flags(config), silent=True)
 
     logger = logging.getLogger("evodock")
     logger.setLevel(logging.INFO)
