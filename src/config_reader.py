@@ -267,7 +267,7 @@ class EvodockConfig:
         # --- SLIDE PARAMS -----------------------------------+
         if config.has_option("DE", "slide"):
             self.slide = config.getboolean("DE", "slide")
-            self.max_slide_attempts = config["DE"].getfloat("max_slide_attempts", fallback=100)
+            self.max_slide_attempts = config["DE"].getfloat("max_slide_attempts", fallback=500)
             self.slide_trans_mag = config["DE"].getfloat("slide_trans_mag", fallback=0.3)
         else:
             self.slide = True
