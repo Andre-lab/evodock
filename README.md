@@ -39,7 +39,7 @@ pip install .
 Then additionally install the packages under [Package requirements](#package-requirements)
 
 # Running EvoDOCK 
-EvoDOCK can be run with different configurations given a specifc `config.ini` input file as so: 
+EvoDOCK can be run with different configurations given a config file (`config.ini`): 
 
 ```console
 python ./evodock.py config.ini
@@ -67,7 +67,7 @@ python ./evodock.py configs/heterodimeric/sample_dock_flexbb.ini
 
 ### Symmetrical docking modes
 
-EvoDOCK can predict cubic symmetrical structures with Icosahedral, Octahedral or Tetrahedral symmetry. 
+EvoDOCK can predict cubic symmetrical structures with Icosahedral, Octahedral or Tetrahedral symmetry.
 
 3. Local recapitulation - Predicting assembly structure from a single backbone and starting positions: 
 ```console
@@ -83,6 +83,8 @@ python ./evodock.py configs/symmetric/local_assembly.ini
 ```console
 python ./evodock.py configs/symmetric/global_assembly.ini
 ```
+
+The symmetry type modelled (I/O/T) is defined in the config file. 
 
 The following section describes how to configure EvoDOCK through the config file in more detail.
 
