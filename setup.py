@@ -11,8 +11,9 @@ setup(
     url="https://github.com/Andre-lab/evodock",
     keywords="protein-docking,evolutionary-algorithms",
     install_requires=[
-        "cubicsym @ git+https://github.com/Andre-lab/cubicsym",
-        "cloudcontactscore @ git+https://github.com/Andre-lab/cloudcontactscore",
+        "cubicsym @ git+https://github.com/Andre-lab/cubicsym@20ef715b4da5c9f0c710c7f20e41d17e66b627f2",
+        "cloudcontactscore @ git+https://github.com/Andre-lab/cloudcontactscore@9f2b8429e35dea94d8e20f0bff49dbfa6171de64",
+        "symmetryhandler @ git+https://github.com/Andre-lab/symmetryhandler@cdfd3c017f93101bc47be6412deaace2728e2413"
         "numpy>=1.21.0",
         "pandas>=1.3.4",
         "pillow>=9.1.0",
